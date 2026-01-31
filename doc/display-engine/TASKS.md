@@ -13,8 +13,8 @@
 | **Display Server** | Wayland-first (via GTK4) |
 | **GPU Rendering** | GTK4/GSK (uses Vulkan internally) |
 | **Text Rendering** | Pango (via GTK4) |
-| **Video Backend** | GStreamer |
-| **Browser Embedding** | WPE WebKit (critical feature) |
+| **Video Backend** | GStreamer (VA-API hardware decoding) |
+| **Browser Embedding** | WPE WebKit (DMA-BUF zero-copy) |
 | **Implementation** | Rust with C FFI |
 | **Compatibility** | 90% (minor Lisp breakage acceptable) |
 | **Backends** | TTY + GTK4 only (remove X11, W32, NS, etc.) |
@@ -45,13 +45,63 @@
 │  └──────────────┴──────────────────┴──────────────┴────────┘   │
 │                            │                                    │
 │                            ▼                                    │
-│                   Vulkan / OpenGL (via GSK)                    │
+│           GPU: DMA-BUF → GdkDmabufTexture → GSK → Vulkan       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### GPU Pipeline (Zero-Copy)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     GPU Memory (VRAM)                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Video (VA-API)──┐    WebKit (WPE)──┐    Image (large)──┐     │
+│         │         │          │        │         │         │     │
+│         ▼         │          ▼        │         ▼         │     │
+│   ┌─────────┐     │   ┌─────────┐     │   ┌─────────┐     │     │
+│   │ DMA-BUF │     │   │ DMA-BUF │     │   │ DMA-BUF │     │     │
+│   └────┬────┘     │   └────┬────┘     │   └────┬────┘     │     │
+│        │          │        │          │        │          │     │
+│        └──────────┴────────┴──────────┴────────┘          │     │
+│                           │                                │     │
+│                           ▼                                │     │
+│                  GdkDmabufTexture                          │     │
+│                           │                                │     │
+│                           ▼                                │     │
+│                    GSK TextureNode                         │     │
+│                           │                                │     │
+│                           ▼                                │     │
+│                  Vulkan/GL Compositor                      │     │
+│                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
+## Progress Summary
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| **Phase 1** | Foundation & Project Setup | ✅ Complete |
+| **Phase 2** | TTY Backend | ⏳ Pending |
+| **Phase 3** | GTK4 Backend - Basic Rendering | ✅ Complete |
+| **Phase 4** | Image Support | ✅ Complete |
+| **Phase 5** | Video Support (GStreamer) | ✅ Complete |
+| **Phase 6** | WPE WebKit Support | ✅ Complete |
+| **Phase 7** | GPU Zero-Copy Pipeline | ⏳ Pending |
+| **Phase 8** | Animation System | ⏳ Pending |
+| **Phase 9** | Inline Display (`xdisp.c`) | ⏳ Pending |
+| **Phase 10** | Emacs Build Integration | 🔧 Partial |
+| **Phase 11** | Remove Legacy Backends | ⏳ Pending |
+| **Phase 12** | Testing & Documentation | ⏳ Pending |
+| **Phase 13** | Polish & Optimization | ⏳ Pending |
+
+---
+
 ## Implementation Tasks
+
+---
 
 ## Phase 1: Foundation & Project Setup ✅
 
@@ -102,17 +152,9 @@
 - [x] Create GTK4 backend skeleton
 - [x] Create TTY backend skeleton
 
-### 1.7 Study emacs-ng
-- [ ] Clone and build emacs-ng
-- [ ] Study `rust/emacs-sys/` - Emacs type bindings
-- [ ] Study `rust/pgtk/` - GTK integration
-- [ ] Study `rust/webrender/` - rendering approach
-- [ ] Document lessons learned
-- [ ] Identify code we can reuse or adapt
-
 ---
 
-## Phase 2: TTY Backend
+## Phase 2: TTY Backend ⏳
 
 ### 2.1 Terminal Output
 - [ ] Create `backend/tty.rs` module
@@ -386,125 +428,187 @@
   - Mode line with title and loading progress
   - Mouse click and scroll handlers
 
-### 6.7 Infrastructure for Inline Display ✅
-- [x] Add WEBKIT_GLYPH to `enum glyph_type` in dispextern.h
-- [x] Add IT_WEBKIT to `enum it_method` in dispextern.h
-- [x] Add webkit_id to glyph union and iterator struct
-- [x] Handle WEBKIT_GLYPH in neomacsterm.c draw functions
-- [ ] Wire up `(webkit :id N)` display property in xdisp.c (future)
+---
+
+## Phase 7: GPU Zero-Copy Pipeline ⏳
+
+**Goal**: Eliminate CPU→GPU memory copies for video and large images.
+
+### Current State (Before)
+| Type | Decode | Texture | Copy? |
+|------|--------|---------|-------|
+| Image | CPU (GdkPixbuf) | MemoryTexture | ⚠️ CPU→GPU copy |
+| Video | CPU (GStreamer appsink) | MemoryTexture | ⚠️ CPU→GPU copy |
+| WebKit | GPU (WPE) | DmabufTexture | ✅ Zero-copy |
+
+### Target State (After)
+| Type | Decode | Texture | Copy? |
+|------|--------|---------|-------|
+| Image (small) | CPU | MemoryTexture | CPU→GPU (fast, small data) |
+| Image (large) | CPU | DmabufTexture | ✅ Zero-copy upload |
+| Video | GPU (VA-API) | DmabufTexture | ✅ Zero-copy |
+| WebKit | GPU (WPE) | DmabufTexture | ✅ Zero-copy |
+
+### 7.1 Video Hardware Decoding (High Priority)
+- [ ] Enable VA-API hardware decoding in GStreamer pipeline
+- [ ] Use `vaapidecode`, `vah264dec`, `vah265dec` elements
+- [ ] Fallback chain: VA-API → NVDEC → CPU decode
+- [ ] Export decoded frames via DMA-BUF (`vapostproc` → `dmabuf`)
+- [ ] Create `GdkDmabufTexture` from exported buffer
+- [ ] Test 4K@60fps performance (target: <5% CPU usage)
+
+### 7.2 Video DMA-BUF Export
+- [ ] Create `DmaBufVideoSink` custom GStreamer element
+- [ ] Use `gst_video_frame_map()` with `GST_MAP_READ` for DMA-BUF FD
+- [ ] Use `GdkDmabufTextureBuilder` for texture creation
+- [ ] Handle format negotiation (NV12, P010, BGRA)
+- [ ] Handle modifier negotiation with GSK
+
+### 7.3 Image DMA-BUF Upload (Medium Priority)
+- [ ] Use `GdkDmabufTextureBuilder` for large images (>1MP)
+- [ ] Create DMA-BUF via `gbm_bo_create()` or `drm` allocator
+- [ ] Map buffer, decode image, unmap
+- [ ] Threshold: use DMA-BUF only for images > 1 megapixel
+- [ ] Keep MemoryTexture for small images (faster for small data)
+
+### 7.4 GStreamer GL Pipeline (Alternative Approach)
+- [ ] Use `glupload` element for GPU texture import
+- [ ] Use `gldownload` with DMA-BUF export
+- [ ] Share EGL context between GStreamer and GTK4
+- [ ] Handle GL context threading
 
 ---
 
-## Phase 7: Animation System
+## Phase 8: Animation System ⏳
 
-### 7.1 Animation Core
+### 8.1 Animation Core
 - [ ] Create `core/animation.rs` module
 - [ ] Define animation types (scroll, fade, transform)
 - [ ] Implement easing functions (linear, ease-in-out, cubic, etc.)
 - [ ] Implement animation timeline/scheduler
 - [ ] Handle animation completion callbacks
 
-### 7.2 Smooth Scrolling
+### 8.2 Smooth Scrolling
 - [ ] Implement smooth scroll animation
 - [ ] Integrate with GTK4 frame clock
 - [ ] Handle scroll velocity/momentum
 - [ ] Handle scroll interruption
 
-### 7.3 Cursor Animation
+### 8.3 Cursor Animation
 - [ ] Implement cursor blink animation
 - [ ] Implement cursor smooth movement (optional)
 
-### 7.4 Transition Effects
+### 8.4 Transition Effects
 - [ ] Implement fade in/out for windows
 - [ ] Implement buffer switch transitions (optional)
 
 ---
 
-## Phase 8: Emacs Integration
+## Phase 9: Inline Display Support ⏳
 
-### 8.1 Build System Integration
+**Goal**: Support `(video :id N)` and `(webkit :id N)` display properties in buffer text.
+
+### 9.1 Display Property Infrastructure
+- [x] Add WEBKIT_GLYPH to `enum glyph_type` in dispextern.h
+- [x] Add IT_WEBKIT to `enum it_method` in dispextern.h
+- [x] Add webkit_id to glyph union and iterator struct
+- [x] Handle WEBKIT_GLYPH in neomacsterm.c draw functions
+- [ ] Add VIDEO_GLYPH handling (similar to WEBKIT_GLYPH)
+
+### 9.2 xdisp.c Integration
+- [ ] Add `Qvideo` and `Qwebkit` symbols
+- [ ] Add handling in `handle_single_display_spec()`
+- [ ] Implement `produce_video_glyph()` function
+- [ ] Implement `produce_webkit_glyph()` function
+- [ ] Handle glyph dimensions in layout
+
+### 9.3 Iteration Support
+- [ ] Add `GET_FROM_VIDEO` method
+- [ ] Add `GET_FROM_WEBKIT` method
+- [ ] Implement `next_element_from_video()`
+- [ ] Implement `next_element_from_webkit()`
+
+---
+
+## Phase 10: Emacs Build Integration 🔧
+
+### 10.1 Build System Integration
 - [ ] Add Rust build to Emacs `configure.ac`
 - [ ] Add cargo build to `Makefile.in`
-- [ ] Link `libemacs_display.a` with Emacs
-- [ ] Add `--with-rust-display` configure option
+- [ ] Link `libneomacs_display.so` with Emacs
+- [ ] Add `--with-neomacs` configure option
 - [ ] Handle cross-compilation
 
-### 8.2 Modify dispnew.c
+### 10.2 Modify dispnew.c
 - [ ] Include generated C header
 - [ ] Initialize Rust display engine on startup
 - [ ] Replace `update_frame` to call Rust FFI
 - [ ] Convert `glyph_matrix` to Rust `Glyph` array
 - [ ] Handle backend selection (TTY vs GTK4)
 
-### 8.3 Modify xdisp.c
-- [ ] Add VIDEO_GLYPH and WPE_GLYPH handling in display spec
-- [ ] Produce video/wpe glyphs from display properties
-- [ ] Handle video/wpe glyph dimensions in layout
-
-### 8.4 Modify keyboard.c
+### 10.3 Modify keyboard.c
 - [ ] Forward input to video/wpe when cursor on those glyphs
 - [ ] Handle video playback shortcuts
 - [ ] Handle WPE input mode
 
-### 8.5 New Lisp Primitives
-- [ ] Add video primitives to `src/video.c` (new file)
-- [ ] Add WPE primitives to `src/wpe.c` (new file)
-- [ ] Register primitives in `syms_of_video`, `syms_of_wpe`
-- [ ] Add to `emacs.c` initialization
+### 10.4 New Lisp Primitives (Already Done)
+- [x] Add video primitives to `src/neomacsterm.c`
+- [x] Add WebKit primitives to `src/neomacsterm.c`
+- [x] Register primitives in `syms_of_neomacsterm`
 
 ---
 
-## Phase 9: Remove Legacy Backends
+## Phase 11: Remove Legacy Backends ⏳
 
-### 9.1 Remove X11 Backend
+### 11.1 Remove X11 Backend
 - [ ] Remove `xterm.c`, `xterm.h`
 - [ ] Remove `xfns.c`
 - [ ] Remove X11-specific code from `gtkutil.c`
 - [ ] Update configure.ac
 - [ ] Update Makefile.in
 
-### 9.2 Remove Windows Backend
+### 11.2 Remove Windows Backend
 - [ ] Remove `w32term.c`, `w32term.h`
 - [ ] Remove `w32fns.c`
 - [ ] Remove `w32*.c` files
 - [ ] Update configure.ac
 
-### 9.3 Remove macOS Backend
+### 11.3 Remove macOS Backend
 - [ ] Remove `nsterm.m`, `nsterm.h`
 - [ ] Remove `nsfns.m`
 - [ ] Remove `ns*.m` files
 - [ ] Update configure.ac
 
-### 9.4 Remove Other Backends
+### 11.4 Remove Other Backends
 - [ ] Remove Haiku backend (`haikuterm.c`, etc.)
 - [ ] Remove Android backend (`androidterm.c`, etc.)
 - [ ] Remove MS-DOS backend (`msdos.c`)
 - [ ] Remove old X menu code (`oldXMenu/`)
 
-### 9.5 Cleanup
-- [ ] Remove `output_method` enum entries (keep initial, termcap, gtk4)
+### 11.5 Cleanup
+- [ ] Remove `output_method` enum entries (keep initial, termcap, neomacs)
 - [ ] Remove unused conditionals (`HAVE_X_WINDOWS`, `HAVE_NS`, etc.)
 - [ ] Remove unused header includes
 - [ ] Update documentation
 
 ---
 
-## Phase 10: Testing & Documentation
+## Phase 12: Testing & Documentation ⏳
 
-### 10.1 Rust Unit Tests
+### 12.1 Rust Unit Tests
 - [ ] Test core types serialization
 - [ ] Test scene graph construction
 - [ ] Test glyph atlas packing
 - [ ] Test animation interpolation
 - [ ] Test TTY escape sequence generation
 
-### 10.2 Integration Tests
+### 12.2 Integration Tests
 - [ ] Test C FFI from test harness
 - [ ] Test GTK4 rendering with screenshot comparison
 - [ ] Test video playback
 - [ ] Test WPE WebKit loading
 
-### 10.3 Emacs Integration Tests
+### 12.3 Emacs Integration Tests
 - [ ] Test basic text display
 - [ ] Test face rendering (colors, styles)
 - [ ] Test image display
@@ -512,14 +616,14 @@
 - [ ] Test WPE view insertion and navigation
 - [ ] Test smooth scrolling
 
-### 10.4 Performance Benchmarks
+### 12.4 Performance Benchmarks
 - [ ] Benchmark text rendering throughput
 - [ ] Benchmark large buffer scrolling
 - [ ] Benchmark image loading
 - [ ] Benchmark video playback CPU/GPU usage
 - [ ] Compare with old display engine
 
-### 10.5 Documentation
+### 12.5 Documentation
 - [ ] Write Rust API documentation (rustdoc)
 - [ ] Write C FFI documentation
 - [ ] Write Lisp API documentation (docstrings)
@@ -528,28 +632,28 @@
 
 ---
 
-## Phase 11: Polish & Optimization
+## Phase 13: Polish & Optimization ⏳
 
-### 11.1 Performance Optimization
+### 13.1 Performance Optimization
 - [ ] Profile and optimize hot paths
 - [ ] Reduce memory allocations
 - [ ] Optimize scene graph updates (incremental)
 - [ ] Optimize glyph atlas usage
 - [ ] Enable GPU shader optimizations
 
-### 11.2 Error Handling
+### 13.2 Error Handling
 - [ ] Graceful fallback on GPU failure
 - [ ] Handle video codec errors
 - [ ] Handle WPE crash recovery
 - [ ] Log errors to Emacs `*Messages*`
 
-### 11.3 Accessibility
+### 13.3 Accessibility
 - [ ] Ensure screen reader compatibility
 - [ ] Support high contrast themes
 - [ ] Support reduced motion preferences
 - [ ] Support system font scaling
 
-### 11.4 Platform Testing
+### 13.4 Platform Testing
 - [ ] Test on Linux (X11 via XWayland)
 - [ ] Test on Linux (Wayland native)
 - [ ] Test on macOS (via GTK4)
@@ -561,14 +665,16 @@
 
 | Milestone | Phases | Status |
 |-----------|--------|--------|
-| **M1: Basic Rendering** | 1-3 | ✅ TTY + GTK4 text rendering works |
+| **M1: Basic Rendering** | 1, 3 | ✅ GTK4 text rendering works |
 | **M2: Feature Parity** | 4 | ✅ Images work like current Emacs |
 | **M3: Video Support** | 5 | ✅ Video playback in buffers |
 | **M4: WebKit Support** | 6 | ✅ WPE WebKit embedding works |
-| **M5: Smooth UX** | 7 | 🔧 Animations and smooth scrolling |
-| **M6: Full Integration** | 8 | 🔧 Emacs builds and runs with new engine |
-| **M7: Cleanup** | 9 | ⏳ Legacy backends removed |
-| **M8: Release Ready** | 10-11 | ⏳ Tested, documented, optimized |
+| **M5: GPU Zero-Copy** | 7 | ⏳ Video/Image DMA-BUF pipeline |
+| **M6: Smooth UX** | 8 | ⏳ Animations and smooth scrolling |
+| **M7: Inline Display** | 9 | ⏳ `(video :id N)` display property |
+| **M8: Full Integration** | 10 | 🔧 Emacs builds with new engine |
+| **M9: Cleanup** | 11 | ⏳ Legacy backends removed |
+| **M10: Release Ready** | 12-13 | ⏳ Tested, documented, optimized |
 
 ---
 
@@ -582,28 +688,26 @@
 - `cairo-rs` (0.20+) - 2D graphics
 - `gstreamer` (0.23+) - Video playback
 - `gstreamer-video` (0.23+) - Video utilities
-- `tokio` (1.0+) - Async runtime
-- `log` (0.4+) - Logging
-- `thiserror` (1.0+) - Error handling
-- `cbindgen` (0.26+) - C header generation
 
 ### System Libraries
 - GTK4 (4.10+)
 - GStreamer (1.20+)
-- WPE WebKit (2.38+) - when available
+- WPE WebKit (2.38+)
+- libwpe, wpebackend-fdo
 - Pango (1.50+)
 - Cairo (1.16+)
+- VA-API (for hardware video decoding)
+- Mesa (for DMA-BUF)
 
 ---
 
 ## Open Questions
 
-1. ~~**WPE Rust bindings**: Do mature bindings exist, or need to create?~~ → Solved: bindgen for C APIs
+1. ~~**WPE Rust bindings**: Do mature bindings exist?~~ → Solved: bindgen for C APIs
 2. **GTK4 minimum version**: What's the minimum GTK4 version to support?
 3. **Fallback rendering**: Should we support software rendering fallback?
 4. **Thread model**: How to handle Rust async with Emacs event loop?
 5. **Memory sharing**: How to efficiently share buffer text with Rust?
-6. **Inline display**: How to wire up `(webkit :id N)` in xdisp.c?
 
 ---
 
@@ -612,5 +716,7 @@
 - [gtk4-rs Documentation](https://gtk-rs.org/gtk4-rs/stable/latest/docs/gtk4/)
 - [gstreamer-rs Documentation](https://gstreamer.freedesktop.org/documentation/rust/)
 - [WPE WebKit](https://wpewebkit.org/)
-- [cbindgen](https://github.com/mozilla/cbindgen)
+- [VA-API](https://github.com/intel/libva)
+- [DMA-BUF](https://docs.kernel.org/driver-api/dma-buf.html)
+- [GdkDmabufTexture](https://docs.gtk.org/gdk4/class.DmabufTexture.html)
 - [Emacs Internals](https://www.gnu.org/software/emacs/manual/html_node/elisp/Display.html)
