@@ -519,7 +519,7 @@ a `GdkPaintable` that can be snapshotted directly into our render tree.
 
 ---
 
-## Phase 9: Inline Display Support ⏳ (HIGH PRIORITY)
+## Phase 9: Inline Display Support ✅ C CODE COMPLETE
 
 **Goal**: Support `(video :id N)` and `(webkit :id N)` display properties in buffer text, just like `(image ...)` works today.
 
@@ -528,28 +528,26 @@ a `GdkPaintable` that can be snapshotted directly into our render tree.
 | Type | Display Property | xdisp.c | Status |
 |------|------------------|---------|--------|
 | **Image** | `(image :file "x.png")` | ✅ `Qimage`, `produce_image_glyph()` | ✅ **WORKS** |
-| **Video** | `(video :id N)` | ✅ `Qvideo`, `produce_video_glyph()` | ⏳ **C CODE DONE** |
-| **WebKit** | `(webkit :id N)` | ✅ `Qwebkit`, `produce_webkit_glyph()` | ⏳ **C CODE DONE** |
+| **Video** | `(video :id N :width W :height H)` | ✅ Full support | ✅ **C CODE COMPLETE** |
+| **WebKit** | `(webkit :id N :width W :height H)` | ✅ Full support | ✅ **C CODE COMPLETE** |
 
-### Usage Example (Target)
+### Usage Example
 ```elisp
 ;; Image (already works)
 (put-text-property 1 2 'display '(image :file "/path/to/image.png"))
 
-;; Video (C code done, need renderer)
-(let ((id (neomacs-video-load "/path/to/video.mp4")))
-  (put-text-property 1 2 'display `(video :id ,id :width 640 :height 480)))
+;; Video display property (renders placeholder, needs VideoCache lookup)
+(put-text-property 1 2 'display '(video :id 1 :width 640 :height 480))
 
-;; WebKit (C code done, need renderer)
-(let ((id (neomacs-webkit-create 800 600)))
-  (neomacs-webkit-load-uri id "https://example.com")
-  (put-text-property 1 2 'display `(webkit :id ,id)))
+;; WebKit display property (renders placeholder, needs WebKitCache lookup)
+(put-text-property 1 2 'display '(webkit :id 2 :width 800 :height 600))
 ```
 
 ### 9.1 Display Property Infrastructure ✅ COMPLETE
 - [x] Add VIDEO_GLYPH to `enum glyph_type` in dispextern.h
 - [x] Add IT_VIDEO to `enum it_method` in dispextern.h
 - [x] Add video_id to glyph union and iterator struct
+- [x] Add video_width, video_height to iterator struct
 - [x] Add WEBKIT_GLYPH to `enum glyph_type` in dispextern.h
 - [x] Add IT_WEBKIT to `enum it_method` in dispextern.h
 - [x] Add webkit_id to glyph union and iterator struct
@@ -559,34 +557,43 @@ a `GdkPaintable` that can be snapshotted directly into our render tree.
 - [x] Add `Qwebkit` symbol via DEFSYM (neomacsterm.c)
 - [x] Add `QCid` symbol via DEFSYM (neomacsterm.c)
 - [x] Add VIDEOP() and WEBKITP() predicates (lisp.h)
+- [x] Add video/webkit to handle_display_spec exclusion list
 - [x] Parse `(video :id N :width W :height H)` in `handle_single_display_spec()`
-- [x] Parse `(webkit :id N)` in `handle_single_display_spec()`
+- [x] Parse `(webkit :id N :width W :height H)` in `handle_single_display_spec()`
 
 ### 9.3 Glyph Production Functions ✅ COMPLETE
 - [x] Implement `produce_video_glyph()` (similar to `produce_xwidget_glyph()`)
 - [x] Implement `produce_webkit_glyph()`
-- [x] Set glyph dimensions from video/webkit size (default 320x240 / 800x600)
+- [x] Set glyph dimensions from :width/:height properties
 - [x] Handle ascent/descent calculation
 - [x] Add IT_VIDEO and IT_WEBKIT cases to produce_glyphs switch
 
-### 9.4 Rust Renderer Integration ⏳ IN PROGRESS
-- [ ] Handle VIDEO_GLYPH in gsk_renderer.rs (draw_glyph_row)
-- [ ] Handle WEBKIT_GLYPH in gsk_renderer.rs (draw_glyph_row)
+### 9.4 Iterator/Display Infrastructure ✅ COMPLETE
+- [x] Add GET_FROM_VIDEO and GET_FROM_WEBKIT to push_it() switch
+- [x] Add GET_FROM_VIDEO and GET_FROM_WEBKIT to pop_it() switch
+- [x] Add GET_FROM_VIDEO and GET_FROM_WEBKIT to set_iterator_to_next()
+- [x] Implement next_element_from_video() and next_element_from_webkit()
+- [x] Add to get_next_element[] dispatch table
+
+### 9.5 Glyph String Building ✅ COMPLETE
+- [x] Implement fill_video_glyph_string()
+- [x] Implement fill_webkit_glyph_string()
+- [x] Define BUILD_VIDEO_GLYPH_STRING macro
+- [x] Define BUILD_WEBKIT_GLYPH_STRING macro
+- [x] Add VIDEO_GLYPH case to BUILD_GLYPH_STRINGS_2
+- [x] Add WEBKIT_GLYPH case to BUILD_GLYPH_STRINGS_2
+
+### 9.6 Rust Renderer Integration ⏳ TODO
+- [ ] Handle VIDEO_GLYPH in gsk_renderer.rs (currently renders blue placeholder)
+- [ ] Handle WEBKIT_GLYPH in gsk_renderer.rs (currently renders blue placeholder)
 - [ ] Look up video paintable from VideoCache by glyph.u.video_id
 - [ ] Look up webkit texture from WebKitCache by glyph.u.webkit_id
 - [ ] Snapshot paintable/texture at glyph position
-- [ ] Test inline video rendering
-- [ ] Test inline webkit rendering
 
-### 9.5 Future Enhancements
-- [ ] GET_FROM_VIDEO and GET_FROM_WEBKIT iterator methods (if needed)
-- [ ] Dynamic dimension retrieval from cache instead of hardcoded defaults
+### 9.7 Future Enhancements
+- [ ] Dynamic dimension retrieval from cache instead of display property
 - [ ] Slice support for partial video/webkit display
 - [ ] Handle video/webkit resize on window resize
-
-### 9.5 Layout Integration
-- [ ] Handle video/webkit glyph dimensions in `x_produce_glyphs()`
-- [ ] Handle line height calculation with video/webkit
 - [ ] Handle cursor movement over video/webkit glyphs
 - [ ] Handle mouse click on video/webkit glyphs
 
