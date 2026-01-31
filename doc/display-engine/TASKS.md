@@ -590,6 +590,12 @@ a `GdkPaintable` that can be snapshotted directly into our render tree.
 - [x] Look up webkit texture from WebKitCache by glyph.u.webkit_id
 - [x] Snapshot paintable/texture at glyph position
 - [x] Fall back to placeholder if no texture available
+- [x] Wire video/image caches through thread-local for widget path
+
+**Note:** Video frames require gtk4paintablesink to be integrated with
+GTK's frame clock for frame production. Currently renders placeholder
+until frames are produced. This needs further investigation of GTK
+main loop integration with Emacs event loop.
 
 ### 9.7 Future Enhancements
 - [ ] Dynamic dimension retrieval from cache instead of display property
