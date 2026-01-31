@@ -19,7 +19,7 @@ use crate::backend::DisplayBackend;
 pub use renderer::Gtk4Renderer;
 pub use gsk_renderer::GskRenderer;
 pub use widget::{NeomacsWidget, set_widget_video_cache, set_widget_image_cache};
-pub use video::VideoCache;
+pub use video::{VideoCache, set_video_widget};
 pub use image::ImageCache;
 
 /// Shared state for the GTK4 backend

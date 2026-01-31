@@ -4,6 +4,8 @@
 //! rendering via DMA-BUF when running on Wayland with VA-API hardware.
 
 #[cfg(feature = "video")]
+use std::cell::RefCell;
+#[cfg(feature = "video")]
 use std::collections::HashMap;
 #[cfg(feature = "video")]
 use std::sync::{Arc, Mutex};
@@ -19,7 +21,27 @@ use gtk4::gdk;
 #[cfg(feature = "video")]
 use gtk4::glib;
 #[cfg(feature = "video")]
-use gtk4::prelude::{TextureExt, TextureExtManual, PaintableExt};
+use gtk4::prelude::{TextureExt, TextureExtManual, PaintableExt, WidgetExt};
+
+// Thread-local widget reference for video frame invalidation callbacks
+#[cfg(feature = "video")]
+thread_local! {
+    static VIDEO_WIDGET: RefCell<Option<gtk4::Widget>> = const { RefCell::new(None) };
+}
+
+/// Set the widget for video frame invalidation callbacks
+#[cfg(feature = "video")]
+pub fn set_video_widget(widget: Option<gtk4::Widget>) {
+    VIDEO_WIDGET.with(|w| {
+        *w.borrow_mut() = widget;
+    });
+}
+
+/// Get the widget for video frame invalidation callbacks
+#[cfg(feature = "video")]
+fn get_video_widget() -> Option<gtk4::Widget> {
+    VIDEO_WIDGET.with(|w| w.borrow().clone())
+}
 
 use crate::core::error::{DisplayError, DisplayResult};
 
@@ -136,10 +158,7 @@ impl GpuVideoPlayer {
         let hw_accel = gst::ElementFactory::find("vah264dec").is_some()
             || gst::ElementFactory::find("vaapidecodebin").is_some();
 
-        eprintln!("[GpuVideoPlayer] Created with gtk4paintablesink (DMA-BUF zero-copy enabled)");
-        eprintln!("[GpuVideoPlayer] VA-API hardware decoding: {}", if hw_accel { "available" } else { "not available" });
-
-        Ok(Self {
+        let player = Self {
             pipeline,
             gtk4sink,
             width: 0,
@@ -151,7 +170,28 @@ impl GpuVideoPlayer {
             volume: 1.0,
             hw_accel,
             use_dmabuf: true, // gtk4paintablesink handles this automatically
-        })
+        };
+
+        // Connect paintable's invalidate-contents signal to trigger widget redraw
+        player.connect_invalidate_signal();
+
+        Ok(player)
+    }
+
+    /// Connect paintable's invalidate-contents signal to trigger widget redraw
+    ///
+    /// This is essential for video playback: when gtk4paintablesink produces a new
+    /// frame, it emits invalidate-contents on the paintable. We need to listen for
+    /// this and queue a redraw on the Emacs widget.
+    fn connect_invalidate_signal(&self) {
+        if let Some(paintable) = self.get_paintable() {
+            paintable.connect_invalidate_contents(|_paintable| {
+                // Queue redraw on the widget stored in thread-local
+                if let Some(widget) = get_video_widget() {
+                    widget.queue_draw();
+                }
+            });
+        }
     }
 
     /// Get the GdkPaintable from the sink for rendering

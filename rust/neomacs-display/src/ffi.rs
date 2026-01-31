@@ -4,7 +4,7 @@ use std::ffi::{c_char, c_int, c_void, CStr, CString};
 use std::ptr;
 
 use crate::backend::{BackendType, DisplayBackend};
-use crate::backend::gtk4::{Gtk4Backend, Gtk4Renderer, GskRenderer, VideoCache, ImageCache};
+use crate::backend::gtk4::{Gtk4Backend, Gtk4Renderer, GskRenderer, VideoCache, ImageCache, set_video_widget};
 use crate::backend::tty::TtyBackend;
 use crate::core::types::{Color, Rect};
 use crate::core::scene::{Scene, WindowScene, CursorState, CursorStyle};
@@ -1166,6 +1166,7 @@ pub unsafe extern "C" fn neomacs_display_render_to_widget(
     widget: *mut c_void,
 ) -> c_int {
     use gtk4::glib::translate::from_glib_none;
+    use gtk4::prelude::{WidgetExt, Cast};
 
     if handle.is_null() || widget.is_null() {
         return -1;
@@ -1173,6 +1174,10 @@ pub unsafe extern "C" fn neomacs_display_render_to_widget(
 
     let display = &mut *handle;
     let widget: NeomacsWidget = from_glib_none(widget as *mut _);
+
+    // Set widget for video frame invalidation callbacks
+    // This allows video paintables to trigger redraws when new frames arrive
+    set_video_widget(Some(widget.clone().upcast::<gtk4::Widget>()));
 
     // Count glyphs
     let total_glyphs: usize = display.scene.windows.iter()

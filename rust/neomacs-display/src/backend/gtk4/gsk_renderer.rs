@@ -151,24 +151,50 @@ impl GskRenderer {
                 if let Some(player) = cache.get(floating.video_id) {
                     // Prefer using paintable directly (more efficient for gtk4paintablesink)
                     if let Some(paintable) = player.get_paintable() {
-                        let video_rect = graphene::Rect::new(
-                            floating.x,
-                            floating.y,
-                            floating.width,
-                            floating.height,
-                        );
-                        // Create a snapshot and render the paintable to it
-                        let snapshot = gtk4::Snapshot::new();
-                        snapshot.push_clip(&video_rect);
-                        snapshot.translate(&graphene::Point::new(floating.x, floating.y));
-                        paintable.snapshot(
-                            snapshot.upcast_ref::<gdk::Snapshot>(),
-                            floating.width as f64,
-                            floating.height as f64,
-                        );
-                        snapshot.pop(); // pop clip
-                        if let Some(node) = snapshot.to_node() {
-                            nodes.push(node);
+                        let pw = paintable.intrinsic_width();
+                        let ph = paintable.intrinsic_height();
+
+                        // Skip if paintable has no content yet
+                        if pw <= 0 || ph <= 0 {
+                            // Draw placeholder
+                            let video_rect = graphene::Rect::new(
+                                floating.x,
+                                floating.y,
+                                floating.width,
+                                floating.height,
+                            );
+                            let placeholder_color = gdk::RGBA::new(0.2, 0.2, 0.3, 1.0);
+                            let placeholder_node = gsk::ColorNode::new(&placeholder_color, &video_rect);
+                            nodes.push(placeholder_node.upcast());
+                            continue;
+                        }
+
+                        // Try to get current image as a texture for direct rendering
+                        let current_image = paintable.current_image();
+                        if let Ok(texture) = current_image.clone().downcast::<gdk::Texture>() {
+                            // We have a texture, render it directly
+                            let video_rect = graphene::Rect::new(
+                                floating.x,
+                                floating.y,
+                                floating.width,
+                                floating.height,
+                            );
+                            let texture_node = gsk::TextureNode::new(&texture, &video_rect);
+                            nodes.push(texture_node.upcast());
+                        } else {
+                            // Snapshot the paintable - use simpler approach without clip
+                            let snapshot = gtk4::Snapshot::new();
+                            snapshot.save();
+                            snapshot.translate(&graphene::Point::new(floating.x, floating.y));
+                            paintable.snapshot(
+                                snapshot.upcast_ref::<gdk::Snapshot>(),
+                                floating.width as f64,
+                                floating.height as f64,
+                            );
+                            snapshot.restore();
+                            if let Some(node) = snapshot.to_node() {
+                                nodes.push(node);
+                            }
                         }
                     } else if let Some(texture) = player.get_frame_texture() {
                         // Fallback to texture if paintable not available
