@@ -287,7 +287,7 @@ neomacs_initialize_display_info (struct neomacs_display_info *dpyinfo)
 	    }
 	}
 
-      if (1) fprintf (stderr, "DEBUG: Display connection fd: %d\n", dpyinfo->connection);
+      if (0) fprintf (stderr, "DEBUG: Display connection fd: %d\n", dpyinfo->connection);
     }
 }
 
@@ -374,11 +374,11 @@ neomacs_create_terminal (struct neomacs_display_info *dpyinfo)
   if (dpyinfo->connection >= 0)
     {
       add_keyboard_wait_descriptor (dpyinfo->connection);
-      fprintf (stderr, "DEBUG: Registered fd %d with add_keyboard_wait_descriptor\n", 
+if (0) fprintf (stderr, "DEBUG: Registered fd %d with add_keyboard_wait_descriptor\n", 
                dpyinfo->connection);
     }
   else
-    fprintf (stderr, "DEBUG: WARNING: No valid connection fd to register!\n");
+if (0) fprintf (stderr, "DEBUG: WARNING: No valid connection fd to register!\n");
 
   /* More hooks would be set up here... */
 
@@ -458,7 +458,7 @@ neomacs_update_window_begin (struct window *w)
       unsigned long bg = FRAME_BACKGROUND_PIXEL (f);
       int selected = (w == XWINDOW (f->selected_window)) ? 1 : 0;
 
-      fprintf (stderr, "DEBUG add_window: x=%d y=%d w=%d h=%d bg=%08lx\n",
+if (0) fprintf (stderr, "DEBUG add_window: x=%d y=%d w=%d h=%d bg=%08lx\n",
                x, y, width, height, bg);
 
       neomacs_display_add_window (dpyinfo->display_handle,
@@ -1033,7 +1033,7 @@ neomacs_draw_vertical_window_border (struct window *w, int x, int y0, int y1)
   struct face *face;
   unsigned long fg;
 
-  fprintf (stderr, "DEBUG C draw_vertical_border: x=%d, y0=%d, y1=%d, dpyinfo=%p, handle=%p\n",
+if (0) fprintf (stderr, "DEBUG C draw_vertical_border: x=%d, y0=%d, y1=%d, dpyinfo=%p, handle=%p\n",
            x, y0, y1, (void*)dpyinfo, dpyinfo ? (void*)dpyinfo->display_handle : NULL);
 
   if (!output)
@@ -1051,14 +1051,14 @@ neomacs_draw_vertical_window_border (struct window *w, int x, int y0, int y1)
     {
       /* Convert to ARGB format with full opacity */
       uint32_t color = (0xFF << 24) | (fg & 0xFFFFFF);
-      fprintf (stderr, "DEBUG C: calling neomacs_display_draw_border\n");
+if (0) fprintf (stderr, "DEBUG C: calling neomacs_display_draw_border\n");
       neomacs_display_draw_border (dpyinfo->display_handle,
                                    x, y0, 1, y1 - y0, color);
     }
   else if (output->cr_context)
     {
       /* Fallback to Cairo */
-      fprintf (stderr, "DEBUG C: using Cairo fallback\n");
+if (0) fprintf (stderr, "DEBUG C: using Cairo fallback\n");
       cairo_t *cr = output->cr_context;
       double r = RED_FROM_ULONG (fg) / 255.0;
       double g = GREEN_FROM_ULONG (fg) / 255.0;
@@ -1104,6 +1104,12 @@ neomacs_draw_window_cursor (struct window *w, struct glyph_row *row,
   if (cursor_color == 0)
     cursor_color = 0x00FF00;  /* Green for visibility */
 
+  /* Convert window-relative x,y to frame-absolute coordinates */
+  int window_left = WINDOW_LEFT_EDGE_X (w);
+  int window_top = WINDOW_TOP_EDGE_Y (w);
+  int frame_x = window_left + x;
+  int frame_y = window_top + y;
+
   /* Use GPU path if available */
   if (dpyinfo && dpyinfo->display_handle)
     {
@@ -1134,12 +1140,10 @@ neomacs_draw_window_cursor (struct window *w, struct glyph_row *row,
       /* Convert color to RGBA format (0xAARRGGBB) */
       uint32_t rgba = 0xFF000000 | (cursor_color & 0xFFFFFF);
       
-      /* Pass window pointer as ID so cursor is set on correct window */
-      fprintf(stderr, "DEBUG set_cursor: win=%p, x=%d, y=%d, style=%d (type=%d)\n",
-              (void*)w, x, y, style, cursor_type);
+      /* Use frame-absolute coordinates for cursor position */
       neomacs_display_set_cursor (dpyinfo->display_handle,
                                   (int)(intptr_t) w,
-                                  (float) x, (float) y,
+                                  (float) frame_x, (float) frame_y,
                                   (float) char_width, (float) char_height,
                                   style, rgba, 1);
       neomacs_display_reset_cursor_blink (dpyinfo->display_handle);
@@ -1345,7 +1349,7 @@ neomacs_read_socket (struct terminal *terminal, struct input_event *hold_quit)
   count = neomacs_evq_flush (hold_quit);
   if (count > 0)
     {
-      fprintf (stderr, "DEBUG: read_socket: flushed %d pre-queued events\n", count);
+if (0) fprintf (stderr, "DEBUG: read_socket: flushed %d pre-queued events\n", count);
       return count;
     }
 
@@ -1366,13 +1370,13 @@ neomacs_read_socket (struct terminal *terminal, struct input_event *hold_quit)
           pending_count++;
         }
       if (++read_socket_calls % 500 == 0)
-        fprintf (stderr, "DEBUG: read_socket: dispatched %d events (call #%d)\n", 
+if (0) fprintf (stderr, "DEBUG: read_socket: dispatched %d events (call #%d)\n", 
                  pending_count, read_socket_calls);
     }
   else
     {
       if (++read_socket_calls % 500 == 0)
-        fprintf (stderr, "DEBUG: read_socket: could NOT acquire context (call #%d)\n", 
+if (0) fprintf (stderr, "DEBUG: read_socket: could NOT acquire context (call #%d)\n", 
                  read_socket_calls);
     }
 
@@ -1384,7 +1388,7 @@ neomacs_read_socket (struct terminal *terminal, struct input_event *hold_quit)
   /* Flush events that were queued during dispatch */
   count = neomacs_evq_flush (hold_quit);
   if (count > 0)
-    fprintf (stderr, "DEBUG: read_socket: flushed %d events after dispatch\n", count);
+if (0) fprintf (stderr, "DEBUG: read_socket: flushed %d events after dispatch\n", count);
   return count;
 }
 
