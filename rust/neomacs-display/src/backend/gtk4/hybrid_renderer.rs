@@ -71,6 +71,8 @@ impl HybridRenderer {
         c: char,
         face_id: u32,
         fg: &Color,
+        bold: bool,
+        italic: bool,
     ) -> Option<&CachedGlyph> {
         let key = GlyphKey {
             charcode: c as u32,
@@ -82,9 +84,17 @@ impl HybridRenderer {
             return self.glyph_atlas.get(&key);
         }
 
-        debug!("Rasterizing '{}' (face_id={}, fg={:?}, scale={})", c, face_id, fg, self.scale_factor);
+        warn!("Rasterizing '{}' (face_id={}, fg={:?}, bold={}, italic={}, scale={})", c, face_id, fg, bold, italic, self.scale_factor);
 
         // Need to rasterize - create a temporary face with the foreground color
+        let mut attrs = crate::core::face::FaceAttributes::empty();
+        if bold {
+            attrs |= crate::core::face::FaceAttributes::BOLD;
+        }
+        if italic {
+            attrs |= crate::core::face::FaceAttributes::ITALIC;
+        }
+
         let face = Face {
             id: face_id,
             foreground: *fg,
@@ -95,8 +105,8 @@ impl HybridRenderer {
             box_color: None,
             font_family: "monospace".to_string(),
             font_size: 13.0,
-            font_weight: 400,
-            attributes: crate::core::face::FaceAttributes::empty(),
+            font_weight: if bold { 700 } else { 400 },
+            attributes: attrs,
             underline_style: crate::core::face::UnderlineStyle::None,
             box_type: crate::core::face::BoxType::None,
             box_line_width: 0,
@@ -424,6 +434,8 @@ impl HybridRenderer {
                 fg,
                 bg,
                 face_id,
+                bold,
+                italic,
                 ..
             } => {
                 *char_count += 1;
@@ -440,7 +452,7 @@ impl HybridRenderer {
 
                 // Get or rasterize glyph
                 let scale = self.scale_factor;
-                if let Some(cached) = self.get_or_rasterize_glyph(*char, *face_id, fg) {
+                if let Some(cached) = self.get_or_rasterize_glyph(*char, *face_id, fg, *bold, *italic) {
                     // Position glyph using bearing (bearing is already in device pixels, divide by scale)
                     let glyph_x = x + cached.bearing_x / scale;
                     let glyph_y = y + ascent - cached.bearing_y / scale;
@@ -669,6 +681,8 @@ impl HybridRenderer {
                 fg,
                 bg,
                 face_id,
+                bold,
+                italic,
                 ..
             } => {
                 *char_count += 1;
@@ -680,7 +694,7 @@ impl HybridRenderer {
                     return;
                 }
                 let scale = self.scale_factor;
-                if let Some(cached) = self.get_or_rasterize_glyph(*char, *face_id, fg) {
+                if let Some(cached) = self.get_or_rasterize_glyph(*char, *face_id, fg, *bold, *italic) {
                     // Scale down from device pixels to logical pixels for rendering
                     let tex_rect = graphene::Rect::new(
                         *x + cached.bearing_x / scale,
