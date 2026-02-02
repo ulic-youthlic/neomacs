@@ -57,6 +57,42 @@ struct neomacs_bitmap_record
   cairo_pattern_t *pattern;
 };
 
+/* Scroll bar structure - one per scroll bar widget */
+struct scroll_bar
+{
+  /* These fields are shared by all vectors.  */
+  union vectorlike_header header;
+
+  /* The window we're a scroll bar for.  */
+  Lisp_Object window;
+
+  /* The next and previous in the chain of scroll bars in this frame.  */
+  Lisp_Object next, prev;
+
+  /* Fields from `x_window' down will not be traced by the GC.  */
+
+  /* The window representing this scroll bar (GTK widget handle).  */
+  Window x_window;
+
+  /* The position and size of the scroll bar in pixels, relative to the frame.  */
+  int top, left, width, height;
+
+  /* The starting and ending positions of the handle, relative to the
+     handle area (zero is the top position).  */
+  int start, end;
+
+  /* If the scroll bar handle is currently being dragged by the user,
+     this is the number of pixels from the top of the handle to the
+     place where the user grabbed it.  If not being dragged, this is -1.  */
+  int dragging;
+
+  /* True if the scroll bar is horizontal.  */
+  bool horizontal;
+};
+
+/* Turning a lisp vector value into a pointer to a struct scroll_bar.  */
+#define XSCROLL_BAR(vec) ((struct scroll_bar *) XVECTOR (vec))
+
 /* Neomacs display info structure - one per display connection */
 struct neomacs_display_info
 {

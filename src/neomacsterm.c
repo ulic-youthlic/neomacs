@@ -49,6 +49,13 @@ struct neomacs_display_info *neomacs_display_list = NULL;
 /* Forward declarations */
 static void neomacs_set_window_size (struct frame *f, bool change_gravity,
                                      int width, int height);
+static void neomacs_set_vertical_scroll_bar (struct window *w, int portion,
+                                             int whole, int position);
+static void neomacs_set_horizontal_scroll_bar (struct window *w, int portion,
+                                               int whole, int position);
+static void neomacs_condemn_scroll_bars (struct frame *frame);
+static void neomacs_redeem_scroll_bar (struct window *w);
+static void neomacs_judge_scroll_bars (struct frame *f);
 
 /* Event queue for buffering input events from GTK callbacks */
 struct neomacs_event_queue_t
@@ -377,11 +384,18 @@ neomacs_create_terminal (struct neomacs_display_info *dpyinfo)
   terminal->change_tab_bar_height_hook = neomacs_change_tab_bar_height;
   terminal->set_window_size_hook = neomacs_set_window_size;
 
+  /* Scroll bar hooks */
+  terminal->set_vertical_scroll_bar_hook = neomacs_set_vertical_scroll_bar;
+  terminal->set_horizontal_scroll_bar_hook = neomacs_set_horizontal_scroll_bar;
+  terminal->condemn_scroll_bars_hook = neomacs_condemn_scroll_bars;
+  terminal->redeem_scroll_bar_hook = neomacs_redeem_scroll_bar;
+  terminal->judge_scroll_bars_hook = neomacs_judge_scroll_bars;
+
   /* Register the display connection fd for event handling */
   if (dpyinfo->connection >= 0)
     {
       add_keyboard_wait_descriptor (dpyinfo->connection);
-if (0) fprintf (stderr, "DEBUG: Registered fd %d with add_keyboard_wait_descriptor\n", 
+if (0) fprintf (stderr, "DEBUG: Registered fd %d with add_keyboard_wait_descriptor\n",
                dpyinfo->connection);
     }
   else
@@ -444,7 +458,7 @@ neomacs_update_end (struct frame *f)
         {
           neomacs_display_render_to_widget (dpyinfo->display_handle, output->drawing_area);
         }
-      
+
       gtk_widget_queue_draw (GTK_WIDGET (output->drawing_area));
     }
 }
@@ -560,6 +574,146 @@ neomacs_set_window_size (struct frame *f, bool change_gravity,
   unblock_input ();
 }
 
+/* ============================================================================
+ * Scroll Bar Support (Stubs)
+ * ============================================================================
+ *
+ * Note: Full scroll bar support requires creating GtkScrollbar widgets
+ * and integrating them with the NeomacsWidget. These stub implementations
+ * allow Emacs to function without scroll bars while that work is completed.
+ */
+
+/* Set vertical scroll bar for window W */
+static void
+neomacs_set_vertical_scroll_bar (struct window *w, int portion, int whole,
+                                 int position)
+{
+  /* TODO: Create/update GTK scroll bar widget
+     For now, this is a stub that allows Emacs to function without scroll bars */
+}
+
+/* Set horizontal scroll bar for window W */
+static void
+neomacs_set_horizontal_scroll_bar (struct window *w, int portion, int whole,
+                                   int position)
+{
+  /* TODO: Create/update GTK scroll bar widget
+     For now, this is a stub */
+}
+
+/* Mark all scroll bars on FRAME for deletion */
+static void
+neomacs_condemn_scroll_bars (struct frame *frame)
+{
+  /* Move all scroll bars to condemned list.
+     Since we don't create scroll bars yet, just clear the lists. */
+  if (!NILP (FRAME_SCROLL_BARS (frame)))
+    {
+      /* Prepend to condemned list */
+      if (!NILP (FRAME_CONDEMNED_SCROLL_BARS (frame)))
+        {
+          Lisp_Object last = FRAME_SCROLL_BARS (frame);
+          while (!NILP (XSCROLL_BAR (last)->next))
+            last = XSCROLL_BAR (last)->next;
+          XSCROLL_BAR (last)->next = FRAME_CONDEMNED_SCROLL_BARS (frame);
+          XSCROLL_BAR (FRAME_CONDEMNED_SCROLL_BARS (frame))->prev = last;
+        }
+      fset_condemned_scroll_bars (frame, FRAME_SCROLL_BARS (frame));
+      fset_scroll_bars (frame, Qnil);
+    }
+}
+
+/* Un-mark WINDOW's scroll bar for deletion */
+static void
+neomacs_redeem_scroll_bar (struct window *w)
+{
+  struct scroll_bar *bar;
+  Lisp_Object barobj;
+  struct frame *f;
+
+  /* If window has no scroll bar, nothing to redeem */
+  if (NILP (w->vertical_scroll_bar) && NILP (w->horizontal_scroll_bar))
+    return;
+
+  f = XFRAME (WINDOW_FRAME (w));
+
+  /* Redeem vertical scroll bar */
+  if (!NILP (w->vertical_scroll_bar) && WINDOW_HAS_VERTICAL_SCROLL_BAR (w))
+    {
+      bar = XSCROLL_BAR (w->vertical_scroll_bar);
+
+      /* Unlink from condemned list */
+      if (NILP (bar->prev))
+        {
+          if (EQ (FRAME_SCROLL_BARS (f), w->vertical_scroll_bar))
+            goto horizontal;  /* Not condemned */
+          else if (EQ (FRAME_CONDEMNED_SCROLL_BARS (f), w->vertical_scroll_bar))
+            fset_condemned_scroll_bars (f, bar->next);
+        }
+      else
+        XSCROLL_BAR (bar->prev)->next = bar->next;
+
+      if (!NILP (bar->next))
+        XSCROLL_BAR (bar->next)->prev = bar->prev;
+
+      /* Add back to active list */
+      bar->next = FRAME_SCROLL_BARS (f);
+      bar->prev = Qnil;
+      XSETVECTOR (barobj, bar);
+      fset_scroll_bars (f, barobj);
+      if (!NILP (bar->next))
+        XSCROLL_BAR (bar->next)->prev = barobj;
+    }
+
+ horizontal:
+  /* Redeem horizontal scroll bar */
+  if (!NILP (w->horizontal_scroll_bar) && WINDOW_HAS_HORIZONTAL_SCROLL_BAR (w))
+    {
+      bar = XSCROLL_BAR (w->horizontal_scroll_bar);
+
+      if (NILP (bar->prev))
+        {
+          if (EQ (FRAME_SCROLL_BARS (f), w->horizontal_scroll_bar))
+            return;  /* Not condemned */
+          else if (EQ (FRAME_CONDEMNED_SCROLL_BARS (f), w->horizontal_scroll_bar))
+            fset_condemned_scroll_bars (f, bar->next);
+        }
+      else
+        XSCROLL_BAR (bar->prev)->next = bar->next;
+
+      if (!NILP (bar->next))
+        XSCROLL_BAR (bar->next)->prev = bar->prev;
+
+      bar->next = FRAME_SCROLL_BARS (f);
+      bar->prev = Qnil;
+      XSETVECTOR (barobj, bar);
+      fset_scroll_bars (f, barobj);
+      if (!NILP (bar->next))
+        XSCROLL_BAR (bar->next)->prev = barobj;
+    }
+}
+
+/* Destroy all condemned scroll bars on FRAME */
+static void
+neomacs_judge_scroll_bars (struct frame *f)
+{
+  Lisp_Object bar, next;
+
+  bar = FRAME_CONDEMNED_SCROLL_BARS (f);
+  fset_condemned_scroll_bars (f, Qnil);
+
+  for (; !NILP (bar); bar = next)
+    {
+      struct scroll_bar *b = XSCROLL_BAR (bar);
+
+      /* TODO: Actually destroy the GTK scroll bar widget here
+         For now, just unlink the scroll bar */
+
+      next = b->next;
+      b->next = b->prev = Qnil;
+    }
+}
+
 /* Make frame visible or invisible */
 static void
 neomacs_make_frame_visible_invisible (struct frame *f, bool visible)
@@ -617,7 +771,7 @@ neomacs_defined_color (struct frame *f, const char *color_name,
                           | (color_def->blue >> 8) << 0);
       return true;
     }
-  
+
   return false;
 }
 
@@ -692,7 +846,7 @@ neomacs_draw_glyph_string (struct glyph_string *s)
           /* s->y is already frame-relative (set via WINDOW_TO_FRAME_PIXEL_Y in xdisp.c),
              so we use it directly without adding window_top again */
           int glyph_y = s->y;
-          
+
           neomacs_display_begin_row (dpyinfo->display_handle,
                                      glyph_y,
                                      s->x,  /* Starting X position for this glyph string */
@@ -703,20 +857,20 @@ neomacs_draw_glyph_string (struct glyph_string *s)
 
           /* Add glyphs to Rust scene graph */
           int face_id = s->face ? s->face->id : 0;
-          
+
           /* Register face with colors/attributes if we have face info */
           if (s->face)
             {
               struct face *face = s->face;
               unsigned long fg = face->foreground;
               unsigned long bg = face->background;
-              
+
               /* If foreground is defaulted, use frame foreground */
               if (face->foreground_defaulted_p)
                 fg = FRAME_FOREGROUND_PIXEL(s->f);
               if (face->background_defaulted_p)
                 bg = FRAME_BACKGROUND_PIXEL(s->f);
-              
+
               /* Convert Emacs colors to 0xRRGGBB format */
               uint32_t fg_rgb = ((RED_FROM_ULONG(fg) << 16) |
                                 (GREEN_FROM_ULONG(fg) << 8) |
@@ -724,11 +878,11 @@ neomacs_draw_glyph_string (struct glyph_string *s)
               uint32_t bg_rgb = ((RED_FROM_ULONG(bg) << 16) |
                                 (GREEN_FROM_ULONG(bg) << 8) |
                                 BLUE_FROM_ULONG(bg));
-              
+
               /* Get font weight and slant from lface attributes */
               int font_weight = 400;  /* normal */
               int is_italic = 0;
-              
+
               /* Check face's lface for weight (bold) */
               Lisp_Object weight_attr = face->lface[LFACE_WEIGHT_INDEX];
               if (!NILP (weight_attr) && SYMBOLP (weight_attr))
@@ -737,7 +891,7 @@ neomacs_draw_glyph_string (struct glyph_string *s)
                   if (weight_numeric > 0)
                     font_weight = weight_numeric;
                 }
-              
+
               /* Check face's lface for slant (italic) */
               Lisp_Object slant_attr = face->lface[LFACE_SLANT_INDEX];
               if (!NILP (slant_attr) && SYMBOLP (slant_attr))
@@ -747,7 +901,7 @@ neomacs_draw_glyph_string (struct glyph_string *s)
                   if (slant_numeric != 100)
                     is_italic = 1;
                 }
-              
+
               /* Check for underline */
               int underline_style = 0;
               uint32_t underline_color = fg_rgb;
@@ -758,7 +912,7 @@ neomacs_draw_glyph_string (struct glyph_string *s)
                     underline_style = 2;
                   /* Use foreground as underline color (there's no separate underline_color field) */
                 }
-              
+
               /* Check for box */
               int box_type = 0;
               uint32_t box_color = fg_rgb;
@@ -774,7 +928,7 @@ neomacs_draw_glyph_string (struct glyph_string *s)
                                  (GREEN_FROM_ULONG(face->box_color) << 8) |
                                  BLUE_FROM_ULONG(face->box_color));
                 }
-              
+
               neomacs_display_set_face (dpyinfo->display_handle,
                                         face_id,
                                         fg_rgb,
@@ -787,7 +941,7 @@ neomacs_draw_glyph_string (struct glyph_string *s)
                                         box_color,
                                         box_line_width);
             }
-          
+
           switch (s->first_glyph->type)
             {
             case CHAR_GLYPH:
@@ -875,13 +1029,13 @@ neomacs_draw_glyph_string (struct glyph_string *s)
         w = s->w;  /* Use the actual window from glyph_string if available */
       int window_top = WINDOW_TOP_EDGE_Y (w);
       int row_y = window_top + s->row->y;
-      
+
       /* Debug: print what we're calculating */
       static int debug_count = 0;
       if (debug_count++ < 30)
         fprintf(stderr, "DEBUG C begin_row: window_top=%d, s->row->y=%d, row_y=%d, height=%d\n",
                 window_top, s->row->y, row_y, s->row->height);
-      
+
       neomacs_display_begin_row (dpyinfo->display_handle,
                                  row_y,
                                  s->x,  /* Starting X position for this glyph string */
@@ -892,7 +1046,7 @@ neomacs_draw_glyph_string (struct glyph_string *s)
 
       /* Add glyphs to Rust scene graph */
       int face_id = s->face ? s->face->id : 0;
-      
+
       switch (s->first_glyph->type)
         {
         case CHAR_GLYPH:
@@ -913,7 +1067,7 @@ neomacs_draw_glyph_string (struct glyph_string *s)
               }
           }
           break;
-          
+
         case COMPOSITE_GLYPH:
         case GLYPHLESS_GLYPH:
           /* For composite/glyphless, use char2b if available */
@@ -932,18 +1086,18 @@ neomacs_draw_glyph_string (struct glyph_string *s)
                 }
             }
           break;
-          
+
         case STRETCH_GLYPH:
           neomacs_display_add_stretch_glyph (dpyinfo->display_handle,
                                              s->width,
                                              s->height,
                                              face_id);
           break;
-          
+
         case IMAGE_GLYPH:
           /* TODO: Forward image glyph */
           break;
-          
+
         case VIDEO_GLYPH:
           /* Handle video glyphs */
           neomacs_display_add_video_glyph (dpyinfo->display_handle,
@@ -959,7 +1113,7 @@ neomacs_draw_glyph_string (struct glyph_string *s)
                                           s->first_glyph->pixel_width,
                                           s->row->height);
           break;
-          
+
         default:
           break;
         }
@@ -1238,10 +1392,10 @@ neomacs_draw_window_cursor (struct window *w, struct glyph_row *row,
           style = 0;
           break;
         }
-      
+
       /* Convert color to RGBA format (0xAARRGGBB) */
       uint32_t rgba = 0xFF000000 | (cursor_color & 0xFFFFFF);
-      
+
       /* Use frame-absolute coordinates for cursor position */
       neomacs_display_set_cursor (dpyinfo->display_handle,
                                   (int)(intptr_t) w,
@@ -1472,13 +1626,13 @@ if (0) fprintf (stderr, "DEBUG: read_socket: flushed %d pre-queued events\n", co
           pending_count++;
         }
       if (++read_socket_calls % 500 == 0)
-if (0) fprintf (stderr, "DEBUG: read_socket: dispatched %d events (call #%d)\n", 
+if (0) fprintf (stderr, "DEBUG: read_socket: dispatched %d events (call #%d)\n",
                  pending_count, read_socket_calls);
     }
   else
     {
       if (++read_socket_calls % 500 == 0)
-if (0) fprintf (stderr, "DEBUG: read_socket: could NOT acquire context (call #%d)\n", 
+if (0) fprintf (stderr, "DEBUG: read_socket: could NOT acquire context (call #%d)\n",
                  read_socket_calls);
     }
 
@@ -1564,17 +1718,17 @@ URI can be a file path or a URL.  */)
   (Lisp_Object uri)
 {
   CHECK_STRING (uri);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   const char *uri_str = SSDATA (uri);
   uint32_t video_id = neomacs_display_load_video (dpyinfo->display_handle, uri_str);
-  
+
   if (video_id == 0)
     return Qnil;
-    
+
   return make_fixnum (video_id);
 }
 
@@ -1584,12 +1738,12 @@ Returns t on success, nil on failure.  */)
   (Lisp_Object video_id)
 {
   CHECK_FIXNUM (video_id);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
-  int result = neomacs_display_video_play (dpyinfo->display_handle, 
+
+  int result = neomacs_display_video_play (dpyinfo->display_handle,
                                            (uint32_t) XFIXNUM (video_id));
   return result == 0 ? Qt : Qnil;
 }
@@ -1600,11 +1754,11 @@ Returns t on success, nil on failure.  */)
   (Lisp_Object video_id)
 {
   CHECK_FIXNUM (video_id);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   int result = neomacs_display_video_pause (dpyinfo->display_handle,
                                             (uint32_t) XFIXNUM (video_id));
   return result == 0 ? Qt : Qnil;
@@ -1616,11 +1770,11 @@ Returns t on success, nil on failure.  */)
   (Lisp_Object video_id)
 {
   CHECK_FIXNUM (video_id);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   int result = neomacs_display_video_stop (dpyinfo->display_handle,
                                            (uint32_t) XFIXNUM (video_id));
   return result == 0 ? Qt : Qnil;
@@ -1637,11 +1791,11 @@ The video is rendered on top of the frame content at a fixed screen position.  *
   CHECK_FIXNUM (y);
   CHECK_FIXNUM (width);
   CHECK_FIXNUM (height);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   neomacs_display_set_floating_video (dpyinfo->display_handle,
                                       (uint32_t) XFIXNUM (video_id),
                                       (int) XFIXNUM (x),
@@ -1656,11 +1810,11 @@ DEFUN ("neomacs-video-floating-clear", Fneomacs_video_floating_clear, Sneomacs_v
   (Lisp_Object video_id)
 {
   CHECK_FIXNUM (video_id);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   neomacs_display_clear_floating_video (dpyinfo->display_handle,
                                         (uint32_t) XFIXNUM (video_id));
   return Qt;
@@ -1675,11 +1829,11 @@ LOOP-COUNT can be:
   (Lisp_Object video_id, Lisp_Object loop_count)
 {
   CHECK_FIXNUM (video_id);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   int count = 0;
   if (NILP (loop_count))
     count = 0;  /* No loop */
@@ -1689,7 +1843,7 @@ LOOP-COUNT can be:
     count = XFIXNUM (loop_count);
   else
     count = -1; /* Default to infinite for truthy values */
-    
+
   int result = neomacs_display_video_set_loop (dpyinfo->display_handle,
                                                (uint32_t) XFIXNUM (video_id),
                                                count);
@@ -1703,11 +1857,11 @@ Should be called periodically for proper loop handling.  */)
   (Lisp_Object video_id)
 {
   CHECK_FIXNUM (video_id);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   int result = neomacs_display_video_update (dpyinfo->display_handle,
                                              (uint32_t) XFIXNUM (video_id));
   return result == 0 ? Qt : Qnil;
@@ -1724,17 +1878,17 @@ Returns image ID on success, nil on failure.  */)
   (Lisp_Object path)
 {
   CHECK_STRING (path);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   const char *path_str = SSDATA (path);
   uint32_t image_id = neomacs_display_load_image (dpyinfo->display_handle, path_str);
-  
+
   if (image_id == 0)
     return Qnil;
-    
+
   return make_fixnum (image_id);
 }
 
@@ -1744,19 +1898,19 @@ Returns (width . height) on success, nil on failure.  */)
   (Lisp_Object image_id)
 {
   CHECK_FIXNUM (image_id);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   int width = 0, height = 0;
   int result = neomacs_display_get_image_size (dpyinfo->display_handle,
                                                 (uint32_t) XFIXNUM (image_id),
                                                 &width, &height);
-  
+
   if (result != 0)
     return Qnil;
-    
+
   return Fcons (make_fixnum (width), make_fixnum (height));
 }
 
@@ -1766,14 +1920,14 @@ Returns t on success, nil on failure.  */)
   (Lisp_Object image_id)
 {
   CHECK_FIXNUM (image_id);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   int result = neomacs_display_free_image (dpyinfo->display_handle,
                                            (uint32_t) XFIXNUM (image_id));
-  
+
   return result == 0 ? Qt : Qnil;
 }
 
@@ -1787,11 +1941,11 @@ The image will be rendered on top of the frame content at a fixed screen positio
   CHECK_FIXNUM (y);
   CHECK_FIXNUM (width);
   CHECK_FIXNUM (height);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   neomacs_display_set_floating_image (dpyinfo->display_handle,
                                       (uint32_t) XFIXNUM (image_id),
                                       (int) XFIXNUM (x),
@@ -1806,11 +1960,11 @@ DEFUN ("neomacs-image-floating-clear", Fneomacs_image_floating_clear, Sneomacs_i
   (Lisp_Object image_id)
 {
   CHECK_FIXNUM (image_id);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   neomacs_display_clear_floating_image (dpyinfo->display_handle,
                                         (uint32_t) XFIXNUM (image_id));
   return Qt;
@@ -1830,7 +1984,7 @@ Returns t on success, nil on failure.  */)
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   /* TODO: Get EGL display from GTK4 - for now pass NULL to use default */
   int result = neomacs_display_webkit_init (dpyinfo->display_handle, NULL);
   return result == 0 ? Qt : Qnil;
@@ -1843,18 +1997,18 @@ Returns view ID on success, nil on failure.  */)
 {
   CHECK_FIXNUM (width);
   CHECK_FIXNUM (height);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   uint32_t view_id = neomacs_display_webkit_create (dpyinfo->display_handle,
                                                     (int) XFIXNUM (width),
                                                     (int) XFIXNUM (height));
-  
+
   if (view_id == 0)
     return Qnil;
-    
+
   return make_fixnum (view_id);
 }
 
@@ -1864,11 +2018,11 @@ Returns t on success, nil on failure.  */)
   (Lisp_Object view_id)
 {
   CHECK_FIXNUM (view_id);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   int result = neomacs_display_webkit_destroy (dpyinfo->display_handle,
                                                (uint32_t) XFIXNUM (view_id));
   return result == 0 ? Qt : Qnil;
@@ -1881,11 +2035,11 @@ Returns t on success, nil on failure.  */)
 {
   CHECK_FIXNUM (view_id);
   CHECK_STRING (uri);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   const char *uri_str = SSDATA (uri);
   int result = neomacs_display_webkit_load_uri (dpyinfo->display_handle,
                                                 (uint32_t) XFIXNUM (view_id),
@@ -1899,11 +2053,11 @@ Returns t on success, nil on failure.  */)
   (Lisp_Object view_id)
 {
   CHECK_FIXNUM (view_id);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   int result = neomacs_display_webkit_go_back (dpyinfo->display_handle,
                                                (uint32_t) XFIXNUM (view_id));
   return result == 0 ? Qt : Qnil;
@@ -1915,11 +2069,11 @@ Returns t on success, nil on failure.  */)
   (Lisp_Object view_id)
 {
   CHECK_FIXNUM (view_id);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   int result = neomacs_display_webkit_go_forward (dpyinfo->display_handle,
                                                   (uint32_t) XFIXNUM (view_id));
   return result == 0 ? Qt : Qnil;
@@ -1931,11 +2085,11 @@ Returns t on success, nil on failure.  */)
   (Lisp_Object view_id)
 {
   CHECK_FIXNUM (view_id);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   int result = neomacs_display_webkit_reload (dpyinfo->display_handle,
                                               (uint32_t) XFIXNUM (view_id));
   return result == 0 ? Qt : Qnil;
@@ -1948,11 +2102,11 @@ Returns t on success, nil on failure.  */)
 {
   CHECK_FIXNUM (view_id);
   CHECK_STRING (script);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   const char *script_str = SSDATA (script);
   int result = neomacs_display_webkit_execute_js (dpyinfo->display_handle,
                                                   (uint32_t) XFIXNUM (view_id),
@@ -1971,11 +2125,11 @@ The browser view is rendered on top of the frame content at a fixed screen posit
   CHECK_FIXNUM (y);
   CHECK_FIXNUM (width);
   CHECK_FIXNUM (height);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   neomacs_display_set_floating_webkit (dpyinfo->display_handle,
                                        (uint32_t) XFIXNUM (view_id),
                                        (int) XFIXNUM (x),
@@ -1990,11 +2144,11 @@ DEFUN ("neomacs-webkit-floating-clear", Fneomacs_webkit_floating_clear, Sneomacs
   (Lisp_Object view_id)
 {
   CHECK_FIXNUM (view_id);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   neomacs_display_hide_floating_webkit (dpyinfo->display_handle,
                                         (uint32_t) XFIXNUM (view_id));
   return Qt;
@@ -2012,13 +2166,13 @@ MODIFIERS is a bitmask: ctrl=1, shift=2, alt=4, meta=8.  */)
   CHECK_FIXNUM (view_id);
   CHECK_FIXNUM (key_code);
   CHECK_FIXNUM (hardware_key_code);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   uint32_t mods = NILP (modifiers) ? 0 : (uint32_t) XFIXNUM (modifiers);
-  
+
   neomacs_display_webkit_send_key (dpyinfo->display_handle,
                                    (uint32_t) XFIXNUM (view_id),
                                    (uint32_t) XFIXNUM (key_code),
@@ -2044,13 +2198,13 @@ MODIFIERS is a bitmask.  */)
   CHECK_FIXNUM (y);
   CHECK_FIXNUM (button);
   CHECK_FIXNUM (state);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   uint32_t mods = NILP (modifiers) ? 0 : (uint32_t) XFIXNUM (modifiers);
-  
+
   neomacs_display_webkit_send_pointer (dpyinfo->display_handle,
                                        (uint32_t) XFIXNUM (view_id),
                                        (uint32_t) XFIXNUM (event_type),
@@ -2074,11 +2228,11 @@ DELTA-Y is vertical scroll amount (positive = down).  */)
   CHECK_FIXNUM (y);
   CHECK_FIXNUM (delta_x);
   CHECK_FIXNUM (delta_y);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   neomacs_display_webkit_send_scroll (dpyinfo->display_handle,
                                       (uint32_t) XFIXNUM (view_id),
                                       (int) XFIXNUM (x),
@@ -2097,11 +2251,11 @@ BUTTON is 1 for left, 2 for middle, 3 for right.  */)
   CHECK_FIXNUM (x);
   CHECK_FIXNUM (y);
   CHECK_FIXNUM (button);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   neomacs_display_webkit_click (dpyinfo->display_handle,
                                 (uint32_t) XFIXNUM (view_id),
                                 (int) XFIXNUM (x),
@@ -2116,16 +2270,16 @@ Returns the page title as a string, or nil if not available.  */)
   (Lisp_Object view_id)
 {
   CHECK_FIXNUM (view_id);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   char *title = neomacs_display_webkit_get_title (dpyinfo->display_handle,
                                                    (uint32_t) XFIXNUM (view_id));
   if (!title)
     return Qnil;
-    
+
   Lisp_Object result = build_string (title);
   neomacs_display_webkit_free_string (title);
   return result;
@@ -2137,16 +2291,16 @@ Returns the URL as a string, or nil if not available.  */)
   (Lisp_Object view_id)
 {
   CHECK_FIXNUM (view_id);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   char *url = neomacs_display_webkit_get_url (dpyinfo->display_handle,
                                                (uint32_t) XFIXNUM (view_id));
   if (!url)
     return Qnil;
-    
+
   Lisp_Object result = build_string (url);
   neomacs_display_webkit_free_string (url);
   return result;
@@ -2158,16 +2312,16 @@ Returns a float from 0.0 to 1.0, or nil if view not found.  */)
   (Lisp_Object view_id)
 {
   CHECK_FIXNUM (view_id);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   double progress = neomacs_display_webkit_get_progress (dpyinfo->display_handle,
                                                           (uint32_t) XFIXNUM (view_id));
   if (progress < 0)
     return Qnil;
-    
+
   return make_float (progress);
 }
 
@@ -2176,11 +2330,11 @@ DEFUN ("neomacs-webkit-loading-p", Fneomacs_webkit_loading_p, Sneomacs_webkit_lo
   (Lisp_Object view_id)
 {
   CHECK_FIXNUM (view_id);
-  
+
   struct neomacs_display_info *dpyinfo = neomacs_display_list;
   if (!dpyinfo || !dpyinfo->display_handle)
     return Qnil;
-    
+
   int loading = neomacs_display_webkit_is_loading (dpyinfo->display_handle,
                                                     (uint32_t) XFIXNUM (view_id));
   return loading == 1 ? Qt : Qnil;
@@ -2325,7 +2479,7 @@ syms_of_neomacsterm (void)
   defsubr (&Sx_hide_tip);
   defsubr (&Sxw_display_color_p);
   defsubr (&Sx_display_grayscale_p);
-  
+
   /* Video playback API */
   defsubr (&Sneomacs_video_load);
   defsubr (&Sneomacs_video_play);
