@@ -595,4 +595,59 @@ void neomacs_display_add_wpe_glyph(struct NeomacsDisplay *handle,
                                    int pixelWidth,
                                    int pixelHeight);
 
+/* ============================================================================
+ * Animation API
+ * ============================================================================ */
+
+/**
+ * Set an animation configuration option
+ *
+ * key: option name (e.g., "animation", "cursor-animation", "cursor-animation-mode", etc.)
+ * value: option value (e.g., "t", "nil", "railgun", "crossfade", "30", etc.)
+ *
+ * Returns 1 on success, 0 on failure
+ */
+int neomacs_display_set_animation_option(struct NeomacsDisplay *handle,
+                                         const char *key,
+                                         const char *value);
+
+/**
+ * Get an animation configuration option
+ *
+ * Returns the value as a newly-allocated C string (caller must free with neomacs_display_free_string)
+ * Returns NULL on failure or unknown option
+ */
+char *neomacs_display_get_animation_option(struct NeomacsDisplay *handle,
+                                           const char *key);
+
+/**
+ * Free a string returned by neomacs_display_get_animation_option
+ */
+void neomacs_display_free_string(char *s);
+
+/**
+ * Update cursor animation state (call each frame from GTK widget)
+ *
+ * dt: delta time in seconds since last frame
+ * Returns 1 if animation is still in progress (needs redraw), 0 otherwise
+ */
+int neomacs_display_update_animation(struct NeomacsDisplay *handle, double dt);
+
+/**
+ * Check if animation needs continuous redraw
+ * Returns 1 if continuous redraw needed, 0 otherwise
+ */
+int neomacs_display_animation_active(struct NeomacsDisplay *handle);
+
+/**
+ * Trigger a buffer transition animation
+ *
+ * effect: transition effect name ("crossfade", "slide-left", "slide-right", etc.)
+ * duration: animation duration in milliseconds
+ * Returns 1 on success, 0 on failure
+ */
+int neomacs_display_start_buffer_transition(struct NeomacsDisplay *handle,
+                                            const char *effect,
+                                            int durationMs);
+
 #endif  /* NEOMACS_DISPLAY_H */

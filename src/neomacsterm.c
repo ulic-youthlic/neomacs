@@ -2671,6 +2671,116 @@ DEFUN ("neomacs-webkit-loading-p", Fneomacs_webkit_loading_p, Sneomacs_webkit_lo
 
 
 /* ============================================================================
+ * Animation API
+ * ============================================================================ */
+
+DEFUN ("neomacs-set-animation-option", Fneomacs_set_animation_option, Sneomacs_set_animation_option, 2, 2, 0,
+       doc: /* Set OPTION to VALUE for Neomacs animation system.
+OPTION is a string naming the option:
+  \"animation\" - master enable/disable (\"t\" or \"nil\")
+  \"cursor-animation\" - enable cursor animation (\"t\" or \"nil\")
+  \"cursor-animation-mode\" - cursor effect mode (\"smooth\", \"railgun\", \"torpedo\", \"pixiedust\", \"sonicboom\", \"ripple\", \"wireframe\", \"none\")
+  \"cursor-animation-speed\" - cursor animation speed (1-100)
+  \"cursor-glow\" - enable cursor glow (\"t\" or \"nil\")
+  \"cursor-particle-count\" - number of particles (1-100)
+  \"buffer-transition\" - enable buffer transitions (\"t\" or \"nil\")
+  \"buffer-transition-effect\" - transition effect (\"crossfade\", \"slide-left\", \"slide-right\", \"slide-up\", \"slide-down\", \"scale-fade\", \"push\", \"blur\", \"page-curl\", \"none\")
+  \"buffer-transition-duration\" - duration in milliseconds
+VALUE is a string with the new value.
+Returns t on success, nil on failure.  */)
+  (Lisp_Object option, Lisp_Object value)
+{
+  CHECK_STRING (option);
+  CHECK_STRING (value);
+
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+
+  const char *opt = SSDATA (option);
+  const char *val = SSDATA (value);
+
+  int result = neomacs_display_set_animation_option (dpyinfo->display_handle, opt, val);
+  return result ? Qt : Qnil;
+}
+
+DEFUN ("neomacs-get-animation-option", Fneomacs_get_animation_option, Sneomacs_get_animation_option, 1, 1, 0,
+       doc: /* Get the value of animation OPTION.
+OPTION is a string naming the option (see `neomacs-set-animation-option').
+Returns the current value as a string, or nil if the option is unknown.  */)
+  (Lisp_Object option)
+{
+  CHECK_STRING (option);
+
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+
+  const char *opt = SSDATA (option);
+  char *value = neomacs_display_get_animation_option (dpyinfo->display_handle, opt);
+
+  if (!value)
+    return Qnil;
+
+  Lisp_Object result = build_string (value);
+  neomacs_display_free_string (value);
+  return result;
+}
+
+DEFUN ("neomacs-start-buffer-transition", Fneomacs_start_buffer_transition, Sneomacs_start_buffer_transition, 1, 2, 0,
+       doc: /* Start a buffer transition animation with EFFECT.
+EFFECT is a string naming the effect:
+  \"crossfade\" - simple fade between buffers
+  \"slide-left\" - slide horizontally (new buffer comes from right)
+  \"slide-right\" - slide horizontally (new buffer comes from left)
+  \"slide-up\" - slide vertically (new buffer comes from bottom)
+  \"slide-down\" - slide vertically (new buffer comes from top)
+  \"scale-fade\" - scale and fade
+  \"push\" - new buffer pushes over old
+  \"blur\" - blur transition
+  \"page-curl\" - 3D book page turn effect
+  \"none\" - no animation (instant switch)
+Optional DURATION is the animation duration in milliseconds (default 300).
+Returns t on success, nil on failure.  */)
+  (Lisp_Object effect, Lisp_Object duration)
+{
+  CHECK_STRING (effect);
+
+  int duration_ms = 300;  /* Default */
+  if (!NILP (duration))
+    {
+      CHECK_FIXNUM (duration);
+      duration_ms = XFIXNUM (duration);
+      if (duration_ms < 0)
+        duration_ms = 0;
+      if (duration_ms > 5000)
+        duration_ms = 5000;  /* Cap at 5 seconds */
+    }
+
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+
+  const char *eff = SSDATA (effect);
+  int result = neomacs_display_start_buffer_transition (dpyinfo->display_handle, eff, duration_ms);
+  return result ? Qt : Qnil;
+}
+
+DEFUN ("neomacs-animation-active-p", Fneomacs_animation_active_p, Sneomacs_animation_active_p, 0, 0, 0,
+       doc: /* Return non-nil if any animation is currently active.
+This includes cursor animation and buffer transition animation.  */)
+  (void)
+{
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+
+  int active = neomacs_display_animation_active (dpyinfo->display_handle);
+  return active ? Qt : Qnil;
+}
+
+
+/* ============================================================================
  * Miscellaneous Functions
  * ============================================================================ */
 
@@ -2847,6 +2957,12 @@ syms_of_neomacsterm (void)
   defsubr (&Sneomacs_webkit_get_url);
   defsubr (&Sneomacs_webkit_get_progress);
   defsubr (&Sneomacs_webkit_loading_p);
+
+  /* Animation API */
+  defsubr (&Sneomacs_set_animation_option);
+  defsubr (&Sneomacs_get_animation_option);
+  defsubr (&Sneomacs_start_buffer_transition);
+  defsubr (&Sneomacs_animation_active_p);
 
   DEFSYM (Qneomacs, "neomacs");
   /* Qvideo and Qwebkit are defined in xdisp.c for use in VIDEOP/WEBKITP */
