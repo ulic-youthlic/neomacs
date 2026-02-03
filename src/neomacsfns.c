@@ -1121,227 +1121,283 @@ neomacs_scroll_cb (GtkEventControllerScroll *controller,
   return TRUE;
 }
 
-/* Create GTK4 widgets for a frame */
+/* Create winit window for a frame via Rust backend */
 static void
 neomacs_create_frame_widgets (struct frame *f)
 {
   struct neomacs_output *output = FRAME_NEOMACS_OUTPUT (f);
   struct neomacs_display_info *dpyinfo = FRAME_DISPLAY_INFO (f);
-  GtkWidget *window, *drawing_area;
-  GtkEventController *key_controller, *focus_controller, *motion_controller, *scroll_controller;
-  int use_gpu_widget = 1;  /* Always use GPU widget when Neomacs is available */
+  int use_winit = 1;  /* Try winit by default */
+  int use_gtk_fallback = 0;
 
-  /* Allow disabling GPU widget via environment variable */
-  const char *gpu_env = getenv ("NEOMACS_GPU_WIDGET");
-  if (gpu_env && strcmp (gpu_env, "0") == 0)
-    use_gpu_widget = 0;
+  /* Allow forcing GTK fallback via environment variable */
+  const char *winit_env = getenv ("NEOMACS_USE_WINIT");
+  if (winit_env && strcmp (winit_env, "0") == 0)
+    use_winit = 0;
 
-  /* Create main window */
-  window = gtk_window_new ();
+  /* Initialize window_id to 0 (invalid) */
+  output->window_id = 0;
 
-  gtk_window_set_title (GTK_WINDOW (window), "Emacs");
-  gtk_window_set_default_size (GTK_WINDOW (window),
-                               FRAME_PIXEL_WIDTH (f),
-                               FRAME_PIXEL_HEIGHT (f));
-
-  /* Create drawing area - either standard DrawingArea or GPU NeomacsWidget */
-  if (use_gpu_widget && dpyinfo && dpyinfo->display_handle)
+  /* Try to create winit window via Rust backend */
+  if (use_winit && dpyinfo && dpyinfo->display_handle)
     {
-      /* Use GPU-accelerated NeomacsWidget */
-      drawing_area = (GtkWidget *) neomacs_display_create_widget ();
-      if (!drawing_area)
+      uint32_t window_id = neomacs_display_create_window (
+        dpyinfo->display_handle,
+        FRAME_PIXEL_WIDTH (f),
+        FRAME_PIXEL_HEIGHT (f),
+        "Emacs"
+      );
+
+      if (window_id != 0)
         {
-          fprintf (stderr, "Failed to create NeomacsWidget, falling back to DrawingArea\n");
-          use_gpu_widget = 0;
+          /* Successfully created winit window */
+          output->window_id = window_id;
+          output->window_desc = (Window) window_id;
+
+          /* Show the window */
+          neomacs_display_show_window (dpyinfo->display_handle, window_id, true);
+
+          /* Set up resize callback for the winit window */
+          neomacs_display_set_resize_callback (neomacs_widget_resize_cb, f);
+
+          /* Mark that we're using winit, not GTK widgets */
+          output->widget = NULL;
+          output->drawing_area = NULL;
+          output->use_gpu_widget = 1;
+
+          fprintf (stderr, "Created winit window with id %u\n", window_id);
+          return;
+        }
+      else
+        {
+          fprintf (stderr, "Failed to create winit window, falling back to GTK\n");
+          use_gtk_fallback = 1;
         }
     }
-
-  if (!use_gpu_widget)
-    {
-      /* Use standard DrawingArea with Cairo rendering */
-      drawing_area = gtk_drawing_area_new ();
-      gtk_drawing_area_set_content_width (GTK_DRAWING_AREA (drawing_area),
-                                          FRAME_PIXEL_WIDTH (f));
-      gtk_drawing_area_set_content_height (GTK_DRAWING_AREA (drawing_area),
-                                           FRAME_PIXEL_HEIGHT (f));
-      /* Connect draw callback for Cairo rendering */
-      gtk_drawing_area_set_draw_func (GTK_DRAWING_AREA (drawing_area),
-                                      neomacs_draw_cb, f, NULL);
-    }
   else
     {
-      /* Set size for GPU widget */
-      gtk_widget_set_size_request (drawing_area,
+      use_gtk_fallback = 1;
+    }
+
+  /* GTK fallback path - only used if winit is disabled or fails */
+  if (use_gtk_fallback)
+    {
+      GtkWidget *window, *drawing_area;
+      GtkEventController *key_controller, *focus_controller, *motion_controller, *scroll_controller;
+      int use_gpu_widget = 1;
+
+      /* Allow disabling GPU widget via environment variable */
+      const char *gpu_env = getenv ("NEOMACS_GPU_WIDGET");
+      if (gpu_env && strcmp (gpu_env, "0") == 0)
+        use_gpu_widget = 0;
+
+      /* Create main window */
+      window = gtk_window_new ();
+
+      gtk_window_set_title (GTK_WINDOW (window), "Emacs");
+      gtk_window_set_default_size (GTK_WINDOW (window),
                                    FRAME_PIXEL_WIDTH (f),
                                    FRAME_PIXEL_HEIGHT (f));
-    }
 
-  /* Make widget opaque - disable transparency */
-  gtk_widget_set_opacity (drawing_area, 1.0);
-  gtk_widget_set_opacity (window, 1.0);
+      /* Create drawing area - either standard DrawingArea or GPU NeomacsWidget */
+      if (use_gpu_widget && dpyinfo && dpyinfo->display_handle)
+        {
+          /* Use GPU-accelerated NeomacsWidget */
+          drawing_area = (GtkWidget *) neomacs_display_create_widget ();
+          if (!drawing_area)
+            {
+              fprintf (stderr, "Failed to create NeomacsWidget, falling back to DrawingArea\n");
+              use_gpu_widget = 0;
+            }
+        }
 
-  /* Add CSS to set a solid background (black for dark theme) */
-  {
-    GtkCssProvider *css_provider = gtk_css_provider_new ();
-    gtk_css_provider_load_from_string (css_provider,
-      "window, drawingarea { background-color: black; }");
-    gtk_style_context_add_provider_for_display (
-      gdk_display_get_default (),
-      GTK_STYLE_PROVIDER (css_provider),
-      GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-    g_object_unref (css_provider);
-  }
+      if (!use_gpu_widget)
+        {
+          /* Use standard DrawingArea with Cairo rendering */
+          drawing_area = gtk_drawing_area_new ();
+          gtk_drawing_area_set_content_width (GTK_DRAWING_AREA (drawing_area),
+                                              FRAME_PIXEL_WIDTH (f));
+          gtk_drawing_area_set_content_height (GTK_DRAWING_AREA (drawing_area),
+                                               FRAME_PIXEL_HEIGHT (f));
+          /* Connect draw callback for Cairo rendering */
+          gtk_drawing_area_set_draw_func (GTK_DRAWING_AREA (drawing_area),
+                                          neomacs_draw_cb, f, NULL);
+        }
+      else
+        {
+          /* Set size for GPU widget */
+          gtk_widget_set_size_request (drawing_area,
+                                       FRAME_PIXEL_WIDTH (f),
+                                       FRAME_PIXEL_HEIGHT (f));
+        }
 
-  /* Make window and drawing area focusable to receive keyboard events */
-  gtk_widget_set_focusable (window, TRUE);
-  gtk_widget_set_can_focus (window, TRUE);
-  gtk_widget_set_focusable (drawing_area, TRUE);
-  gtk_widget_set_can_focus (drawing_area, TRUE);
+      /* Make widget opaque - disable transparency */
+      gtk_widget_set_opacity (drawing_area, 1.0);
+      gtk_widget_set_opacity (window, 1.0);
 
-  /* Connect callbacks - resize handling differs between widget types */
-  if (!use_gpu_widget)
-    {
-      /* DrawingArea has its own resize signal */
-      g_signal_connect (drawing_area, "resize",
-                        G_CALLBACK (neomacs_resize_cb), f);
-    }
-  else
-    {
-      /* GPU widget: use Rust callback mechanism since NeomacsWidget doesn't have resize signal */
-      neomacs_display_set_resize_callback (neomacs_widget_resize_cb, f);
-    }
-  g_signal_connect (window, "close-request",
-                    G_CALLBACK (neomacs_close_request_cb), f);
-
-  /* Add keyboard event controller on window with CAPTURE phase */
-  key_controller = gtk_event_controller_key_new ();
-  gtk_event_controller_set_propagation_phase (key_controller, GTK_PHASE_CAPTURE);
-  g_signal_connect (key_controller, "key-pressed",
-		    G_CALLBACK (neomacs_key_pressed_cb), f);
-  gtk_widget_add_controller (window, key_controller);
-
-  /* Add key controller to drawing area with BUBBLE phase */
-  {
-    GtkEventController *da_key_controller = gtk_event_controller_key_new ();
-    gtk_event_controller_set_propagation_phase (da_key_controller, GTK_PHASE_BUBBLE);
-    g_signal_connect (da_key_controller, "key-pressed",
-                      G_CALLBACK (neomacs_key_pressed_cb), f);
-    gtk_widget_add_controller (drawing_area, da_key_controller);
-  }
-
-  /* Also add key controller to drawing area with CAPTURE phase */
-  {
-    GtkEventController *da_key_controller2 = gtk_event_controller_key_new ();
-    gtk_event_controller_set_propagation_phase (da_key_controller2, GTK_PHASE_CAPTURE);
-    g_signal_connect (da_key_controller2, "key-pressed",
-                      G_CALLBACK (neomacs_key_pressed_cb), f);
-    gtk_widget_add_controller (drawing_area, da_key_controller2);
-  }
-
-  /* Create IM context for input method support */
-  {
-    GtkIMContext *imc = gtk_im_multicontext_new ();
-    g_signal_connect (imc, "commit", G_CALLBACK (neomacs_im_commit_cb), f);
-    gtk_im_context_set_client_widget (imc, drawing_area);
-    gtk_im_context_focus_in (imc);
-    output->im_context = imc;
-  }
-
-  /* Add focus event controller to window */
-  focus_controller = gtk_event_controller_focus_new ();
-  g_signal_connect (focus_controller, "enter",
-		    G_CALLBACK (neomacs_focus_enter_cb), f);
-  g_signal_connect (focus_controller, "leave",
-		    G_CALLBACK (neomacs_focus_leave_cb), f);
-  gtk_widget_add_controller (window, focus_controller);
-
-  /* Also add focus controller to drawing area */
-  {
-    GtkEventController *da_focus_controller = gtk_event_controller_focus_new ();
-    g_signal_connect (da_focus_controller, "enter",
-                      G_CALLBACK (neomacs_focus_enter_cb), f);
-    g_signal_connect (da_focus_controller, "leave",
-                      G_CALLBACK (neomacs_focus_leave_cb), f);
-    gtk_widget_add_controller (drawing_area, da_focus_controller);
-  }
-
-  /* Add legacy event controller for ALL mouse button events.
-     We need controllers on BOTH window and drawing_area because GTK4 only
-     delivers release events to window, but press events to drawing_area.
-     Deduplication is handled in the callback using event timestamps. */
-  {
-    GtkEventController *legacy_controller = gtk_event_controller_legacy_new ();
-    g_signal_connect (legacy_controller, "event",
-                      G_CALLBACK (neomacs_legacy_event_cb), f);
-    gtk_widget_add_controller (drawing_area, legacy_controller);
-
-    GtkEventController *window_legacy_controller = gtk_event_controller_legacy_new ();
-    g_signal_connect (window_legacy_controller, "event",
-                      G_CALLBACK (neomacs_legacy_event_cb), f);
-    gtk_widget_add_controller (window, window_legacy_controller);
-  }
-
-  /* Add motion controller for mouse tracking (non-button motion) */
-  motion_controller = gtk_event_controller_motion_new ();
-  g_signal_connect (motion_controller, "motion",
-		    G_CALLBACK (neomacs_motion_cb), f);
-  gtk_widget_add_controller (drawing_area, motion_controller);
-
-  /* Add scroll controller for mouse wheel */
-  scroll_controller = gtk_event_controller_scroll_new (GTK_EVENT_CONTROLLER_SCROLL_BOTH_AXES);
-  g_signal_connect (scroll_controller, "scroll",
-		    G_CALLBACK (neomacs_scroll_cb), f);
-  gtk_widget_add_controller (drawing_area, scroll_controller);
-
-  /* Connect realize callback to grab focus when widget is ready */
-  g_signal_connect (drawing_area, "realize",
-                    G_CALLBACK (neomacs_realize_cb), f);
-
-  /* Set up widget hierarchy */
-  gtk_window_set_child (GTK_WINDOW (window), drawing_area);
-
-  /* Store in output structure */
-  output->widget = window;
-  output->drawing_area = drawing_area;
-  output->window_desc = (Window) (intptr_t) window;
-  output->use_gpu_widget = use_gpu_widget;
-
-  /* Create initial Cairo surface (only needed for non-GPU mode) */
-  if (!use_gpu_widget)
-    neomacs_ensure_cr_surface (f, FRAME_PIXEL_WIDTH (f), FRAME_PIXEL_HEIGHT (f));
-
-  /* Show the window and grab focus */
-  if (0) fprintf (stderr, "DEBUG: Calling gtk_window_present\n");
-  gtk_window_present (GTK_WINDOW (window));
-
-  /* Force window to be realized and shown */
-  gtk_widget_set_visible (window, TRUE);
-  gtk_widget_realize (window);
-
-  /* Initialize Rust renderer's Pango context now that widget is realized */
-  {
-    struct neomacs_display_info *dpyinfo = FRAME_DISPLAY_INFO (f);
-    if (dpyinfo && dpyinfo->display_handle)
+      /* Add CSS to set a solid background (black for dark theme) */
       {
-	PangoContext *pango_ctx = gtk_widget_get_pango_context (drawing_area);
-	if (pango_ctx)
-	  neomacs_display_init_pango (dpyinfo->display_handle, pango_ctx);
-
-	/* For GPU widget, also initialize with widget reference for video callbacks */
-	if (use_gpu_widget)
-	  neomacs_display_widget_init_pango (dpyinfo->display_handle, drawing_area);
+        GtkCssProvider *css_provider = gtk_css_provider_new ();
+        gtk_css_provider_load_from_string (css_provider,
+          "window, drawingarea { background-color: black; }");
+        gtk_style_context_add_provider_for_display (
+          gdk_display_get_default (),
+          GTK_STYLE_PROVIDER (css_provider),
+          GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+        g_object_unref (css_provider);
       }
-  }
 
-  /* Process events to ensure window is mapped */
-  while (g_main_context_iteration (NULL, FALSE))
-    ;
+      /* Make window and drawing area focusable to receive keyboard events */
+      gtk_widget_set_focusable (window, TRUE);
+      gtk_widget_set_can_focus (window, TRUE);
+      gtk_widget_set_focusable (drawing_area, TRUE);
+      gtk_widget_set_can_focus (drawing_area, TRUE);
 
-  /* Ensure the drawing area gets keyboard focus */
-  gtk_widget_grab_focus (drawing_area);
+      /* Connect callbacks - resize handling differs between widget types */
+      if (!use_gpu_widget)
+        {
+          /* DrawingArea has its own resize signal */
+          g_signal_connect (drawing_area, "resize",
+                            G_CALLBACK (neomacs_resize_cb), f);
+        }
+      else
+        {
+          /* GPU widget: use Rust callback mechanism since NeomacsWidget doesn't have resize signal */
+          neomacs_display_set_resize_callback (neomacs_widget_resize_cb, f);
+        }
+      g_signal_connect (window, "close-request",
+                        G_CALLBACK (neomacs_close_request_cb), f);
 
-  /* Also set as the default focus widget */
-  gtk_window_set_focus (GTK_WINDOW (window), drawing_area);
+      /* Add keyboard event controller on window with CAPTURE phase */
+      key_controller = gtk_event_controller_key_new ();
+      gtk_event_controller_set_propagation_phase (key_controller, GTK_PHASE_CAPTURE);
+      g_signal_connect (key_controller, "key-pressed",
+                        G_CALLBACK (neomacs_key_pressed_cb), f);
+      gtk_widget_add_controller (window, key_controller);
+
+      /* Add key controller to drawing area with BUBBLE phase */
+      {
+        GtkEventController *da_key_controller = gtk_event_controller_key_new ();
+        gtk_event_controller_set_propagation_phase (da_key_controller, GTK_PHASE_BUBBLE);
+        g_signal_connect (da_key_controller, "key-pressed",
+                          G_CALLBACK (neomacs_key_pressed_cb), f);
+        gtk_widget_add_controller (drawing_area, da_key_controller);
+      }
+
+      /* Also add key controller to drawing area with CAPTURE phase */
+      {
+        GtkEventController *da_key_controller2 = gtk_event_controller_key_new ();
+        gtk_event_controller_set_propagation_phase (da_key_controller2, GTK_PHASE_CAPTURE);
+        g_signal_connect (da_key_controller2, "key-pressed",
+                          G_CALLBACK (neomacs_key_pressed_cb), f);
+        gtk_widget_add_controller (drawing_area, da_key_controller2);
+      }
+
+      /* Create IM context for input method support */
+      {
+        GtkIMContext *imc = gtk_im_multicontext_new ();
+        g_signal_connect (imc, "commit", G_CALLBACK (neomacs_im_commit_cb), f);
+        gtk_im_context_set_client_widget (imc, drawing_area);
+        gtk_im_context_focus_in (imc);
+        output->im_context = imc;
+      }
+
+      /* Add focus event controller to window */
+      focus_controller = gtk_event_controller_focus_new ();
+      g_signal_connect (focus_controller, "enter",
+                        G_CALLBACK (neomacs_focus_enter_cb), f);
+      g_signal_connect (focus_controller, "leave",
+                        G_CALLBACK (neomacs_focus_leave_cb), f);
+      gtk_widget_add_controller (window, focus_controller);
+
+      /* Also add focus controller to drawing area */
+      {
+        GtkEventController *da_focus_controller = gtk_event_controller_focus_new ();
+        g_signal_connect (da_focus_controller, "enter",
+                          G_CALLBACK (neomacs_focus_enter_cb), f);
+        g_signal_connect (da_focus_controller, "leave",
+                          G_CALLBACK (neomacs_focus_leave_cb), f);
+        gtk_widget_add_controller (drawing_area, da_focus_controller);
+      }
+
+      /* Add legacy event controller for ALL mouse button events.
+         We need controllers on BOTH window and drawing_area because GTK4 only
+         delivers release events to window, but press events to drawing_area.
+         Deduplication is handled in the callback using event timestamps. */
+      {
+        GtkEventController *legacy_controller = gtk_event_controller_legacy_new ();
+        g_signal_connect (legacy_controller, "event",
+                          G_CALLBACK (neomacs_legacy_event_cb), f);
+        gtk_widget_add_controller (drawing_area, legacy_controller);
+
+        GtkEventController *window_legacy_controller = gtk_event_controller_legacy_new ();
+        g_signal_connect (window_legacy_controller, "event",
+                          G_CALLBACK (neomacs_legacy_event_cb), f);
+        gtk_widget_add_controller (window, window_legacy_controller);
+      }
+
+      /* Add motion controller for mouse tracking (non-button motion) */
+      motion_controller = gtk_event_controller_motion_new ();
+      g_signal_connect (motion_controller, "motion",
+                        G_CALLBACK (neomacs_motion_cb), f);
+      gtk_widget_add_controller (drawing_area, motion_controller);
+
+      /* Add scroll controller for mouse wheel */
+      scroll_controller = gtk_event_controller_scroll_new (GTK_EVENT_CONTROLLER_SCROLL_BOTH_AXES);
+      g_signal_connect (scroll_controller, "scroll",
+                        G_CALLBACK (neomacs_scroll_cb), f);
+      gtk_widget_add_controller (drawing_area, scroll_controller);
+
+      /* Connect realize callback to grab focus when widget is ready */
+      g_signal_connect (drawing_area, "realize",
+                        G_CALLBACK (neomacs_realize_cb), f);
+
+      /* Set up widget hierarchy */
+      gtk_window_set_child (GTK_WINDOW (window), drawing_area);
+
+      /* Store in output structure */
+      output->widget = window;
+      output->drawing_area = drawing_area;
+      output->window_desc = (Window) (intptr_t) window;
+      output->use_gpu_widget = use_gpu_widget;
+
+      /* Create initial Cairo surface (only needed for non-GPU mode) */
+      if (!use_gpu_widget)
+        neomacs_ensure_cr_surface (f, FRAME_PIXEL_WIDTH (f), FRAME_PIXEL_HEIGHT (f));
+
+      /* Show the window and grab focus */
+      if (0) fprintf (stderr, "DEBUG: Calling gtk_window_present\n");
+      gtk_window_present (GTK_WINDOW (window));
+
+      /* Force window to be realized and shown */
+      gtk_widget_set_visible (window, TRUE);
+      gtk_widget_realize (window);
+
+      /* Initialize Rust renderer's Pango context now that widget is realized */
+      {
+        struct neomacs_display_info *dpyinfo = FRAME_DISPLAY_INFO (f);
+        if (dpyinfo && dpyinfo->display_handle)
+          {
+            PangoContext *pango_ctx = gtk_widget_get_pango_context (drawing_area);
+            if (pango_ctx)
+              neomacs_display_init_pango (dpyinfo->display_handle, pango_ctx);
+
+            /* For GPU widget, also initialize with widget reference for video callbacks */
+            if (use_gpu_widget)
+              neomacs_display_widget_init_pango (dpyinfo->display_handle, drawing_area);
+          }
+      }
+
+      /* Process events to ensure window is mapped */
+      while (g_main_context_iteration (NULL, FALSE))
+        ;
+
+      /* Ensure the drawing area gets keyboard focus */
+      gtk_widget_grab_focus (drawing_area);
+
+      /* Also set as the default focus widget */
+      gtk_window_set_focus (GTK_WINDOW (window), drawing_area);
+    }
 }
 
 
@@ -1669,6 +1725,7 @@ static void
 neomacs_set_title (struct frame *f)
 {
   struct neomacs_output *output = FRAME_NEOMACS_OUTPUT (f);
+  struct neomacs_display_info *dpyinfo = FRAME_DISPLAY_INFO (f);
   const char *title;
 
   if (FRAME_ICONIFIED_P (f))
@@ -1679,6 +1736,17 @@ neomacs_set_title (struct frame *f)
   else
     title = SSDATA (f->title);
 
+  /* Try winit window first */
+  if (output && output->window_id != 0 && dpyinfo && dpyinfo->display_handle)
+    {
+      block_input ();
+      neomacs_display_set_window_title (dpyinfo->display_handle,
+                                        output->window_id, title);
+      unblock_input ();
+      return;
+    }
+
+  /* Fall back to GTK window */
   if (output && output->widget)
     {
       block_input ();

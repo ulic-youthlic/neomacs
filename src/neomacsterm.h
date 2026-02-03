@@ -186,7 +186,10 @@ struct neomacs_output
   /* Pointer back to display info */
   struct neomacs_display_info *display_info;
 
-  /* Placeholder for the widget hierarchy */
+  /* Winit window identifier */
+  uint32_t window_id;
+
+  /* Placeholder for the widget hierarchy (GTK fallback) */
   void *widget;
   void *container;
   void *drawing_area;
