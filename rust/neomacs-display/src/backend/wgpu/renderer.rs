@@ -688,34 +688,31 @@ impl WgpuRenderer {
             &frame_glyphs.background,
         );
 
-        // 2. Process backgrounds and stretches (rendered before text)
+        // 2. Process window backgrounds FIRST
         for glyph in &frame_glyphs.glyphs {
-            match glyph {
-                FrameGlyph::Background { bounds, color } => {
-                    self.add_rect(
-                        &mut rect_vertices,
-                        bounds.x,
-                        bounds.y,
-                        bounds.width,
-                        bounds.height,
-                        color,
-                    );
-                }
-                FrameGlyph::Stretch {
-                    x,
-                    y,
-                    width,
-                    height,
-                    bg,
-                    ..
-                } => {
-                    self.add_rect(&mut rect_vertices, *x, *y, *width, *height, bg);
-                }
-                FrameGlyph::Char { x, y, width, height, bg: Some(bg_color), .. } => {
-                    // Render per-character background (modeline, etc.)
-                    self.add_rect(&mut rect_vertices, *x, *y, *width, *height, bg_color);
-                }
-                _ => {} // Chars without bg, cursors, borders handled separately
+            if let FrameGlyph::Background { bounds, color } = glyph {
+                self.add_rect(
+                    &mut rect_vertices,
+                    bounds.x,
+                    bounds.y,
+                    bounds.width,
+                    bounds.height,
+                    color,
+                );
+            }
+        }
+
+        // 3. Process stretches
+        for glyph in &frame_glyphs.glyphs {
+            if let FrameGlyph::Stretch { x, y, width, height, bg, .. } = glyph {
+                self.add_rect(&mut rect_vertices, *x, *y, *width, *height, bg);
+            }
+        }
+
+        // 4. Process char backgrounds (modeline, etc.) - AFTER window backgrounds
+        for glyph in &frame_glyphs.glyphs {
+            if let FrameGlyph::Char { x, y, width, height, bg: Some(bg_color), .. } = glyph {
+                self.add_rect(&mut rect_vertices, *x, *y, *width, *height, bg_color);
             }
         }
 
