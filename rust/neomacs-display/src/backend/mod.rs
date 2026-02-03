@@ -6,6 +6,9 @@ use crate::core::scene::Scene;
 pub mod gtk4;
 pub mod tty;
 
+#[cfg(feature = "winit-backend")]
+pub mod wgpu;
+
 #[cfg(feature = "wpe-webkit")]
 pub mod wpe;
 
@@ -77,6 +80,9 @@ pub enum BackendType {
 
     /// Terminal/TTY backend
     Tty = 1,
+
+    /// Winit/wgpu GPU-accelerated backend
+    Wgpu = 2,
 }
 
 impl Default for BackendType {

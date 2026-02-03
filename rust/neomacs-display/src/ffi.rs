@@ -12,6 +12,8 @@ use log::{debug, trace, warn, info, error};
 use crate::backend::{BackendType, DisplayBackend};
 use crate::backend::gtk4::{Gtk4Backend, Gtk4Renderer, GskRenderer, HybridRenderer, VideoCache, ImageCache, set_video_widget};
 use crate::backend::tty::TtyBackend;
+#[cfg(feature = "winit-backend")]
+use crate::backend::wgpu::WinitBackend;
 use crate::core::types::{Color, Rect};
 use crate::core::scene::{Scene, WindowScene, CursorState, CursorStyle};
 use crate::core::glyph::{Glyph, GlyphRow, GlyphType, GlyphData};
@@ -23,6 +25,8 @@ pub struct NeomacsDisplay {
     backend_type: BackendType,
     gtk4_backend: Option<Gtk4Backend>,
     tty_backend: Option<TtyBackend>,
+    #[cfg(feature = "winit-backend")]
+    winit_backend: Option<WinitBackend>,
     scene: Scene,           // The scene for rendering (legacy)
     frame_glyphs: FrameGlyphBuffer,  // Hybrid approach: direct glyph buffer
     use_hybrid: bool,       // Whether to use hybrid rendering (default: true)
@@ -48,6 +52,10 @@ impl NeomacsDisplay {
         match self.backend_type {
             BackendType::Gtk4 => self.gtk4_backend.as_mut().map(|b| b as &mut dyn DisplayBackend),
             BackendType::Tty => self.tty_backend.as_mut().map(|b| b as &mut dyn DisplayBackend),
+            #[cfg(feature = "winit-backend")]
+            BackendType::Wgpu => self.winit_backend.as_mut().map(|b| b as &mut dyn DisplayBackend),
+            #[cfg(not(feature = "winit-backend"))]
+            BackendType::Wgpu => None,
         }
     }
 }
@@ -80,6 +88,8 @@ pub unsafe extern "C" fn neomacs_display_init(backend: BackendType) -> *mut Neom
         backend_type: backend,
         gtk4_backend: None,
         tty_backend: None,
+        #[cfg(feature = "winit-backend")]
+        winit_backend: None,
         scene: Scene::new(800.0, 600.0),
         frame_glyphs: FrameGlyphBuffer::with_size(800.0, 600.0),  // Match initial scene size
         use_hybrid,
@@ -123,6 +133,20 @@ pub unsafe extern "C" fn neomacs_display_init(backend: BackendType) -> *mut Neom
                 return ptr::null_mut();
             }
             display.tty_backend = Some(tty);
+        }
+        #[cfg(feature = "winit-backend")]
+        BackendType::Wgpu => {
+            let mut winit = WinitBackend::new();
+            if let Err(e) = winit.init() {
+                eprintln!("Failed to initialize Winit/wgpu backend: {}", e);
+                return ptr::null_mut();
+            }
+            display.winit_backend = Some(winit);
+        }
+        #[cfg(not(feature = "winit-backend"))]
+        BackendType::Wgpu => {
+            eprintln!("Winit/wgpu backend not compiled in (enable 'winit-backend' feature)");
+            return ptr::null_mut();
         }
     }
 
@@ -1660,6 +1684,17 @@ pub unsafe extern "C" fn neomacs_display_end_frame(handle: *mut NeomacsDisplay) 
                 Ok(())
             }
         }
+        #[cfg(feature = "winit-backend")]
+        BackendType::Wgpu => {
+            if let Some(backend) = display.winit_backend.as_mut() {
+                backend.render(&display.scene)
+                    .and_then(|_| backend.present())
+            } else {
+                Ok(())
+            }
+        }
+        #[cfg(not(feature = "winit-backend"))]
+        BackendType::Wgpu => Ok(()),
     };
 
     if let Err(e) = result {

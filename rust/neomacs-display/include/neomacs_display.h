@@ -32,6 +32,10 @@ typedef enum BackendType {
    * Terminal/TTY backend
    */
   BACKEND_TYPE_TTY = 1,
+  /**
+   * Winit/wgpu GPU-accelerated backend
+   */
+  BACKEND_TYPE_WGPU = 2,
 } BackendType;
 
 /**
