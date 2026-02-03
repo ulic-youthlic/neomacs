@@ -67,6 +67,21 @@ impl NeomacsDisplay {
             BackendType::Wgpu => self.winit_backend.as_mut().map(|b| b as &mut dyn DisplayBackend),
         }
     }
+
+    /// Get the scene to render to based on current_render_window_id.
+    /// Returns the winit window's scene if rendering to a window,
+    /// otherwise returns the legacy scene.
+    fn get_target_scene(&mut self) -> &mut Scene {
+        if self.current_render_window_id > 0 {
+            #[cfg(feature = "winit-backend")]
+            if let Some(ref mut backend) = self.winit_backend {
+                if let Some(scene) = backend.get_scene_mut(self.current_render_window_id) {
+                    return scene;
+                }
+            }
+        }
+        &mut self.scene
+    }
 }
 
 // ============================================================================
