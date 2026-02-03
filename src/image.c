@@ -13007,6 +13007,7 @@ neomacs_load (struct frame *f, struct image *img)
   /* Get image spec properties */
   Lisp_Object neomacs_id = image_spec_value (img->spec, intern (":neomacs-id"), NULL);
   Lisp_Object file = image_spec_value (img->spec, QCfile, NULL);
+  Lisp_Object data = image_spec_value (img->spec, QCdata, NULL);
   Lisp_Object width = image_spec_value (img->spec, QCwidth, NULL);
   Lisp_Object height = image_spec_value (img->spec, QCheight, NULL);
   Lisp_Object max_width = image_spec_value (img->spec, QCmax_width, NULL);
@@ -13050,6 +13051,24 @@ neomacs_load (struct frame *f, struct image *img)
               actual_w = (int)(mh * ratio);
             }
         }
+    }
+  else if (STRINGP (data))
+    {
+      /* Inline image data - load to get dimensions */
+      const unsigned char *bytes = (const unsigned char *) SDATA (data);
+      ptrdiff_t len = SBYTES (data);
+      uint32_t gpu_id;
+
+      if (mw > 0 || mh > 0)
+        gpu_id = neomacs_display_load_image_data_scaled (dpyinfo->display_handle,
+                                                          bytes, len, mw, mh);
+      else
+        gpu_id = neomacs_display_load_image_data (dpyinfo->display_handle,
+                                                   bytes, len);
+
+      if (gpu_id != 0)
+        neomacs_display_get_image_size (dpyinfo->display_handle, gpu_id,
+                                         &actual_w, &actual_h);
     }
 
   if (actual_w > 0 && actual_h > 0)
