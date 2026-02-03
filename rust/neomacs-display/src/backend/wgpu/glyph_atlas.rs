@@ -327,6 +327,14 @@ impl WgpuGlyphAtlas {
         attrs
     }
 
+    /// Get a cached glyph without creating it
+    ///
+    /// Returns a reference to the cached glyph if it exists.
+    /// This is useful for immutable access after glyphs have been cached.
+    pub fn get(&self, key: &GlyphKey) -> Option<&CachedGlyph> {
+        self.cache.get(key)
+    }
+
     /// Clear the cache
     pub fn clear(&mut self) {
         self.cache.clear();

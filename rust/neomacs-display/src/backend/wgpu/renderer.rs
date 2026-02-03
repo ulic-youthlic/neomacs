@@ -1,13 +1,17 @@
 //! wgpu GPU-accelerated scene renderer.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
+use crate::core::face::Face;
+use crate::core::frame_glyphs::{FrameGlyph, FrameGlyphBuffer};
 use crate::core::scene::{CursorStyle, Scene};
 use crate::core::types::Color;
 
-use super::vertex::{RectVertex, GlyphVertex, Uniforms};
+use super::glyph_atlas::{GlyphKey, WgpuGlyphAtlas};
+use super::vertex::{GlyphVertex, RectVertex, Uniforms};
 
 /// GPU-accelerated renderer using wgpu.
 pub struct WgpuRenderer {
@@ -638,6 +642,190 @@ impl WgpuRenderer {
     /// Get the current height.
     pub fn height(&self) -> u32 {
         self.height
+    }
+
+    /// Render frame glyphs to a texture view
+    pub fn render_frame_glyphs(
+        &self,
+        view: &wgpu::TextureView,
+        frame_glyphs: &FrameGlyphBuffer,
+        glyph_atlas: &mut WgpuGlyphAtlas,
+        faces: &HashMap<u32, Face>,
+    ) {
+        // Update uniforms for current frame size
+        let uniforms = Uniforms {
+            screen_size: [frame_glyphs.width, frame_glyphs.height],
+            _padding: [0.0, 0.0],
+        };
+        self.queue
+            .write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
+
+        // Collect rectangles (backgrounds, stretches, cursors, borders)
+        let mut rect_vertices: Vec<RectVertex> = Vec::new();
+
+        // 1. Draw frame background
+        self.add_rect(
+            &mut rect_vertices,
+            0.0,
+            0.0,
+            frame_glyphs.width,
+            frame_glyphs.height,
+            &frame_glyphs.background,
+        );
+
+        // 2. Process glyphs in order: backgrounds first, then stretches
+        for glyph in &frame_glyphs.glyphs {
+            match glyph {
+                FrameGlyph::Background { bounds, color } => {
+                    self.add_rect(
+                        &mut rect_vertices,
+                        bounds.x,
+                        bounds.y,
+                        bounds.width,
+                        bounds.height,
+                        color,
+                    );
+                }
+                FrameGlyph::Stretch {
+                    x,
+                    y,
+                    width,
+                    height,
+                    bg,
+                    ..
+                } => {
+                    self.add_rect(&mut rect_vertices, *x, *y, *width, *height, bg);
+                }
+                FrameGlyph::Border {
+                    x,
+                    y,
+                    width,
+                    height,
+                    color,
+                } => {
+                    self.add_rect(&mut rect_vertices, *x, *y, *width, *height, color);
+                }
+                FrameGlyph::Cursor {
+                    x,
+                    y,
+                    width,
+                    height,
+                    color,
+                    ..
+                } => {
+                    self.add_rect(&mut rect_vertices, *x, *y, *width, *height, color);
+                }
+                _ => {} // Chars handled separately
+            }
+        }
+
+        // Create command encoder
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Frame Glyphs Encoder"),
+            });
+
+        // Render pass
+        {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Frame Glyphs Pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: frame_glyphs.background.r as f64,
+                            g: frame_glyphs.background.g as f64,
+                            b: frame_glyphs.background.b as f64,
+                            a: 1.0,
+                        }),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            });
+
+            // Draw rectangles (backgrounds, stretches, borders, cursors)
+            if !rect_vertices.is_empty() {
+                let rect_buffer =
+                    self.device
+                        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("Rect Vertex Buffer"),
+                            contents: bytemuck::cast_slice(&rect_vertices),
+                            usage: wgpu::BufferUsages::VERTEX,
+                        });
+
+                render_pass.set_pipeline(&self.rect_pipeline);
+                render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                render_pass.set_vertex_buffer(0, rect_buffer.slice(..));
+                render_pass.draw(0..rect_vertices.len() as u32, 0..1);
+            }
+
+            // Draw character glyphs - collect all vertices first, then batch render
+            render_pass.set_pipeline(&self.glyph_pipeline);
+            render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+
+            // First pass: collect glyph keys and vertices (ensures all glyphs are cached)
+            let mut glyph_data: Vec<(GlyphKey, [GlyphVertex; 6])> = Vec::new();
+
+            for glyph in &frame_glyphs.glyphs {
+                if let FrameGlyph::Char { char, x, y, ascent, fg, face_id, .. } = glyph {
+                    let key = GlyphKey {
+                        charcode: *char as u32,
+                        face_id: *face_id,
+                    };
+
+                    let face = faces.get(face_id);
+
+                    if let Some(cached) = glyph_atlas.get_or_create(&self.device, &self.queue, &key, face) {
+                        let glyph_x = *x + cached.bearing_x;
+                        let glyph_y = *y + *ascent - cached.bearing_y;
+                        let glyph_w = cached.width as f32;
+                        let glyph_h = cached.height as f32;
+
+                        let vertices = [
+                            GlyphVertex { position: [glyph_x, glyph_y], tex_coords: [0.0, 0.0], color: [fg.r, fg.g, fg.b, fg.a] },
+                            GlyphVertex { position: [glyph_x + glyph_w, glyph_y], tex_coords: [1.0, 0.0], color: [fg.r, fg.g, fg.b, fg.a] },
+                            GlyphVertex { position: [glyph_x + glyph_w, glyph_y + glyph_h], tex_coords: [1.0, 1.0], color: [fg.r, fg.g, fg.b, fg.a] },
+                            GlyphVertex { position: [glyph_x, glyph_y], tex_coords: [0.0, 0.0], color: [fg.r, fg.g, fg.b, fg.a] },
+                            GlyphVertex { position: [glyph_x + glyph_w, glyph_y + glyph_h], tex_coords: [1.0, 1.0], color: [fg.r, fg.g, fg.b, fg.a] },
+                            GlyphVertex { position: [glyph_x, glyph_y + glyph_h], tex_coords: [0.0, 1.0], color: [fg.r, fg.g, fg.b, fg.a] },
+                        ];
+
+                        glyph_data.push((key, vertices));
+                    }
+                }
+            }
+
+            // Create single vertex buffer for all glyphs
+            if !glyph_data.is_empty() {
+                let all_vertices: Vec<GlyphVertex> = glyph_data.iter()
+                    .flat_map(|(_, verts)| verts.iter().copied())
+                    .collect();
+
+                let glyph_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Glyph Vertex Buffer"),
+                    contents: bytemuck::cast_slice(&all_vertices),
+                    usage: wgpu::BufferUsages::VERTEX,
+                });
+
+                render_pass.set_vertex_buffer(0, glyph_buffer.slice(..));
+
+                // Second pass: draw each glyph using cached bind groups
+                for (i, (key, _)) in glyph_data.iter().enumerate() {
+                    if let Some(cached) = glyph_atlas.get(&key) {
+                        render_pass.set_bind_group(1, &cached.bind_group, &[]);
+                        let start = (i * 6) as u32;
+                        render_pass.draw(start..start + 6, 0..1);
+                    }
+                }
+            }
+        }
+
+        self.queue.submit(std::iter::once(encoder.finish()));
     }
 
     /// Render a WebKit view texture at the given bounds.
