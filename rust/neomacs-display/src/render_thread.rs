@@ -67,6 +67,9 @@ struct RenderApp {
 
     // Current modifier state (NEOMACS_*_MASK flags)
     modifiers: u32,
+
+    // Last known cursor position
+    mouse_pos: (f32, f32),
 }
 
 impl RenderApp {
@@ -86,6 +89,7 @@ impl RenderApp {
             glyph_atlas: None,
             faces: HashMap::new(),
             modifiers: 0,
+            mouse_pos: (0.0, 0.0),
         }
     }
 
@@ -480,14 +484,15 @@ impl ApplicationHandler for RenderApp {
                 };
                 self.comms.send_input(InputEvent::MouseButton {
                     button: btn,
-                    x: 0.0, // TODO: Track mouse position
-                    y: 0.0,
+                    x: self.mouse_pos.0,
+                    y: self.mouse_pos.1,
                     pressed: state == ElementState::Pressed,
                     modifiers: self.modifiers,
                 });
             }
 
             WindowEvent::CursorMoved { position, .. } => {
+                self.mouse_pos = (position.x as f32, position.y as f32);
                 self.comms.send_input(InputEvent::MouseMove {
                     x: position.x as f32,
                     y: position.y as f32,
@@ -505,8 +510,8 @@ impl ApplicationHandler for RenderApp {
                 self.comms.send_input(InputEvent::MouseScroll {
                     delta_x: dx,
                     delta_y: dy,
-                    x: 0.0,
-                    y: 0.0,
+                    x: self.mouse_pos.0,
+                    y: self.mouse_pos.1,
                     modifiers: self.modifiers,
                 });
             }
