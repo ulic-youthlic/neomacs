@@ -987,6 +987,8 @@ impl WgpuRenderer {
     ///
     /// `surface_width` and `surface_height` should be the actual surface dimensions
     /// for correct coordinate transformation.
+    /// `scale_factor` is the HiDPI scale factor (1.0, 2.0, etc.) for scaling logical
+    /// glyph positions to physical pixel coordinates.
     pub fn render_frame_glyphs(
         &self,
         view: &wgpu::TextureView,
@@ -995,15 +997,18 @@ impl WgpuRenderer {
         faces: &HashMap<u32, Face>,
         surface_width: u32,
         surface_height: u32,
+        scale_factor: f64,
     ) {
+        let scale = scale_factor as f32;
         log::debug!(
-            "render_frame_glyphs: frame={}x{} surface={}x{}, {} glyphs, {} faces",
+            "render_frame_glyphs: frame={}x{} surface={}x{}, {} glyphs, {} faces, scale={}",
             frame_glyphs.width,
             frame_glyphs.height,
             surface_width,
             surface_height,
             frame_glyphs.glyphs.len(),
             faces.len(),
+            scale,
         );
 
         // Update uniforms with actual surface size for correct coordinate transformation
@@ -1017,17 +1022,17 @@ impl WgpuRenderer {
         // Collect rectangles (backgrounds, stretches, cursors, borders)
         let mut rect_vertices: Vec<RectVertex> = Vec::new();
 
-        // 1. Draw frame background
+        // 1. Draw frame background (scaled to physical pixels)
         self.add_rect(
             &mut rect_vertices,
             0.0,
             0.0,
-            frame_glyphs.width,
-            frame_glyphs.height,
+            frame_glyphs.width * scale,
+            frame_glyphs.height * scale,
             &frame_glyphs.background,
         );
 
-        // 2. Process window backgrounds FIRST
+        // 2. Process window backgrounds FIRST (scale logical to physical)
         let mut bg_count = 0;
         for glyph in &frame_glyphs.glyphs {
             if let FrameGlyph::Background { bounds, color } = glyph {
@@ -1036,31 +1041,31 @@ impl WgpuRenderer {
                 bg_count += 1;
                 self.add_rect(
                     &mut rect_vertices,
-                    bounds.x,
-                    bounds.y,
-                    bounds.width,
-                    bounds.height,
+                    bounds.x * scale,
+                    bounds.y * scale,
+                    bounds.width * scale,
+                    bounds.height * scale,
                     color,
                 );
             }
         }
         log::debug!("render_frame_glyphs: {} window backgrounds total", bg_count);
 
-        // 3. Process stretches
+        // 3. Process stretches (scale logical to physical)
         for glyph in &frame_glyphs.glyphs {
             if let FrameGlyph::Stretch { x, y, width, height, bg, .. } = glyph {
-                self.add_rect(&mut rect_vertices, *x, *y, *width, *height, bg);
+                self.add_rect(&mut rect_vertices, *x * scale, *y * scale, *width * scale, *height * scale, bg);
             }
         }
 
-        // 4. Process char backgrounds (modeline, etc.) - AFTER window backgrounds
+        // 4. Process char backgrounds (modeline, etc.) - AFTER window backgrounds (scale logical to physical)
         for glyph in &frame_glyphs.glyphs {
             if let FrameGlyph::Char { x, y, width, height, bg: Some(bg_color), .. } = glyph {
-                self.add_rect(&mut rect_vertices, *x, *y, *width, *height, bg_color);
+                self.add_rect(&mut rect_vertices, *x * scale, *y * scale, *width * scale, *height * scale, bg_color);
             }
         }
 
-        // Collect cursors and borders (to be rendered after text)
+        // Collect cursors and borders (to be rendered after text) (scale logical to physical)
         let mut cursor_vertices: Vec<RectVertex> = Vec::new();
         for glyph in &frame_glyphs.glyphs {
             match glyph {
@@ -1071,7 +1076,7 @@ impl WgpuRenderer {
                     height,
                     color,
                 } => {
-                    self.add_rect(&mut cursor_vertices, *x, *y, *width, *height, color);
+                    self.add_rect(&mut cursor_vertices, *x * scale, *y * scale, *width * scale, *height * scale, color);
                 }
                 FrameGlyph::Cursor {
                     x,
@@ -1081,7 +1086,7 @@ impl WgpuRenderer {
                     color,
                     ..
                 } => {
-                    self.add_rect(&mut cursor_vertices, *x, *y, *width, *height, color);
+                    self.add_rect(&mut cursor_vertices, *x * scale, *y * scale, *width * scale, *height * scale, color);
                 }
                 _ => {}
             }
@@ -1159,11 +1164,13 @@ impl WgpuRenderer {
                         // Size: Use Emacs's width (*width) but cosmic-text's height for proper
                         //       vertical proportions. The texture will be stretched horizontally
                         //       if cosmic-text's glyph width differs from Emacs's expectation.
-                        let glyph_x = *x;
-                        let glyph_y = *y + *ascent - cached.bearing_y;
+                        //
+                        // Scale from logical to physical coordinates for HiDPI
+                        let glyph_x = *x * scale;
+                        let glyph_y = (*y + *ascent - cached.bearing_y) * scale;
                         // Use Emacs's width to ensure no overlap, but cosmic-text's height
-                        let glyph_w = *width;  // Emacs's expected width
-                        let glyph_h = cached.height as f32;
+                        let glyph_w = *width * scale;  // Emacs's expected width (scaled)
+                        let glyph_h = cached.height as f32 * scale;
 
                         let vertices = [
                             GlyphVertex { position: [glyph_x, glyph_y], tex_coords: [0.0, 0.0], color: [fg.r, fg.g, fg.b, fg.a] },

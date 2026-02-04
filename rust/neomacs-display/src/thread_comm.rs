@@ -37,6 +37,7 @@ pub enum InputEvent {
     WindowResize {
         width: u32,
         height: u32,
+        scale_factor: f32,
     },
     WindowClose,
     WindowFocus {
