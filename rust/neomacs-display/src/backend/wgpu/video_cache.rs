@@ -6,11 +6,15 @@
 use std::collections::HashMap;
 use std::sync::mpsc;
 use std::thread;
+#[cfg(target_os = "linux")]
+use std::os::unix::io::RawFd;
 
 use gstreamer as gst;
 use gstreamer::prelude::*;
 use gstreamer_video as gst_video;
 use gstreamer_app as gst_app;
+#[cfg(target_os = "linux")]
+use gstreamer_allocators as gst_allocators;
 
 /// Video playback state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -29,6 +33,19 @@ pub enum VideoState {
     Error,
 }
 
+/// DMA-BUF information for zero-copy path
+#[cfg(target_os = "linux")]
+pub struct DmaBufInfo {
+    /// File descriptor
+    pub fd: RawFd,
+    /// Stride (bytes per row)
+    pub stride: u32,
+    /// DRM fourcc format code
+    pub fourcc: u32,
+    /// DRM modifier
+    pub modifier: u64,
+}
+
 /// Decoded video frame ready for rendering
 pub struct DecodedFrame {
     /// Frame ID
@@ -39,8 +56,11 @@ pub struct DecodedFrame {
     pub width: u32,
     /// Height in pixels
     pub height: u32,
-    /// RGBA pixel data (CPU path)
+    /// RGBA pixel data (CPU path) - empty if using DMA-BUF
     pub data: Vec<u8>,
+    /// DMA-BUF info for zero-copy (Linux only)
+    #[cfg(target_os = "linux")]
+    pub dmabuf: Option<DmaBufInfo>,
     /// Presentation timestamp in nanoseconds
     pub pts: u64,
     /// Duration in nanoseconds
@@ -271,33 +291,140 @@ impl VideoCache {
                     video.bind_group = Some(bind_group);
                 }
 
-                // Update texture data (reuse existing texture)
-                if let Some(ref texture) = video.texture {
-                    queue.write_texture(
-                        wgpu::ImageCopyTexture {
-                            texture,
-                            mip_level: 0,
-                            origin: wgpu::Origin3d::ZERO,
-                            aspect: wgpu::TextureAspect::All,
-                        },
-                        &frame.data,
-                        wgpu::ImageDataLayout {
-                            offset: 0,
-                            bytes_per_row: Some(frame.width * 4),
-                            rows_per_image: Some(frame.height),
-                        },
-                        wgpu::Extent3d {
-                            width: frame.width,
-                            height: frame.height,
-                            depth_or_array_layers: 1,
-                        },
+                // Update texture data
+                // Try DMA-BUF zero-copy path first, fall back to CPU copy
+                #[cfg(target_os = "linux")]
+                let dmabuf_imported = if let Some(ref dmabuf) = frame.dmabuf {
+                    // Try to import DMA-BUF directly into wgpu texture
+                    use super::external_buffer::DmaBufBuffer;
+
+                    let dmabuf_buffer = DmaBufBuffer::single_plane(
+                        dmabuf.fd,
+                        frame.width,
+                        frame.height,
+                        dmabuf.stride,
+                        dmabuf.fourcc,
+                        dmabuf.modifier,
                     );
+
+                    if let Some(imported_texture) = dmabuf_buffer.to_wgpu_texture(device, queue) {
+                        log::debug!("DMA-BUF zero-copy import successful for video {}", frame.video_id);
+
+                        // Replace texture with imported one
+                        let texture_view = imported_texture.create_view(&wgpu::TextureViewDescriptor::default());
+                        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                            label: Some("Video DMA-BUF Bind Group"),
+                            layout: bind_group_layout,
+                            entries: &[
+                                wgpu::BindGroupEntry {
+                                    binding: 0,
+                                    resource: wgpu::BindingResource::TextureView(&texture_view),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 1,
+                                    resource: wgpu::BindingResource::Sampler(sampler),
+                                },
+                            ],
+                        });
+
+                        video.texture = Some(imported_texture);
+                        video.texture_view = Some(texture_view);
+                        video.bind_group = Some(bind_group);
+                        true
+                    } else {
+                        log::debug!("DMA-BUF import failed, falling back to CPU copy");
+                        false
+                    }
+                } else {
+                    false
+                };
+
+                #[cfg(not(target_os = "linux"))]
+                let dmabuf_imported = false;
+
+                // Fall back to CPU copy if DMA-BUF import failed or not available
+                if !dmabuf_imported && !frame.data.is_empty() {
+                    if let Some(ref texture) = video.texture {
+                        queue.write_texture(
+                            wgpu::ImageCopyTexture {
+                                texture,
+                                mip_level: 0,
+                                origin: wgpu::Origin3d::ZERO,
+                                aspect: wgpu::TextureAspect::All,
+                            },
+                            &frame.data,
+                            wgpu::ImageDataLayout {
+                                offset: 0,
+                                bytes_per_row: Some(frame.width * 4),
+                                rows_per_image: Some(frame.height),
+                            },
+                            wgpu::Extent3d {
+                                width: frame.width,
+                                height: frame.height,
+                                depth_or_array_layers: 1,
+                            },
+                        );
+                    }
                 }
 
                 video.frame_count += 1;
                 log::trace!("VideoCache: updated video {} frame {}", frame.video_id, video.frame_count);
             }
         }
+    }
+
+    /// Try to extract DMA-BUF info from a GStreamer buffer
+    #[cfg(target_os = "linux")]
+    fn try_extract_dmabuf(buffer: &gst::BufferRef, info: &gst_video::VideoInfo) -> Option<DmaBufInfo> {
+        use gst_allocators::prelude::*;
+
+        // Get the first memory block from the buffer (owned, so we can downcast)
+        let n_memory = buffer.n_memory();
+        if n_memory == 0 {
+            return None;
+        }
+
+        let memory = buffer.memory(0)?;
+
+        // Try to downcast to DmaBufMemory
+        let dmabuf_mem = match memory.downcast_memory_ref::<gst_allocators::DmaBufMemory>() {
+            Some(m) => m,
+            None => {
+                log::trace!("Buffer memory is not DMA-BUF backed");
+                return None;
+            }
+        };
+
+        // Get the DMA-BUF file descriptor
+        let fd = dmabuf_mem.fd();
+
+        // Get stride from video info
+        let stride = info.stride()[0] as u32;
+
+        // Determine fourcc from format
+        let format = info.format();
+        let fourcc = match format {
+            gst_video::VideoFormat::Rgba => 0x34324241, // AB24 (ABGR)
+            gst_video::VideoFormat::Bgra => 0x34324142, // BA24 (BGRA)
+            gst_video::VideoFormat::Argb => 0x34324152, // AR24 (ARGB)
+            gst_video::VideoFormat::Abgr => 0x34324241, // AB24 (ABGR)
+            gst_video::VideoFormat::Rgbx => 0x34325842, // XB24
+            gst_video::VideoFormat::Bgrx => 0x34325258, // XR24
+            gst_video::VideoFormat::Nv12 => 0x3231564e, // NV12
+            _ => {
+                log::debug!("Unsupported video format for DMA-BUF: {:?}", format);
+                return None;
+            }
+        };
+
+        log::info!("Extracted DMA-BUF: fd={}, stride={}, fourcc={:#x}", fd, stride, fourcc);
+
+        Some(DmaBufInfo {
+            fd,
+            stride,
+            fourcc,
+            modifier: 0, // Linear modifier, TODO: extract actual modifier
+        })
     }
 
     /// Background decoder thread
@@ -324,14 +451,18 @@ impl VideoCache {
             // decodebin will auto-select VA-API hardware decoders when available
             // since they have higher rank than software decoders
             let pipeline_str = if has_vapostproc {
-                // Hardware-accelerated pipeline:
-                // - decodebin auto-selects VA-API decoders (they have higher rank)
-                // - vapostproc does GPU-based color conversion if decoder outputs VA memory
-                // - videoconvert is fallback for CPU buffers
+                // VA-API hardware acceleration pipeline:
+                // - decodebin auto-selects VA-API decoders (higher rank)
+                // - vapostproc does GPU-based color conversion (NV12→RGBA on GPU)
+                // - videoconvert ensures CPU-accessible memory for wgpu upload
+                // TODO: True DMA-BUF zero-copy requires vaExportSurfaceHandle() to
+                //       export VA surfaces as DMA-BUF, then import into Vulkan via
+                //       VK_EXT_external_memory_dma_buf. This avoids the GPU→CPU→GPU copy.
                 log::info!("Using VA-API hardware acceleration pipeline (vapostproc available)");
                 format!(
                     "filesrc location=\"{}\" ! decodebin name=dec \
-                     dec. ! queue max-size-buffers=3 ! vapostproc ! videoconvert ! video/x-raw,format=RGBA ! appsink name=sink \
+                     dec. ! queue max-size-buffers=3 ! vapostproc ! videoconvert ! \
+                     video/x-raw,format=RGBA ! appsink name=sink \
                      dec. ! queue ! audioconvert ! audioresample ! autoaudiosink",
                     path.replace("\"", "\\\"")
                 )
@@ -403,27 +534,45 @@ impl VideoCache {
                                                 let width = info.width();
                                                 let height = info.height();
 
+                                                // Try to get DMA-BUF info for zero-copy path
+                                                #[cfg(target_os = "linux")]
+                                                let dmabuf_info = Self::try_extract_dmabuf(buffer, &info);
+                                                #[cfg(not(target_os = "linux"))]
+                                                let dmabuf_info: Option<()> = None;
+
+                                                let has_dmabuf = dmabuf_info.is_some();
                                                 if frame_count <= 5 || frame_count % 60 == 0 {
-                                                    log::debug!("Frame #{} for video {}, {}x{} (VA-API: {})",
-                                                        frame_count, video_id, width, height, using_vaapi);
+                                                    log::info!("Frame #{} for video {}, {}x{}, format={:?}, DMA-BUF: {}",
+                                                        frame_count, video_id, width, height, info.format(), has_dmabuf);
                                                 }
 
-                                                // Map buffer and extract RGBA data
-                                                if let Ok(map) = buffer.map_readable() {
-                                                    let data = map.as_slice().to_vec();
+                                                // Map buffer and extract pixel data
+                                                // For DMA-BUF zero-copy, we still need the data for fallback
+                                                // TODO: Skip mapping when DMA-BUF import to wgpu works
+                                                let data = if let Ok(map) = buffer.map_readable() {
+                                                    map.as_slice().to_vec()
+                                                } else if has_dmabuf {
+                                                    // DMA-BUF memory may not be mappable - this is expected
+                                                    log::debug!("DMA-BUF memory not mappable (expected for zero-copy)");
+                                                    Vec::new()
+                                                } else {
+                                                    log::warn!("Failed to map buffer and no DMA-BUF available");
+                                                    Vec::new()
+                                                };
 
-                                                    if tx_clone.send(DecodedFrame {
-                                                        id: frame_count as u32,
-                                                        video_id,
-                                                        width,
-                                                        height,
-                                                        data,
-                                                        pts: buffer.pts().map(|p| p.nseconds()).unwrap_or(0),
-                                                        duration: buffer.duration().map(|d| d.nseconds()).unwrap_or(0),
-                                                    }).is_err() {
-                                                        log::debug!("Frame receiver dropped, stopping puller");
-                                                        break;
-                                                    }
+                                                if tx_clone.send(DecodedFrame {
+                                                    id: frame_count as u32,
+                                                    video_id,
+                                                    width,
+                                                    height,
+                                                    data,
+                                                    #[cfg(target_os = "linux")]
+                                                    dmabuf: dmabuf_info,
+                                                    pts: buffer.pts().map(|p| p.nseconds()).unwrap_or(0),
+                                                    duration: buffer.duration().map(|d| d.nseconds()).unwrap_or(0),
+                                                }).is_err() {
+                                                    log::debug!("Frame receiver dropped, stopping puller");
+                                                    break;
                                                 }
                                             }
                                         }

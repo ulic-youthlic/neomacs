@@ -21,6 +21,7 @@ ash = { version = "0.38", optional = true }
 gstreamer = { version = "0.23", optional = true }
 gstreamer-video = { version = "0.23", optional = true }
 gstreamer-app = { version = "0.23", optional = true }
+gstreamer-allocators = { version = "0.23", optional = true }
 
 # Winit + wgpu backend
 winit = { version = "0.30", optional = true }
@@ -58,7 +59,7 @@ default = ["winit-backend", "video"]
 winit-backend = ["winit", "wgpu", "raw-window-handle", "arboard", "bytemuck", "pollster", "image"]
 tty-backend = []
 # Video with GStreamer - includes ash for DMA-BUF zero-copy
-video = ["gstreamer", "gstreamer-video", "gstreamer-app", "winit-backend", "ash"]
+video = ["gstreamer", "gstreamer-video", "gstreamer-app", "gstreamer-allocators", "winit-backend", "ash"]
 # wpe-webkit requires winit-backend and ash for Vulkan DMA-BUF import
 wpe-webkit = ["winit-backend", "ash"]
 
