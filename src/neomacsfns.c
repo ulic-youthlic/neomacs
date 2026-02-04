@@ -1172,13 +1172,14 @@ neomacs_create_frame_widgets (struct frame *f)
         }
       else
         {
-          fprintf (stderr, "Failed to create winit window, falling back to GTK\n");
-          use_gtk_fallback = 1;
+          fprintf (stderr, "FATAL: Failed to create winit window\n");
+          emacs_abort ();
         }
     }
   else
     {
-      use_gtk_fallback = 1;
+      fprintf (stderr, "FATAL: winit backend not initialized\n");
+      emacs_abort ();
     }
 
   /* GTK fallback path - only used if winit is disabled or fails */

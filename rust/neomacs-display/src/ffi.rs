@@ -2797,22 +2797,18 @@ pub unsafe extern "C" fn neomacs_display_add_wpe_glyph(
 /// Returns 0 if the backend is not available.
 #[no_mangle]
 pub extern "C" fn neomacs_display_create_window(
-    handle: *mut NeomacsDisplay,
-    width: i32,
-    height: i32,
-    title: *const c_char,
+    _handle: *mut NeomacsDisplay,
+    _width: i32,
+    _height: i32,
+    _title: *const c_char,
 ) -> u32 {
-    let display = unsafe { &mut *handle };
-
+    // In threaded mode, the main window is created automatically by the render thread
+    // Return window ID 1 (the main window)
     #[cfg(feature = "winit-backend")]
-    if let Some(ref mut backend) = display.winit_backend {
-        let title_str = if title.is_null() {
-            "Emacs"
-        } else {
-            unsafe { std::ffi::CStr::from_ptr(title).to_str().unwrap_or("Emacs") }
-        };
-        // Queue the window creation request - it will be processed during poll_events
-        return backend.queue_window_request(width as u32, height as u32, title_str);
+    unsafe {
+        if THREADED_STATE.is_some() {
+            return 1; // Main window ID
+        }
     }
 
     0
