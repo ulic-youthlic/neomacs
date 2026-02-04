@@ -27,8 +27,9 @@ Throw it all away and start fresh.
 **Neomacs** replaces Emacs's entire display subsystem with a modern **Rust + GPU** architecture:
 
 - **~4,000 lines of Rust** replacing ~50,000 lines of legacy C
-- **GTK4/GSK** scene graph for hardware-accelerated rendering
-- **Zero-copy DMA-BUF** for efficient GPU texture sharing
+- **wgpu** for cross-platform GPU-accelerated rendering (Vulkan/Metal/DX12/OpenGL)
+- **winit** for native window management
+- **Zero-copy DMA-BUF** for efficient GPU texture sharing (Linux)
 - **cosmic-text** for pure-Rust text shaping
 - **Full Emacs compatibility** — your config and packages still work
 
@@ -36,25 +37,24 @@ Throw it all away and start fresh.
 
 ## Features
 
-### ✅ Working Now
+### Working Now
 
 | Feature | Description |
 |---------|-------------|
-| **GPU Text Rendering** | Hardware-accelerated text via GTK4/GSK (Vulkan/OpenGL/Metal) |
-| **WebKit Browser** | Embedded web views with zero-copy DMA-BUF rendering |
-| **Video Playback** | GStreamer integration with hardware decode (VA-API) |
+| **GPU Text Rendering** | Hardware-accelerated text via wgpu (Vulkan/Metal/DX12/OpenGL) |
+| **Video Playback** | GStreamer + VA-API hardware decode with DMA-BUF zero-copy |
 | **Cursor Animations** | Neovide-style effects: railgun, torpedo, pixiedust, sonicboom, ripple |
 | **Smooth Scrolling** | Animated scroll with configurable easing |
 | **Buffer Transitions** | Fade/slide effects when switching buffers |
-| **DMA-BUF Zero-Copy** | GPU-to-GPU texture sharing (no CPU readback) |
+| **DMA-BUF Zero-Copy** | GPU-to-GPU texture sharing via Vulkan HAL (no CPU readback) |
+| **Inline Images** | GPU-accelerated image rendering in buffers |
 
-### 🎯 The Ambitious Vision
+### The Ambitious Vision
 
 Neomacs aims to transform Emacs from a text editor into a **modern graphical computing environment**:
 
 **Rich Media First-Class Citizen**
-- 4K/HDR video playback directly in buffers
-- Interactive web content — YouTube, documentation, web apps
+- 4K video playback directly in buffers with hardware decoding
 - PDF rendering with GPU acceleration
 - Image manipulation and annotation
 
@@ -77,15 +77,10 @@ Neomacs aims to transform Emacs from a text editor into a **modern graphical com
 - True color support, ligatures, and modern terminal features
 - Zero-latency input handling
 
-**Beyond Text**
-- Embed any GTK4 widget in buffers
-- Interactive diagrams and visualizations
-- Real-time collaboration widgets
-
 **Cross-Platform Excellence**
-- Linux (Wayland & X11)
+- Linux (Vulkan on Wayland & X11)
 - macOS (Metal backend)
-- Windows (Vulkan/D3D via GTK4)
+- Windows (Vulkan/DX12)
 
 The goal: **Make Emacs the most powerful and beautiful computing environment on any platform.**
 
@@ -101,21 +96,28 @@ The goal: **Make Emacs the most powerful and beautiful computing environment on 
 ┌─────────────────────────▼───────────────────────────────────┐
 │                 Rust Display Engine                         │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │ Text Engine │  │ Animations  │  │ Media (WebKit/Video)│  │
-│  │ cosmic-text │  │ cursor/     │  │ WPE + GStreamer     │  │
-│  │ + atlas     │  │ transitions │  │ DMA-BUF textures    │  │
+│  │ Text Engine │  │ Animations  │  │ Video Pipeline      │  │
+│  │ cosmic-text │  │ cursor/     │  │ GStreamer + VA-API  │  │
+│  │ + atlas     │  │ transitions │  │ DMA-BUF zero-copy   │  │
 │  └──────┬──────┘  └──────┬──────┘  └──────────┬──────────┘  │
 │         └────────────────┼────────────────────┘             │
 │                          ▼                                  │
 │              ┌───────────────────────┐                      │
-│              │   GTK4/GSK Renderer   │                      │
-│              │   (GPU Scene Graph)   │                      │
+│              │     wgpu Renderer     │                      │
+│              │  (GPU Render Pipeline)│                      │
 │              └───────────┬───────────┘                      │
-└──────────────────────────┼──────────────────────────────────┘
-                           ▼
-              ┌───────────────────────┐
-              │  Vulkan/OpenGL/Metal  │
-              └───────────────────────┘
+│                          │                                  │
+│              ┌───────────▼───────────┐                      │
+│              │   winit (Windowing)   │                      │
+│              └───────────────────────┘                      │
+└─────────────────────────────────────────────────────────────┘
+                           │
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+        ┌─────────┐  ┌─────────┐  ┌─────────┐
+        │ Vulkan  │  │  Metal  │  │DX12/GL  │
+        │ (Linux) │  │ (macOS) │  │(Windows)│
+        └─────────┘  └─────────┘  └─────────┘
 ```
 
 ### Why Rust?
@@ -124,37 +126,36 @@ The goal: **Make Emacs the most powerful and beautiful computing environment on 
 - **Zero-cost abstractions** for high-performance rendering
 - **Excellent FFI** with C (Emacs core)
 - **Modern tooling** (Cargo, async, traits)
-- **Growing ecosystem** for graphics (cosmic-text, gtk4-rs)
+- **Growing ecosystem** for graphics (wgpu, winit, cosmic-text)
+
+### Why wgpu?
+
+- **Cross-platform** — single API for Vulkan, Metal, DX12, and OpenGL
+- **Safe Rust API** — no unsafe Vulkan/Metal code in application
+- **WebGPU standard** — future-proof API design
+- **Active development** — used by Firefox, Bevy, and many others
 
 ---
 
 ## Quick Demo
 
-### Embedded WebKit Browser
-
-```elisp
-;; Initialize WebKit subsystem
-(neomacs-webkit-init)
-
-;; Create a browser view
-(setq my-browser (neomacs-webkit-create 800 600))
-(neomacs-webkit-load-uri my-browser "https://github.com")
-
-;; Display as floating overlay
-(neomacs-webkit-floating my-browser 50 50 800 600)
-
-;; Or embed inline in buffer
-(insert (propertize " " 'display
-  (neomacs-insert-webkit "https://example.com" 400 300 t)))
-```
-
 ### Video Playback
 
 ```elisp
-;; Insert video directly in buffer
-(insert (propertize " " 'display
-  `(neomacs-video :file "/path/to/video.mp4"
-                  :width 640 :height 360)))
+;; Insert video directly in buffer (VA-API hardware decode + DMA-BUF zero-copy)
+(neomacs-video-insert "/path/to/video.mp4" 640 360)
+
+;; Control playback
+(neomacs-video-play video-id)
+(neomacs-video-pause video-id)
+(neomacs-video-stop video-id)
+```
+
+### Inline Images
+
+```elisp
+;; GPU-accelerated image display
+(insert-image (create-image "/path/to/image.png"))
 ```
 
 ---
@@ -165,9 +166,8 @@ The goal: **Make Emacs the most powerful and beautiful computing environment on 
 
 - **Emacs source** (this is a fork)
 - **Rust** (stable, 1.70+)
-- **GTK4** development libraries
-- **GStreamer** (optional, for video)
-- **WPE WebKit** (optional, for browser)
+- **GStreamer** (for video playback)
+- **VA-API** (optional, for hardware video decode on Linux)
 
 ### Linux (Debian/Ubuntu)
 
@@ -175,9 +175,12 @@ The goal: **Make Emacs the most powerful and beautiful computing environment on 
 # Install dependencies
 sudo apt install \
   build-essential autoconf automake \
-  libgtk-4-dev libgstreamer1.0-dev \
+  libgstreamer1.0-dev \
   libgstreamer-plugins-base1.0-dev \
-  libwpewebkit-2.0-dev libwpebackend-fdo-1.0-dev
+  gstreamer1.0-plugins-good \
+  gstreamer1.0-plugins-bad \
+  gstreamer1.0-vaapi \
+  libva-dev
 
 # Build
 ./autogen.sh
@@ -206,13 +209,15 @@ neomacs/
 ├── rust/neomacs-display/     # Rust display engine
 │   ├── src/
 │   │   ├── core/             # Types, animations, scene graph
-│   │   ├── backend/gtk4/     # GTK4/GSK GPU renderer
-│   │   ├── backend/wpe/      # WebKit integration
+│   │   ├── backend/wgpu/     # wgpu GPU renderer
+│   │   │   ├── mod.rs        # Main renderer
+│   │   │   ├── video_cache.rs    # GStreamer video pipeline
+│   │   │   ├── vulkan_dmabuf.rs  # DMA-BUF zero-copy import
+│   │   │   └── shaders/      # WGSL shaders
 │   │   ├── text/             # cosmic-text + glyph atlas
 │   │   └── ffi.rs            # C FFI layer
 │   └── Cargo.toml
 ├── src/                      # Emacs C source (with Rust hooks)
-├── lisp/neomacs-webkit.el    # Elisp WebKit API
 └── doc/display-engine/       # Design documentation
 ```
 
@@ -234,10 +239,11 @@ See [doc/display-engine/DESIGN.md](doc/display-engine/DESIGN.md) for architectur
 ## Acknowledgments
 
 Built with:
-- [GTK4](https://gtk.org/) / [gtk4-rs](https://gtk-rs.org/) — GPU rendering backend
+- [wgpu](https://wgpu.rs/) — Cross-platform GPU rendering (Vulkan/Metal/DX12/GL)
+- [winit](https://github.com/rust-windowing/winit) — Cross-platform window management
 - [cosmic-text](https://github.com/pop-os/cosmic-text) — Pure Rust text shaping
-- [WPE WebKit](https://wpewebkit.org/) — Embedded browser engine
-- [GStreamer](https://gstreamer.freedesktop.org/) — Video playback
+- [GStreamer](https://gstreamer.freedesktop.org/) — Video playback with VA-API
+- [ash](https://github.com/ash-rs/ash) — Vulkan bindings for DMA-BUF import
 - Inspired by [Neovide](https://neovide.dev/) cursor animations
 
 ---
