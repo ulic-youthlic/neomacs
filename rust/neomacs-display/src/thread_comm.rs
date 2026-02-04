@@ -42,6 +42,29 @@ pub enum InputEvent {
     WindowFocus {
         focused: bool,
     },
+    /// WebKit view title changed
+    #[cfg(feature = "wpe-webkit")]
+    WebKitTitleChanged {
+        id: u32,
+        title: String,
+    },
+    /// WebKit view URL changed
+    #[cfg(feature = "wpe-webkit")]
+    WebKitUrlChanged {
+        id: u32,
+        url: String,
+    },
+    /// WebKit view load progress changed
+    #[cfg(feature = "wpe-webkit")]
+    WebKitProgressChanged {
+        id: u32,
+        progress: f64,
+    },
+    /// WebKit view finished loading
+    #[cfg(feature = "wpe-webkit")]
+    WebKitLoadFinished {
+        id: u32,
+    },
 }
 
 /// Command from Emacs to render thread

@@ -3114,6 +3114,15 @@ pub unsafe extern "C" fn neomacs_display_drain_input(
                             NEOMACS_EVENT_FOCUS_OUT
                         };
                     }
+                    // WebKit events are handled separately via callbacks
+                    #[cfg(feature = "wpe-webkit")]
+                    InputEvent::WebKitTitleChanged { .. }
+                    | InputEvent::WebKitUrlChanged { .. }
+                    | InputEvent::WebKitProgressChanged { .. }
+                    | InputEvent::WebKitLoadFinished { .. } => {
+                        // Skip these in the event queue - they're handled via webkit-specific API
+                        continue;
+                    }
                 }
                 count += 1;
             }
