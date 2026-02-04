@@ -210,16 +210,13 @@ impl VideoCache {
         bind_group_layout: &wgpu::BindGroupLayout,
         sampler: &wgpu::Sampler,
     ) {
-        // Log entry for debugging
-        log::trace!("VideoCache::process_pending called, videos in cache: {}", self.videos.len());
-
         // Process all available frames
         let mut frame_count = 0;
         while let Ok(frame) = self.frame_rx.try_recv() {
             frame_count += 1;
             let total = self.videos.get(&frame.video_id).map(|v| v.frame_count).unwrap_or(0) + 1;
 
-            log::debug!("VideoCache: frame #{} for video {}, pts={}ms, size={}x{}",
+            log::info!("VideoCache::process_pending received frame #{} for video {}, pts={}ms, size={}x{}",
                 total, frame.video_id, frame.pts / 1_000_000, frame.width, frame.height);
             if let Some(video) = self.videos.get_mut(&frame.video_id) {
                 // Check if we need to create new texture (first frame or size changed)
@@ -320,14 +317,34 @@ impl VideoCache {
                 &request.path
             };
 
+            // Check if VA-API hardware acceleration is available
+            let has_vapostproc = gst::ElementFactory::find("vapostproc").is_some();
+
             // Create GStreamer pipeline with video and audio
-            // decodebin automatically handles demuxing and decoding both streams
-            let pipeline_str = format!(
-                "filesrc location=\"{}\" ! decodebin name=dec \
-                 dec. ! queue ! videoconvert ! video/x-raw,format=RGBA ! appsink name=sink \
-                 dec. ! queue ! audioconvert ! audioresample ! autoaudiosink",
-                path.replace("\"", "\\\"")
-            );
+            // decodebin will auto-select VA-API hardware decoders when available
+            // since they have higher rank than software decoders
+            let pipeline_str = if has_vapostproc {
+                // Hardware-accelerated pipeline:
+                // - decodebin auto-selects VA-API decoders (they have higher rank)
+                // - vapostproc does GPU-based color conversion if decoder outputs VA memory
+                // - videoconvert is fallback for CPU buffers
+                log::info!("Using VA-API hardware acceleration pipeline (vapostproc available)");
+                format!(
+                    "filesrc location=\"{}\" ! decodebin name=dec \
+                     dec. ! queue max-size-buffers=3 ! vapostproc ! videoconvert ! video/x-raw,format=RGBA ! appsink name=sink \
+                     dec. ! queue ! audioconvert ! audioresample ! autoaudiosink",
+                    path.replace("\"", "\\\"")
+                )
+            } else {
+                // Software fallback pipeline
+                log::info!("VA-API not available, using software decoding");
+                format!(
+                    "filesrc location=\"{}\" ! decodebin name=dec \
+                     dec. ! queue ! videoconvert ! video/x-raw,format=RGBA ! appsink name=sink \
+                     dec. ! queue ! audioconvert ! audioresample ! autoaudiosink",
+                    path.replace("\"", "\\\"")
+                )
+            };
 
             log::debug!("Creating GStreamer pipeline: {}", pipeline_str);
 
@@ -343,50 +360,12 @@ impl VideoCache {
                         .dynamic_cast::<gst_app::AppSink>()
                         .expect("Could not cast to AppSink");
 
-                    // Configure appsink
+                    // Configure appsink for pull mode (polling with try_pull_sample)
                     appsink.set_max_buffers(2);
                     appsink.set_drop(true);
 
                     let video_id = request.id;
                     let tx_clone = tx.clone();
-
-                    // Set up callback for new samples
-                    appsink.set_callbacks(
-                        gst_app::AppSinkCallbacks::builder()
-                            .new_sample(move |sink| {
-                                log::debug!("AppSink: new_sample callback triggered for video {}", video_id);
-                                if let Ok(sample) = sink.pull_sample() {
-                                    if let Some(buffer) = sample.buffer() {
-                                        // Get video info from caps
-                                        let caps = sample.caps().expect("No caps");
-                                        let info = gst_video::VideoInfo::from_caps(caps)
-                                            .expect("Failed to get video info");
-
-                                        let width = info.width();
-                                        let height = info.height();
-
-                                        log::debug!("Decoded frame: {}x{} for video {}", width, height, video_id);
-
-                                        // Map buffer and extract data
-                                        if let Ok(map) = buffer.map_readable() {
-                                            let data = map.as_slice().to_vec();
-
-                                            let _ = tx_clone.send(DecodedFrame {
-                                                id: 0, // Frame ID
-                                                video_id,
-                                                width,
-                                                height,
-                                                data,
-                                                pts: buffer.pts().map(|p| p.nseconds()).unwrap_or(0),
-                                                duration: buffer.duration().map(|d| d.nseconds()).unwrap_or(0),
-                                            });
-                                        }
-                                    }
-                                }
-                                Ok(gst::FlowSuccess::Ok)
-                            })
-                            .build(),
-                    );
 
                     // Start playing
                     log::debug!("Setting pipeline to Playing state");
@@ -396,12 +375,83 @@ impl VideoCache {
                         log::info!("Pipeline started successfully for video {}", request.id);
                     }
 
-                    // Wait for EOS or error
+                    // Spawn frame pulling thread
+                    let appsink_clone = appsink.clone();
+                    let pipeline_weak = pipeline.downgrade();
+                    let using_vaapi = has_vapostproc;
+                    std::thread::spawn(move || {
+                        log::info!("Frame puller thread started for video {}", video_id);
+
+                        // Wait for pipeline to reach PLAYING state
+                        if let Some(pipeline) = pipeline_weak.upgrade() {
+                            let (res, state, _) = pipeline.state(gst::ClockTime::from_seconds(5));
+                            log::info!("Video {} pipeline state: {:?}, result: {:?}", video_id, state, res);
+                        }
+                        let mut frame_count = 0u64;
+                        let mut timeout_count = 0u64;
+
+                        loop {
+                            // Try to pull a sample with 100ms timeout
+                            match appsink_clone.try_pull_sample(gst::ClockTime::from_mseconds(100)) {
+                                Some(sample) => {
+                                    timeout_count = 0;
+                                    frame_count += 1;
+                                    if let Some(buffer) = sample.buffer() {
+                                        // Get video info from caps
+                                        if let Some(caps) = sample.caps() {
+                                            if let Ok(info) = gst_video::VideoInfo::from_caps(caps) {
+                                                let width = info.width();
+                                                let height = info.height();
+
+                                                if frame_count <= 5 || frame_count % 60 == 0 {
+                                                    log::debug!("Frame #{} for video {}, {}x{} (VA-API: {})",
+                                                        frame_count, video_id, width, height, using_vaapi);
+                                                }
+
+                                                // Map buffer and extract RGBA data
+                                                if let Ok(map) = buffer.map_readable() {
+                                                    let data = map.as_slice().to_vec();
+
+                                                    if tx_clone.send(DecodedFrame {
+                                                        id: frame_count as u32,
+                                                        video_id,
+                                                        width,
+                                                        height,
+                                                        data,
+                                                        pts: buffer.pts().map(|p| p.nseconds()).unwrap_or(0),
+                                                        duration: buffer.duration().map(|d| d.nseconds()).unwrap_or(0),
+                                                    }).is_err() {
+                                                        log::debug!("Frame receiver dropped, stopping puller");
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                None => {
+                                    timeout_count += 1;
+                                    // Check if EOS
+                                    if appsink_clone.is_eos() {
+                                        log::info!("Video {} reached EOS after {} frames", video_id, frame_count);
+                                        break;
+                                    }
+                                    // Log occasional timeout status
+                                    if timeout_count == 1 || timeout_count % 50 == 0 {
+                                        log::debug!("Video {} pull timeout #{}, frames so far: {}", video_id, timeout_count, frame_count);
+                                    }
+                                }
+                            }
+                        }
+                        log::debug!("Frame puller thread exiting for video {}", video_id);
+                    });
+
+                    // Wait for EOS or error on bus
                     let bus = pipeline.bus().unwrap();
                     for msg in bus.iter_timed(gst::ClockTime::NONE) {
                         match msg.view() {
                             gst::MessageView::Eos(..) => {
-                                log::debug!("Video {} reached end of stream", video_id);
+                                log::debug!("Video {} bus: end of stream", video_id);
                                 break;
                             }
                             gst::MessageView::Error(err) => {
