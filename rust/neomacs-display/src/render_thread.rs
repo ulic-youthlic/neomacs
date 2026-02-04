@@ -29,6 +29,9 @@ use crate::backend::wpe::{WpeBackend, WpeWebView};
 #[cfg(all(feature = "wpe-webkit", target_os = "linux"))]
 use crate::backend::wgpu::WgpuWebKitCache;
 
+#[cfg(feature = "video")]
+use crate::backend::wgpu::VideoCache;
+
 /// Render thread state
 pub struct RenderThread {
     handle: Option<JoinHandle<()>>,
@@ -89,6 +92,10 @@ struct RenderApp {
 
     #[cfg(all(feature = "wpe-webkit", target_os = "linux"))]
     webkit_texture_cache: Option<WgpuWebKitCache>,
+
+    // Video state
+    #[cfg(feature = "video")]
+    video_cache: Option<VideoCache>,
 }
 
 impl RenderApp {
@@ -115,6 +122,8 @@ impl RenderApp {
             webkit_views: HashMap::new(),
             #[cfg(all(feature = "wpe-webkit", target_os = "linux"))]
             webkit_texture_cache: None,
+            #[cfg(feature = "video")]
+            video_cache: None,
         }
     }
 
