@@ -1028,11 +1028,22 @@ impl WgpuRenderer {
         );
 
         // 2. Process window backgrounds FIRST
+        // Also find any overlay chars to check their Y position
+        let overlay_y: Option<f32> = frame_glyphs.glyphs.iter().find_map(|g| {
+            if let FrameGlyph::Char { y, is_overlay: true, .. } = g {
+                Some(*y)
+            } else {
+                None
+            }
+        });
         let mut bg_count = 0;
         for glyph in &frame_glyphs.glyphs {
             if let FrameGlyph::Background { bounds, color } = glyph {
-                log::debug!("render_frame_glyphs: window background #{} at ({:.1},{:.1}) size {:.1}x{:.1} color=({:.3},{:.3},{:.3})",
-                    bg_count, bounds.x, bounds.y, bounds.width, bounds.height, color.r, color.g, color.b);
+                let covers_overlay = overlay_y.map(|oy| {
+                    bounds.y <= oy && bounds.y + bounds.height > oy
+                }).unwrap_or(false);
+                log::debug!("render_frame_glyphs: window background #{} at ({:.1},{:.1}) size {:.1}x{:.1} color=({:.3},{:.3},{:.3}) covers_overlay={}",
+                    bg_count, bounds.x, bounds.y, bounds.width, bounds.height, color.r, color.g, color.b, covers_overlay);
                 bg_count += 1;
                 self.add_rect(
                     &mut rect_vertices,
@@ -1054,9 +1065,17 @@ impl WgpuRenderer {
         }
 
         // 4. Process char backgrounds (modeline, etc.) - AFTER window backgrounds
+        let mut char_bg_count = 0;
         for glyph in &frame_glyphs.glyphs {
-            if let FrameGlyph::Char { x, y, width, height, bg: Some(bg_color), .. } = glyph {
-                self.add_rect(&mut rect_vertices, *x, *y, *width, *height, bg_color);
+            if let FrameGlyph::Char { char, x, y, width, height, bg, is_overlay, face_id, .. } = glyph {
+                if *is_overlay && char_bg_count < 20 {
+                    log::debug!("RENDER char_bg: '{}' face={} at ({:.1},{:.1}) size {:.1}x{:.1} bg={:?}",
+                        char, face_id, x, y, width, height, bg);
+                    char_bg_count += 1;
+                }
+                if let Some(bg_color) = bg {
+                    self.add_rect(&mut rect_vertices, *x, *y, *width, *height, bg_color);
+                }
             }
         }
 
@@ -1150,19 +1169,18 @@ impl WgpuRenderer {
                     let face = faces.get(face_id);
 
                     if let Some(cached) = glyph_atlas.get_or_create(&self.device, &self.queue, &key, face) {
-                        // Use Emacs's allocated width for glyph positioning to ensure proper spacing.
-                        // Emacs calculates glyph positions based on its font metrics, so we use
-                        // its width to prevent glyphs from overlapping when text-scale-increase
-                        // causes Emacs's font metrics to differ from cosmic-text's rendering.
+                        // Position glyph correctly:
+                        // baseline = y + ascent (baseline position in frame coordinates)
+                        // bearing_y = distance from baseline to glyph top (positive = above baseline)
+                        // glyph_y = baseline - bearing_y = position of glyph top
                         //
-                        // Position: x + bearing to align glyph within Emacs's cell
-                        // Size: Use Emacs's width (*width) but cosmic-text's height for proper
-                        //       vertical proportions. The texture will be stretched horizontally
-                        //       if cosmic-text's glyph width differs from Emacs's expectation.
-                        let glyph_x = *x;
-                        let glyph_y = *y + *ascent - cached.bearing_y;
-                        // Use Emacs's width to ensure no overlap, but cosmic-text's height
-                        let glyph_w = *width;  // Emacs's expected width
+                        // Use the cached glyph's actual dimensions (not Emacs's expected width)
+                        // to avoid stretching when font size changes. The glyph is positioned
+                        // at x + bearing_x to align correctly within Emacs's allocated space.
+                        let glyph_x = *x + cached.bearing_x;
+                        let baseline = *y + *ascent;
+                        let glyph_y = baseline - cached.bearing_y;
+                        let glyph_w = cached.width as f32;
                         let glyph_h = cached.height as f32;
 
                         let vertices = [

@@ -1856,6 +1856,14 @@ neomacs_new_font (struct frame *f, Lisp_Object font_object, int fontset)
 	c->used = 0;
     }
 
+  /* Now make the frame display the given font.
+     This triggers proper redisplay after dynamic font changes.  */
+  struct neomacs_output *output = FRAME_NEOMACS_OUTPUT (f);
+  if (output != NULL)
+    adjust_frame_size (f, FRAME_COLS (f) * FRAME_COLUMN_WIDTH (f),
+		       FRAME_LINES (f) * FRAME_LINE_HEIGHT (f), 3,
+		       false, Qfont);
+
   return font_object;
 }
 

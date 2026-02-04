@@ -548,9 +548,9 @@ impl RenderApp {
         // Process video frames
         self.process_video_frames();
 
-        // Build faces from frame data first (while we can mutably borrow self)
+        // Build/update faces from frame data first (while we can mutably borrow self)
         if let Some(ref frame) = self.current_frame {
-            // Build faces from frame glyphs
+            // Build faces from frame glyphs - always update to handle font size changes
             for glyph in &frame.glyphs {
                 if let FrameGlyph::Char {
                     face_id,
@@ -561,20 +561,18 @@ impl RenderApp {
                     ..
                 } = glyph
                 {
-                    if !self.faces.contains_key(face_id) {
-                        let mut face = Face::new(*face_id);
-                        face.foreground = *fg;
-                        face.font_size = *font_size;
-                        if *bold {
-                            face.font_weight = 700;
-                        }
-                        if *italic {
-                            face.attributes |= crate::core::face::FaceAttributes::ITALIC;
-                        }
-                        if let Some(font_family) = frame.face_fonts.get(face_id) {
-                            face.font_family = font_family.clone();
-                        }
-                        self.faces.insert(*face_id, face);
+                    // Always update the face to handle dynamic font size changes
+                    let face = self.faces.entry(*face_id).or_insert_with(|| Face::new(*face_id));
+                    face.foreground = *fg;
+                    face.font_size = *font_size;
+                    face.font_weight = if *bold { 700 } else { 400 };
+                    if *italic {
+                        face.attributes |= crate::core::face::FaceAttributes::ITALIC;
+                    } else {
+                        face.attributes.remove(crate::core::face::FaceAttributes::ITALIC);
+                    }
+                    if let Some(font_family) = frame.face_fonts.get(face_id) {
+                        face.font_family = font_family.clone();
                     }
                 }
             }

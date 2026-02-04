@@ -61,6 +61,8 @@ pub struct NeomacsDisplay {
     current_row_ascent: i32, // Ascent of current row
     current_row_is_overlay: bool, // True if current row is mode-line/echo area
     current_window_id: i32, // ID of current window being updated
+    current_window_x: f32,  // Current window's left X position
+    current_window_width: f32, // Current window's width
     in_frame: bool,         // Whether we're currently in a frame update
     frame_counter: u64,     // Frame counter for tracking row updates
     current_render_window_id: u32, // Winit window ID being rendered to (0 = legacy rendering)
@@ -213,6 +215,8 @@ pub unsafe extern "C" fn neomacs_display_add_window(
 
     // Track current window for subsequent glyph operations
     display.current_window_id = window_id;
+    display.current_window_x = x;
+    display.current_window_width = width;
 
     // Hybrid path: just add window background rectangle
     // Skip hybrid path if rendering to a winit window (current_render_window_id > 0)
@@ -492,6 +496,37 @@ pub unsafe extern "C" fn neomacs_display_add_char_glyph(
 
         // Hybrid path: append directly to frame glyph buffer
         if display.use_hybrid {
+            // For overlay rows (mode-line/echo-area), fill background gap on the left
+            // The gap is from window's left edge to where the first character starts
+            let window_x = display.current_window_x;
+
+            // Debug: log overlay row info with pixel_width
+            if display.current_row_is_overlay {
+                log::debug!("OVERLAY char '{}' at x={}, width={}, window_x={}, current_bg={:?}",
+                    c, current_x, pixel_width, window_x, display.frame_glyphs.get_current_bg());
+            }
+
+            if display.current_row_is_overlay && (current_x as f32) > window_x {
+                if let Some(bg) = display.frame_glyphs.get_current_bg() {
+                    // Check if we haven't already filled this row's left gap
+                    let already_filled = display.frame_glyphs.glyphs.iter().any(|g| {
+                        matches!(g, crate::core::frame_glyphs::FrameGlyph::Stretch { x, y, .. }
+                            if (*x - window_x).abs() < 1.0 && (*y - current_y as f32).abs() < 1.0)
+                    });
+                    if !already_filled {
+                        let gap_width = current_x as f32 - window_x;
+                        display.frame_glyphs.add_stretch(
+                            window_x,
+                            current_y as f32,
+                            gap_width,
+                            display.current_row_height as f32,
+                            bg,
+                            true, // is_overlay
+                        );
+                    }
+                }
+            }
+
             display.frame_glyphs.add_char(
                 c,
                 current_x as f32,
@@ -3151,6 +3186,8 @@ pub unsafe extern "C" fn neomacs_display_init_threaded(
         current_row_ascent: 0,
         current_row_is_overlay: false,
         current_window_id: -1,
+        current_window_x: 0.0,
+        current_window_width: 0.0,
         in_frame: false,
         frame_counter: 0,
         current_render_window_id: 0,

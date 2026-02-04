@@ -90,6 +90,7 @@ impl WgpuGlyphAtlas {
         });
 
         // Create sampler for glyph textures
+        // Use Linear filtering for smooth antialiased text
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("Glyph Sampler"),
             address_mode_u: wgpu::AddressMode::ClampToEdge,
