@@ -1268,13 +1268,28 @@ pub unsafe extern "C" fn neomacs_display_load_image(
     _path: *const c_char,
 ) -> u32 { 0 }
 
-/// Load an image from raw bytes (stub)
+/// Load an image from raw bytes (encoded image format)
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_load_image_data(
-    _handle: *mut NeomacsDisplay,
-    _data: *const u8,
-    _len: usize,
-) -> u32 { 0 }
+    handle: *mut NeomacsDisplay,
+    data: *const u8,
+    len: usize,
+) -> u32 {
+    if handle.is_null() || data.is_null() || len == 0 {
+        return 0;
+    }
+    let display = &mut *handle;
+
+    let data_slice = std::slice::from_raw_parts(data, len);
+
+    #[cfg(feature = "winit-backend")]
+    if let Some(ref mut backend) = display.winit_backend {
+        if let Some(renderer) = backend.renderer_mut() {
+            return renderer.load_image_data(data_slice, 0, 0);
+        }
+    }
+    0
+}
 
 /// Load an image from raw bytes with optional scaling (stub)
 #[no_mangle]
@@ -1286,25 +1301,75 @@ pub unsafe extern "C" fn neomacs_display_load_image_data_scaled(
     _max_height: c_int,
 ) -> u32 { 0 }
 
-/// Load an image from raw ARGB32 pixel data (stub)
+/// Load an image from raw ARGB32 pixel data
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_load_image_argb32(
-    _handle: *mut NeomacsDisplay,
-    _data: *const u8,
-    _width: c_int,
-    _height: c_int,
-    _stride: c_int,
-) -> u32 { 0 }
+    handle: *mut NeomacsDisplay,
+    data: *const u8,
+    width: c_int,
+    height: c_int,
+    stride: c_int,
+) -> u32 {
+    if handle.is_null() || data.is_null() || width <= 0 || height <= 0 || stride <= 0 {
+        return 0;
+    }
+    let display = &mut *handle;
 
-/// Load an image from raw RGB24 pixel data (stub)
+    // Use checked multiplication to prevent overflow
+    let data_len = match (stride as usize).checked_mul(height as usize) {
+        Some(len) => len,
+        None => return 0, // Overflow would occur
+    };
+    let data_slice = std::slice::from_raw_parts(data, data_len);
+
+    #[cfg(feature = "winit-backend")]
+    if let Some(ref mut backend) = display.winit_backend {
+        if let Some(renderer) = backend.renderer_mut() {
+            return renderer.load_image_argb32(
+                data_slice,
+                width as u32,
+                height as u32,
+                stride as u32,
+            );
+        }
+    }
+    0
+}
+
+/// Load an image from raw RGB24 pixel data
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_load_image_rgb24(
-    _handle: *mut NeomacsDisplay,
-    _data: *const u8,
-    _width: c_int,
-    _height: c_int,
-    _stride: c_int,
-) -> u32 { 0 }
+    handle: *mut NeomacsDisplay,
+    data: *const u8,
+    width: c_int,
+    height: c_int,
+    stride: c_int,
+) -> u32 {
+    if handle.is_null() || data.is_null() || width <= 0 || height <= 0 || stride <= 0 {
+        return 0;
+    }
+    let display = &mut *handle;
+
+    // Use checked multiplication to prevent overflow
+    let data_len = match (stride as usize).checked_mul(height as usize) {
+        Some(len) => len,
+        None => return 0, // Overflow would occur
+    };
+    let data_slice = std::slice::from_raw_parts(data, data_len);
+
+    #[cfg(feature = "winit-backend")]
+    if let Some(ref mut backend) = display.winit_backend {
+        if let Some(renderer) = backend.renderer_mut() {
+            return renderer.load_image_rgb24(
+                data_slice,
+                width as u32,
+                height as u32,
+                stride as u32,
+            );
+        }
+    }
+    0
+}
 
 /// Load an image from a file path (async - returns ID immediately)
 #[no_mangle]

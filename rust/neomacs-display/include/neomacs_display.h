@@ -352,7 +352,7 @@ int neomacs_display_get_video_size(struct NeomacsDisplay *handle,
 uint32_t neomacs_display_load_image(struct NeomacsDisplay *handle, const char *path);
 
 /**
- * Load an image from raw bytes (stub)
+ * Load an image from raw bytes (encoded image format)
  */
 uint32_t neomacs_display_load_image_data(struct NeomacsDisplay *handle,
                                          const uint8_t *data,
@@ -368,7 +368,7 @@ uint32_t neomacs_display_load_image_data_scaled(struct NeomacsDisplay *handle,
                                                 int maxHeight);
 
 /**
- * Load an image from raw ARGB32 pixel data (stub)
+ * Load an image from raw ARGB32 pixel data
  */
 uint32_t neomacs_display_load_image_argb32(struct NeomacsDisplay *handle,
                                            const uint8_t *data,
@@ -377,7 +377,7 @@ uint32_t neomacs_display_load_image_argb32(struct NeomacsDisplay *handle,
                                            int stride);
 
 /**
- * Load an image from raw RGB24 pixel data (stub)
+ * Load an image from raw RGB24 pixel data
  */
 uint32_t neomacs_display_load_image_rgb24(struct NeomacsDisplay *handle,
                                           const uint8_t *data,
