@@ -34,6 +34,8 @@ pub enum FrameGlyph {
         bold: bool,
         /// Italic flag
         italic: bool,
+        /// Font size in pixels
+        font_size: f32,
         /// Underline style (0=none, 1=single, 2=double, 3=wave)
         underline: u8,
         /// Underline color
@@ -150,6 +152,7 @@ pub struct FrameGlyphBuffer {
     current_font_family: String,
     current_bold: bool,
     current_italic: bool,
+    current_font_size: f32,
     current_underline: u8,
     current_underline_color: Option<Color>,
 
@@ -173,12 +176,13 @@ impl FrameGlyphBuffer {
             current_font_family: "monospace".to_string(),
             current_bold: false,
             current_italic: false,
+            current_font_size: 14.0,
             current_underline: 0,
             current_underline_color: None,
             face_fonts: HashMap::new(),
         }
     }
-    
+
     /// Create a new buffer with specified dimensions
     pub fn with_size(width: f32, height: f32) -> Self {
         Self {
@@ -195,6 +199,7 @@ impl FrameGlyphBuffer {
             current_font_family: "monospace".to_string(),
             current_bold: false,
             current_italic: false,
+            current_font_size: 14.0,
             current_underline: 0,
             current_underline_color: None,
             face_fonts: HashMap::new(),
@@ -240,13 +245,14 @@ impl FrameGlyphBuffer {
 
     /// Set current face attributes for subsequent char glyphs (with font family)
     pub fn set_face_with_font(&mut self, face_id: u32, fg: Color, bg: Option<Color>,
-                    font_family: &str, bold: bool, italic: bool, underline: u8, underline_color: Option<Color>) {
+                    font_family: &str, bold: bool, italic: bool, font_size: f32, underline: u8, underline_color: Option<Color>) {
         self.current_face_id = face_id;
         self.current_fg = fg;
         self.current_bg = bg;
         self.current_font_family = font_family.to_string();
         self.current_bold = bold;
         self.current_italic = italic;
+        self.current_font_size = font_size;
         self.current_underline = underline;
         self.current_underline_color = underline_color;
         // Store font family for this face_id
@@ -445,6 +451,7 @@ impl FrameGlyphBuffer {
             face_id: self.current_face_id,
             bold: self.current_bold,
             italic: self.current_italic,
+            font_size: self.current_font_size,
             underline: self.current_underline,
             underline_color: self.current_underline_color,
             is_overlay,

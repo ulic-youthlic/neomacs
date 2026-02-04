@@ -1077,6 +1077,11 @@ neomacs_draw_glyph_string (struct glyph_string *s)
                                  BLUE_FROM_ULONG(face->box_color));
                 }
 
+              /* Get font size from the face's font (for text-scale-increase support) */
+              int font_size = 14;  /* default */
+              if (face->font)
+                font_size = face->font->pixel_size;
+
               neomacs_display_set_face (dpyinfo->display_handle,
                                         face_id,
                                         fg_rgb,
@@ -1084,6 +1089,7 @@ neomacs_draw_glyph_string (struct glyph_string *s)
                                         font_family,
                                         font_weight,
                                         is_italic,
+                                        font_size,
                                         underline_style,
                                         underline_color,
                                         box_type,

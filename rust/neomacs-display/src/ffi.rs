@@ -874,6 +874,7 @@ pub unsafe extern "C" fn neomacs_display_set_face(
     font_family: *const c_char, // Font family name (e.g., "monospace", "Sans")
     font_weight: u16, // 400=normal, 700=bold
     is_italic: c_int,
+    font_size: c_int, // Font size in pixels (from face->font->pixel_size)
     underline_style: c_int, // 0=none, 1=line, 2=wave, 3=double, 4=dotted, 5=dashed
     underline_color: u32,
     box_type: c_int,  // 0=none, 1=line, 2=raised3d, 3=sunken3d
@@ -971,6 +972,50 @@ pub unsafe extern "C" fn neomacs_display_set_face(
         None
     };
 
+    let new_font_size = if font_size > 0 { font_size as f32 } else { 14.0 };
+
+    // Detect text-scale changes: When text-scale-increase is used, Emacs creates NEW faces
+    // with larger font_size values (typically IDs > 22). We need to clear glyphs when this
+    // happens because the text layout will be different.
+    //
+    // Get baseline font size from face 0 (the default face). If face 0 doesn't exist yet,
+    // we're in initial setup and shouldn't clear anything.
+    let baseline_font_size = display.faces.get(&0).map(|f| f.font_size);
+
+    let should_clear = if let Some(baseline) = baseline_font_size {
+        // We have a baseline - check for font size changes
+        if let Some(existing_face) = display.faces.get(&face_id) {
+            // Existing face - check if size changed
+            (existing_face.font_size - new_font_size).abs() > 0.1
+        } else {
+            // New face - clear if this is a scaled face (font_size differs from baseline)
+            // This detects text-scale-increase creating new scaled faces
+            (new_font_size - baseline).abs() > 0.1
+        }
+    } else {
+        // No baseline yet (face 0 not created) - don't clear during initial setup
+        false
+    };
+
+    if should_clear {
+        log::debug!("Text scale change detected: face {}: size={}, clearing non-overlay glyphs",
+                   face_id, new_font_size);
+        // Only clear non-overlay glyphs (buffer content).
+        // Preserve overlay glyphs (modeline, echo area) since they don't change with text-scale.
+        display.frame_glyphs.glyphs.retain(|g| {
+            match g {
+                crate::core::frame_glyphs::FrameGlyph::Char { is_overlay, .. } => *is_overlay,
+                crate::core::frame_glyphs::FrameGlyph::Stretch { is_overlay, .. } => *is_overlay,
+                // Keep cursors, borders, backgrounds, images, etc.
+                crate::core::frame_glyphs::FrameGlyph::Cursor { .. } => true,
+                crate::core::frame_glyphs::FrameGlyph::Border { .. } => true,
+                crate::core::frame_glyphs::FrameGlyph::Background { .. } => true,
+                _ => false, // Clear images, videos, webkit (unlikely to be affected but safer)
+            }
+        });
+        display.frame_glyphs.window_regions.clear();
+    }
+
     let face = Face {
         id: face_id,
         foreground: fg,
@@ -980,7 +1025,7 @@ pub unsafe extern "C" fn neomacs_display_set_face(
         strike_through_color: None,
         box_color: bx_color,
         font_family: font_family_str.clone(),
-        font_size: 14.0,
+        font_size: new_font_size,
         font_weight,
         attributes: attrs,
         underline_style: ul_style,
@@ -1002,6 +1047,7 @@ pub unsafe extern "C" fn neomacs_display_set_face(
             &font_family_str,
             font_weight >= 700,
             is_italic != 0,
+            if font_size > 0 { font_size as f32 } else { 14.0 },
             underline_style as u8,
             ul_color_opt,
         );

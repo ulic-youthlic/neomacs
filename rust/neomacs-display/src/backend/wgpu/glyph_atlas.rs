@@ -15,8 +15,11 @@ use crate::core::face::Face;
 pub struct GlyphKey {
     /// Character code
     pub charcode: u32,
-    /// Face ID (determines font, size, style)
+    /// Face ID (determines font, style)
     pub face_id: u32,
+    /// Font size in pixels (for text-scale-increase support)
+    /// Using u32 bits of f32 for hashing
+    pub font_size_bits: u32,
 }
 
 /// A cached glyph with its wgpu texture and bind group
@@ -235,8 +238,11 @@ impl WgpuGlyphAtlas {
         // Create attributes from face
         let attrs = self.face_to_attrs(face);
 
-        // Create metrics
-        let metrics = Metrics::new(self.default_font_size, self.default_line_height);
+        // Use font_size from face if available, otherwise default
+        let font_size = face.map(|f| f.font_size).unwrap_or(self.default_font_size);
+
+        // Create metrics with the face's font size
+        let metrics = Metrics::new(font_size, self.default_line_height);
 
         // Create a small buffer for single character
         let mut buffer = Buffer::new(&mut self.font_system, metrics);

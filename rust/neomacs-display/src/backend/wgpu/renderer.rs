@@ -796,18 +796,29 @@ impl WgpuRenderer {
             let mut glyph_data: Vec<(GlyphKey, [GlyphVertex; 6])> = Vec::new();
 
             for glyph in &frame_glyphs.glyphs {
-                if let FrameGlyph::Char { char, x, y, ascent, fg, face_id, .. } = glyph {
+                if let FrameGlyph::Char { char, x, y, width, ascent, fg, face_id, font_size, .. } = glyph {
                     let key = GlyphKey {
                         charcode: *char as u32,
                         face_id: *face_id,
+                        font_size_bits: font_size.to_bits(),
                     };
 
                     let face = faces.get(face_id);
 
                     if let Some(cached) = glyph_atlas.get_or_create(&self.device, &self.queue, &key, face) {
-                        let glyph_x = *x + cached.bearing_x;
+                        // Use Emacs's allocated width for glyph positioning to ensure proper spacing.
+                        // Emacs calculates glyph positions based on its font metrics, so we use
+                        // its width to prevent glyphs from overlapping when text-scale-increase
+                        // causes Emacs's font metrics to differ from cosmic-text's rendering.
+                        //
+                        // Position: x + bearing to align glyph within Emacs's cell
+                        // Size: Use Emacs's width (*width) but cosmic-text's height for proper
+                        //       vertical proportions. The texture will be stretched horizontally
+                        //       if cosmic-text's glyph width differs from Emacs's expectation.
+                        let glyph_x = *x;
                         let glyph_y = *y + *ascent - cached.bearing_y;
-                        let glyph_w = cached.width as f32;
+                        // Use Emacs's width to ensure no overlap, but cosmic-text's height
+                        let glyph_w = *width;  // Emacs's expected width
                         let glyph_h = cached.height as f32;
 
                         let vertices = [

@@ -5093,6 +5093,11 @@ tty_display_dimension (Lisp_Object frame, int *width, int *height)
       *width = FrameCols (FRAME_TTY (f));
       *height = FrameRows (FRAME_TTY (f));
       break;
+    case output_neomacs:
+      /* Return actual pixel dimensions for neomacs frames */
+      *width = FRAME_PIXEL_WIDTH (f);
+      *height = FRAME_PIXEL_HEIGHT (f);
+      break;
     case output_x_window:
     case output_msdos_raw:
     case output_w32:
