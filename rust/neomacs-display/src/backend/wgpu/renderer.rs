@@ -1144,33 +1144,33 @@ impl WgpuRenderer {
             // First pass: collect glyph keys and vertices (ensures all glyphs are cached)
             let mut glyph_data: Vec<(GlyphKey, [GlyphVertex; 6])> = Vec::new();
 
+            // Round scale to nearest integer for glyph cache (1, 2, 3, etc.)
+            let scale_int = scale.round() as u32;
+
             for glyph in &frame_glyphs.glyphs {
                 if let FrameGlyph::Char { char, x, y, width, ascent, fg, face_id, font_size, .. } = glyph {
                     let key = GlyphKey {
                         charcode: *char as u32,
                         face_id: *face_id,
                         font_size_bits: font_size.to_bits(),
+                        scale: scale_int,
                     };
 
                     let face = faces.get(face_id);
 
                     if let Some(cached) = glyph_atlas.get_or_create(&self.device, &self.queue, &key, face) {
-                        // Use Emacs's allocated width for glyph positioning to ensure proper spacing.
-                        // Emacs calculates glyph positions based on its font metrics, so we use
-                        // its width to prevent glyphs from overlapping when text-scale-increase
-                        // causes Emacs's font metrics to differ from cosmic-text's rendering.
+                        // HiDPI glyph rendering:
+                        // - Glyph texture is rasterized at `scale`x (e.g., 2x for HiDPI)
+                        // - cached.width/height and bearing_x/y are in physical pixels
+                        // - x, y, width, ascent from Emacs are in logical pixels
                         //
-                        // Position: x + bearing to align glyph within Emacs's cell
-                        // Size: Use Emacs's width (*width) but cosmic-text's height for proper
-                        //       vertical proportions. The texture will be stretched horizontally
-                        //       if cosmic-text's glyph width differs from Emacs's expectation.
-                        //
-                        // Scale from logical to physical coordinates for HiDPI
-                        let glyph_x = *x * scale;
-                        let glyph_y = (*y + *ascent - cached.bearing_y) * scale;
-                        // Use Emacs's width to ensure no overlap, but cosmic-text's height
-                        let glyph_w = *width * scale;  // Emacs's expected width (scaled)
-                        let glyph_h = cached.height as f32 * scale;
+                        // Position: scale logical coords to physical, apply vertical bearing
+                        // Use cell width (scaled) for proper character spacing
+                        let glyph_x = (*x * scale).round();
+                        let glyph_y = ((*y + *ascent) * scale - cached.bearing_y).round();
+                        // Use scaled cell width to maintain proper spacing (Emacs controls layout)
+                        let glyph_w = *width * scale;
+                        let glyph_h = cached.height as f32;
 
                         let vertices = [
                             GlyphVertex { position: [glyph_x, glyph_y], tex_coords: [0.0, 0.0], color: [fg.r, fg.g, fg.b, fg.a] },
