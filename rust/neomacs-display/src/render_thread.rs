@@ -20,6 +20,9 @@ use crate::core::face::Face;
 use crate::core::frame_glyphs::{FrameGlyph, FrameGlyphBuffer};
 use crate::thread_comm::{InputEvent, RenderCommand, RenderComms};
 
+#[cfg(all(feature = "wpe-webkit", wpe_platform_available))]
+use crate::backend::wpe::sys::platform as plat;
+
 /// Render thread state
 pub struct RenderThread {
     handle: Option<JoinHandle<()>>,
@@ -280,13 +283,29 @@ impl RenderApp {
     }
 
     /// Pump GLib events (non-blocking)
-    #[cfg(feature = "wpe-webkit")]
+    #[cfg(all(feature = "wpe-webkit", wpe_platform_available))]
     fn pump_glib(&self) {
-        // TODO: Implement GLib pumping
-        // while glib_ctx.iteration(false) {}
+        unsafe {
+            // WPEViewHeadless attaches to thread-default context
+            let thread_ctx = plat::g_main_context_get_thread_default();
+            let ctx = if thread_ctx.is_null() {
+                plat::g_main_context_default()
+            } else {
+                thread_ctx
+            };
+
+            // Non-blocking iteration - process all pending events
+            while plat::g_main_context_iteration(ctx, 0) != 0 {}
+
+            // Also check default context if different
+            let default_ctx = plat::g_main_context_default();
+            if default_ctx != ctx {
+                while plat::g_main_context_iteration(default_ctx, 0) != 0 {}
+            }
+        }
     }
 
-    #[cfg(not(feature = "wpe-webkit"))]
+    #[cfg(not(all(feature = "wpe-webkit", wpe_platform_available)))]
     fn pump_glib(&self) {}
 
     /// Render the current frame

@@ -9,7 +9,7 @@
 //! - dma-buf: Zero-copy GPU buffer sharing
 
 #[cfg(feature = "wpe-webkit")]
-mod sys;
+pub(crate) mod sys;
 
 #[cfg(feature = "wpe-webkit")]
 mod platform;
