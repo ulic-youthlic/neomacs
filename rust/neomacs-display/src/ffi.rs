@@ -2032,12 +2032,10 @@ pub unsafe extern "C" fn neomacs_display_set_mouse_scroll_callback(
 #[cfg(feature = "wpe-webkit")]
 use std::cell::RefCell;
 #[cfg(feature = "wpe-webkit")]
-use crate::backend::wpe::{WpeBackend, WebKitViewCache};
+use crate::backend::wpe::WpeBackend;
 
 #[cfg(feature = "wpe-webkit")]
 thread_local! {
-    /// WebKit view cache for WPE views (public for renderer access).
-    pub static WEBKIT_CACHE: RefCell<Option<WebKitViewCache>> = const { RefCell::new(None) };
     static WPE_BACKEND: RefCell<Option<WpeBackend>> = const { RefCell::new(None) };
 }
 
@@ -2173,11 +2171,6 @@ pub unsafe extern "C" fn neomacs_display_webkit_init(
                     *wpe.borrow_mut() = Some(backend);
                 });
 
-                // Initialize cache
-                WEBKIT_CACHE.with(|cache| {
-                    *cache.borrow_mut() = Some(WebKitViewCache::new());
-                });
-
                 // NOTE: We deliberately do NOT initialize WebKit on the Emacs main thread.
                 // Instead, WebKit should be initialized on the render thread, which will
                 // become WebKit's "main" thread. The render thread has its own GLib main
@@ -2222,7 +2215,7 @@ unsafe fn egl_get_current_display() -> *mut libc::c_void {
     eglGetCurrentDisplay()
 }
 
-/// Create a new WebKit view
+/// Create a new WebKit view (threaded mode only)
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_webkit_create(
     _handle: *mut NeomacsDisplay,
@@ -2231,8 +2224,6 @@ pub unsafe extern "C" fn neomacs_display_webkit_create(
 ) -> u32 {
     #[cfg(feature = "wpe-webkit")]
     {
-        // Use threaded path if available
-        #[cfg(feature = "winit-backend")]
         if let Some(ref state) = THREADED_STATE {
             let id = WEBKIT_VIEW_ID_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             let cmd = RenderCommand::WebKitCreate {
@@ -2243,44 +2234,19 @@ pub unsafe extern "C" fn neomacs_display_webkit_create(
             let _ = state.emacs_comms.cmd_tx.try_send(cmd);
             return id;
         }
-
-        // Fallback to old path (non-threaded)
-        return WPE_BACKEND.with(|wpe_cell| {
-            let wpe_borrow = wpe_cell.borrow();
-            let backend = match wpe_borrow.as_ref() {
-                Some(b) => b,
-                None => {
-                    eprintln!("WebKit not initialized - call neomacs_display_webkit_init first");
-                    return 0;
-                }
-            };
-
-            WEBKIT_CACHE.with(|cache_cell| {
-                let mut cache_borrow = cache_cell.borrow_mut();
-                if let Some(cache) = cache_borrow.as_mut() {
-                    match cache.create_with_backend(backend, width, height) {
-                        Ok(id) => id,
-                        Err(e) => {
-                            eprintln!("Failed to create WebKit view: {}", e);
-                            0
-                        }
-                    }
-                } else {
-                    0
-                }
-            })
-        });
+        log::error!("webkit_create: threaded mode not initialized");
+        return 0;
     }
 
     #[cfg(not(feature = "wpe-webkit"))]
     {
         let _ = (width, height);
-        eprintln!("WebKit support not compiled");
+        log::warn!("WebKit support not compiled");
         0
     }
 }
 
-/// Destroy a WebKit view
+/// Destroy a WebKit view (threaded mode only)
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_webkit_destroy(
     _handle: *mut NeomacsDisplay,
@@ -2288,24 +2254,13 @@ pub unsafe extern "C" fn neomacs_display_webkit_destroy(
 ) -> c_int {
     #[cfg(feature = "wpe-webkit")]
     {
-        // Use threaded path if available
-        #[cfg(feature = "winit-backend")]
         if let Some(ref state) = THREADED_STATE {
             let cmd = RenderCommand::WebKitDestroy { id: view_id };
             let _ = state.emacs_comms.cmd_tx.try_send(cmd);
             return 0;
         }
-
-        // Fallback to old path (non-threaded)
-        return WEBKIT_CACHE.with(|cache_cell| {
-            let mut cache_borrow = cache_cell.borrow_mut();
-            if let Some(cache) = cache_borrow.as_mut() {
-                if cache.remove(view_id) {
-                    return 0;
-                }
-            }
-            -1
-        });
+        log::error!("webkit_destroy: threaded mode not initialized");
+        return -1;
     }
 
     #[cfg(not(feature = "wpe-webkit"))]
@@ -2315,7 +2270,7 @@ pub unsafe extern "C" fn neomacs_display_webkit_destroy(
     }
 }
 
-/// Load a URI in a WebKit view
+/// Load a URI in a WebKit view (threaded mode only)
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_webkit_load_uri(
     _handle: *mut NeomacsDisplay,
@@ -2328,32 +2283,14 @@ pub unsafe extern "C" fn neomacs_display_webkit_load_uri(
 
     #[cfg(feature = "wpe-webkit")]
     {
-        // Use threaded path if available
-        #[cfg(feature = "winit-backend")]
         if let Some(ref state) = THREADED_STATE {
             let url = CStr::from_ptr(uri).to_string_lossy().into_owned();
             let cmd = RenderCommand::WebKitLoadUri { id: view_id, url };
             let _ = state.emacs_comms.cmd_tx.try_send(cmd);
             return 0;
         }
-
-        // Fallback to old path (non-threaded)
-        return WEBKIT_CACHE.with(|cache_cell| {
-            let mut cache_borrow = cache_cell.borrow_mut();
-            if let Some(cache) = cache_borrow.as_mut() {
-                let uri_str = match CStr::from_ptr(uri).to_str() {
-                    Ok(s) => s,
-                    Err(_) => return -1,
-                };
-
-                if let Err(e) = cache.load_uri(view_id, uri_str) {
-                    eprintln!("Failed to load URI: {}", e);
-                    return -1;
-                }
-                return 0;
-            }
-            -1
-        });
+        log::error!("webkit_load_uri: threaded mode not initialized");
+        return -1;
     }
 
     #[cfg(not(feature = "wpe-webkit"))]
@@ -2363,7 +2300,7 @@ pub unsafe extern "C" fn neomacs_display_webkit_load_uri(
     }
 }
 
-/// Go back in a WebKit view
+/// Go back in a WebKit view (threaded mode only)
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_webkit_go_back(
     _handle: *mut NeomacsDisplay,
@@ -2371,25 +2308,13 @@ pub unsafe extern "C" fn neomacs_display_webkit_go_back(
 ) -> c_int {
     #[cfg(feature = "wpe-webkit")]
     {
-        // Use threaded path if available
-        #[cfg(feature = "winit-backend")]
         if let Some(ref state) = THREADED_STATE {
             let cmd = RenderCommand::WebKitGoBack { id: view_id };
             let _ = state.emacs_comms.cmd_tx.try_send(cmd);
             return 0;
         }
-
-        // Fallback to old path (non-threaded)
-        return WEBKIT_CACHE.with(|cache_cell| {
-            let mut cache_borrow = cache_cell.borrow_mut();
-            if let Some(cache) = cache_borrow.as_mut() {
-                if let Some(view) = cache.get_mut(view_id) {
-                    let _ = view.go_back();
-                    return 0;
-                }
-            }
-            -1
-        });
+        log::error!("webkit_go_back: threaded mode not initialized");
+        return -1;
     }
 
     #[cfg(not(feature = "wpe-webkit"))]
@@ -2399,7 +2324,7 @@ pub unsafe extern "C" fn neomacs_display_webkit_go_back(
     }
 }
 
-/// Go forward in a WebKit view
+/// Go forward in a WebKit view (threaded mode only)
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_webkit_go_forward(
     _handle: *mut NeomacsDisplay,
@@ -2407,25 +2332,13 @@ pub unsafe extern "C" fn neomacs_display_webkit_go_forward(
 ) -> c_int {
     #[cfg(feature = "wpe-webkit")]
     {
-        // Use threaded path if available
-        #[cfg(feature = "winit-backend")]
         if let Some(ref state) = THREADED_STATE {
             let cmd = RenderCommand::WebKitGoForward { id: view_id };
             let _ = state.emacs_comms.cmd_tx.try_send(cmd);
             return 0;
         }
-
-        // Fallback to old path (non-threaded)
-        return WEBKIT_CACHE.with(|cache_cell| {
-            let mut cache_borrow = cache_cell.borrow_mut();
-            if let Some(cache) = cache_borrow.as_mut() {
-                if let Some(view) = cache.get_mut(view_id) {
-                    let _ = view.go_forward();
-                    return 0;
-                }
-            }
-            -1
-        });
+        log::error!("webkit_go_forward: threaded mode not initialized");
+        return -1;
     }
 
     #[cfg(not(feature = "wpe-webkit"))]
@@ -2435,7 +2348,7 @@ pub unsafe extern "C" fn neomacs_display_webkit_go_forward(
     }
 }
 
-/// Reload a WebKit view
+/// Reload a WebKit view (threaded mode only)
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_webkit_reload(
     _handle: *mut NeomacsDisplay,
@@ -2443,25 +2356,13 @@ pub unsafe extern "C" fn neomacs_display_webkit_reload(
 ) -> c_int {
     #[cfg(feature = "wpe-webkit")]
     {
-        // Use threaded path if available
-        #[cfg(feature = "winit-backend")]
         if let Some(ref state) = THREADED_STATE {
             let cmd = RenderCommand::WebKitReload { id: view_id };
             let _ = state.emacs_comms.cmd_tx.try_send(cmd);
             return 0;
         }
-
-        // Fallback to old path (non-threaded)
-        return WEBKIT_CACHE.with(|cache_cell| {
-            let mut cache_borrow = cache_cell.borrow_mut();
-            if let Some(cache) = cache_borrow.as_mut() {
-                if let Some(view) = cache.get_mut(view_id) {
-                    let _ = view.reload();
-                    return 0;
-                }
-            }
-            -1
-        });
+        log::error!("webkit_reload: threaded mode not initialized");
+        return -1;
     }
 
     #[cfg(not(feature = "wpe-webkit"))]
@@ -2471,7 +2372,7 @@ pub unsafe extern "C" fn neomacs_display_webkit_reload(
     }
 }
 
-/// Resize a WebKit view
+/// Resize a WebKit view (threaded mode only)
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_webkit_resize(
     _handle: *mut NeomacsDisplay,
@@ -2481,8 +2382,6 @@ pub unsafe extern "C" fn neomacs_display_webkit_resize(
 ) -> c_int {
     #[cfg(feature = "wpe-webkit")]
     {
-        // Use threaded path if available
-        #[cfg(feature = "winit-backend")]
         if let Some(ref state) = THREADED_STATE {
             let cmd = RenderCommand::WebKitResize {
                 id: view_id,
@@ -2492,18 +2391,8 @@ pub unsafe extern "C" fn neomacs_display_webkit_resize(
             let _ = state.emacs_comms.cmd_tx.try_send(cmd);
             return 0;
         }
-
-        // Fallback to old path (non-threaded)
-        return WEBKIT_CACHE.with(|cache_cell| {
-            let mut cache_borrow = cache_cell.borrow_mut();
-            if let Some(cache) = cache_borrow.as_mut() {
-                if let Some(view) = cache.get_mut(view_id) {
-                    view.resize(width as u32, height as u32);
-                    return 0;
-                }
-            }
-            -1
-        });
+        log::error!("webkit_resize: threaded mode not initialized");
+        return -1;
     }
 
     #[cfg(not(feature = "wpe-webkit"))]
@@ -2513,7 +2402,7 @@ pub unsafe extern "C" fn neomacs_display_webkit_resize(
     }
 }
 
-/// Execute JavaScript in a WebKit view
+/// Execute JavaScript in a WebKit view (threaded mode only)
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_webkit_execute_js(
     _handle: *mut NeomacsDisplay,
@@ -2526,8 +2415,6 @@ pub unsafe extern "C" fn neomacs_display_webkit_execute_js(
 
     #[cfg(feature = "wpe-webkit")]
     {
-        // Use threaded path if available
-        #[cfg(feature = "winit-backend")]
         if let Some(ref state) = THREADED_STATE {
             let script_str = match CStr::from_ptr(script).to_str() {
                 Ok(s) => s,
@@ -2540,24 +2427,8 @@ pub unsafe extern "C" fn neomacs_display_webkit_execute_js(
             let _ = state.emacs_comms.cmd_tx.try_send(cmd);
             return 0;
         }
-
-        // Fallback to old path (non-threaded)
-        return WEBKIT_CACHE.with(|cache_cell| {
-            let mut cache_borrow = cache_cell.borrow_mut();
-            if let Some(cache) = cache_borrow.as_mut() {
-                let script_str = match CStr::from_ptr(script).to_str() {
-                    Ok(s) => s,
-                    Err(_) => return -1,
-                };
-
-                if let Err(e) = cache.execute_javascript(view_id, script_str) {
-                    eprintln!("Failed to execute JavaScript: {}", e);
-                    return -1;
-                }
-                return 0;
-            }
-            -1
-        });
+        log::error!("webkit_execute_js: threaded mode not initialized");
+        return -1;
     }
 
     #[cfg(not(feature = "wpe-webkit"))]
@@ -2654,7 +2525,7 @@ pub unsafe extern "C" fn neomacs_display_webkit_at_position(
     0 // No webkit at position
 }
 
-/// Send keyboard event to WebKit view
+/// Send keyboard event to WebKit view (threaded mode only)
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_webkit_send_key(
     _handle: *mut NeomacsDisplay,
@@ -2666,8 +2537,6 @@ pub unsafe extern "C" fn neomacs_display_webkit_send_key(
 ) {
     #[cfg(feature = "wpe-webkit")]
     {
-        // Use threaded path if available
-        #[cfg(feature = "winit-backend")]
         if let Some(ref state) = THREADED_STATE {
             let cmd = RenderCommand::WebKitKeyEvent {
                 id: webkit_id,
@@ -2679,21 +2548,7 @@ pub unsafe extern "C" fn neomacs_display_webkit_send_key(
             let _ = state.emacs_comms.cmd_tx.try_send(cmd);
             return;
         }
-
-        // Fallback to old path (non-threaded)
-        WEBKIT_CACHE.with(|cache| {
-            if let Some(ref c) = *cache.borrow() {
-                if let Err(e) = c.send_keyboard_event(
-                    webkit_id,
-                    key_code,
-                    hardware_key_code,
-                    pressed != 0,
-                    modifiers,
-                ) {
-                    eprintln!("WebKit key event error: {}", e);
-                }
-            }
-        });
+        log::error!("webkit_send_key: threaded mode not initialized");
     }
 
     #[cfg(not(feature = "wpe-webkit"))]
@@ -2702,7 +2557,7 @@ pub unsafe extern "C" fn neomacs_display_webkit_send_key(
     }
 }
 
-/// Send pointer/mouse event to WebKit view
+/// Send pointer/mouse event to WebKit view (threaded mode only)
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_webkit_send_pointer(
     _handle: *mut NeomacsDisplay,
@@ -2716,8 +2571,6 @@ pub unsafe extern "C" fn neomacs_display_webkit_send_pointer(
 ) {
     #[cfg(feature = "wpe-webkit")]
     {
-        // Use threaded path if available
-        #[cfg(feature = "winit-backend")]
         if let Some(ref state_ref) = THREADED_STATE {
             let cmd = RenderCommand::WebKitPointerEvent {
                 id: webkit_id,
@@ -2731,23 +2584,7 @@ pub unsafe extern "C" fn neomacs_display_webkit_send_pointer(
             let _ = state_ref.emacs_comms.cmd_tx.try_send(cmd);
             return;
         }
-
-        // Fallback to old path (non-threaded)
-        WEBKIT_CACHE.with(|cache| {
-            if let Some(ref c) = *cache.borrow() {
-                if let Err(e) = c.send_pointer_event(
-                    webkit_id,
-                    event_type,
-                    x,
-                    y,
-                    button,
-                    state,
-                    modifiers,
-                ) {
-                    eprintln!("WebKit pointer event error: {}", e);
-                }
-            }
-        });
+        log::error!("webkit_send_pointer: threaded mode not initialized");
     }
 
     #[cfg(not(feature = "wpe-webkit"))]
@@ -2756,7 +2593,7 @@ pub unsafe extern "C" fn neomacs_display_webkit_send_pointer(
     }
 }
 
-/// Send scroll event to WebKit view
+/// Send scroll event to WebKit view (threaded mode only)
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_webkit_send_scroll(
     _handle: *mut NeomacsDisplay,
@@ -2768,8 +2605,6 @@ pub unsafe extern "C" fn neomacs_display_webkit_send_scroll(
 ) {
     #[cfg(feature = "wpe-webkit")]
     {
-        // Use threaded path if available
-        #[cfg(feature = "winit-backend")]
         if let Some(ref state) = THREADED_STATE {
             let cmd = RenderCommand::WebKitScroll {
                 id: webkit_id,
@@ -2781,21 +2616,7 @@ pub unsafe extern "C" fn neomacs_display_webkit_send_scroll(
             let _ = state.emacs_comms.cmd_tx.try_send(cmd);
             return;
         }
-
-        // Fallback to old path (non-threaded)
-        WEBKIT_CACHE.with(|cache| {
-            if let Some(ref c) = *cache.borrow() {
-                if let Err(e) = c.send_scroll_event(
-                    webkit_id,
-                    x,
-                    y,
-                    delta_x,
-                    delta_y,
-                ) {
-                    eprintln!("WebKit scroll event error: {}", e);
-                }
-            }
-        });
+        log::error!("webkit_send_scroll: threaded mode not initialized");
     }
 
     #[cfg(not(feature = "wpe-webkit"))]
@@ -2804,7 +2625,7 @@ pub unsafe extern "C" fn neomacs_display_webkit_send_scroll(
     }
 }
 
-/// Click in WebKit view (convenience function)
+/// Click in WebKit view (threaded mode only)
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_webkit_click(
     _handle: *mut NeomacsDisplay,
@@ -2815,8 +2636,6 @@ pub unsafe extern "C" fn neomacs_display_webkit_click(
 ) {
     #[cfg(feature = "wpe-webkit")]
     {
-        // Use threaded path if available
-        #[cfg(feature = "winit-backend")]
         if let Some(ref state) = THREADED_STATE {
             let cmd = RenderCommand::WebKitClick {
                 id: webkit_id,
@@ -2827,15 +2646,7 @@ pub unsafe extern "C" fn neomacs_display_webkit_click(
             let _ = state.emacs_comms.cmd_tx.try_send(cmd);
             return;
         }
-
-        // Fallback to old path (non-threaded)
-        WEBKIT_CACHE.with(|cache| {
-            if let Some(ref c) = *cache.borrow() {
-                if let Err(e) = c.click(webkit_id, x, y, button) {
-                    eprintln!("WebKit click error: {}", e);
-                }
-            }
-        });
+        log::error!("webkit_click: threaded mode not initialized");
     }
 
     #[cfg(not(feature = "wpe-webkit"))]
@@ -2845,6 +2656,8 @@ pub unsafe extern "C" fn neomacs_display_webkit_click(
 }
 
 /// Get WebKit view title
+/// NOTE: In threaded mode, title changes are delivered via InputEvent::WebKitTitleChanged.
+/// This function returns null - use the callback-based API instead.
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_webkit_get_title(
     _handle: *mut NeomacsDisplay,
@@ -2852,23 +2665,10 @@ pub unsafe extern "C" fn neomacs_display_webkit_get_title(
 ) -> *mut c_char {
     #[cfg(feature = "wpe-webkit")]
     {
-        let result = WEBKIT_CACHE.with(|cache| {
-            if let Some(ref c) = *cache.borrow() {
-                c.get_title(webkit_id)
-            } else {
-                None
-            }
-        });
-
-        match result {
-            Some(title) => {
-                match CString::new(title) {
-                    Ok(cstr) => cstr.into_raw(),
-                    Err(_) => std::ptr::null_mut(),
-                }
-            }
-            None => std::ptr::null_mut(),
-        }
+        // In threaded mode, title is delivered via InputEvent::WebKitTitleChanged
+        log::debug!("webkit_get_title: use InputEvent::WebKitTitleChanged callback instead");
+        let _ = webkit_id;
+        std::ptr::null_mut()
     }
 
     #[cfg(not(feature = "wpe-webkit"))]
@@ -2879,6 +2679,8 @@ pub unsafe extern "C" fn neomacs_display_webkit_get_title(
 }
 
 /// Get WebKit view URL
+/// NOTE: In threaded mode, URL changes are delivered via InputEvent::WebKitUrlChanged.
+/// This function returns null - use the callback-based API instead.
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_webkit_get_url(
     _handle: *mut NeomacsDisplay,
@@ -2886,23 +2688,10 @@ pub unsafe extern "C" fn neomacs_display_webkit_get_url(
 ) -> *mut c_char {
     #[cfg(feature = "wpe-webkit")]
     {
-        let result = WEBKIT_CACHE.with(|cache| {
-            if let Some(ref c) = *cache.borrow() {
-                c.get_url(webkit_id)
-            } else {
-                None
-            }
-        });
-
-        match result {
-            Some(url) => {
-                match CString::new(url) {
-                    Ok(cstr) => cstr.into_raw(),
-                    Err(_) => std::ptr::null_mut(),
-                }
-            }
-            None => std::ptr::null_mut(),
-        }
+        // In threaded mode, URL is delivered via InputEvent::WebKitUrlChanged
+        log::debug!("webkit_get_url: use InputEvent::WebKitUrlChanged callback instead");
+        let _ = webkit_id;
+        std::ptr::null_mut()
     }
 
     #[cfg(not(feature = "wpe-webkit"))]
@@ -2913,6 +2702,8 @@ pub unsafe extern "C" fn neomacs_display_webkit_get_url(
 }
 
 /// Get WebKit view loading progress
+/// NOTE: In threaded mode, progress changes are delivered via InputEvent::WebKitProgressChanged.
+/// This function returns -1.0 - use the callback-based API instead.
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_webkit_get_progress(
     _handle: *mut NeomacsDisplay,
@@ -2920,13 +2711,10 @@ pub unsafe extern "C" fn neomacs_display_webkit_get_progress(
 ) -> f64 {
     #[cfg(feature = "wpe-webkit")]
     {
-        WEBKIT_CACHE.with(|cache| {
-            if let Some(ref c) = *cache.borrow() {
-                c.get_progress(webkit_id).unwrap_or(-1.0)
-            } else {
-                -1.0
-            }
-        })
+        // In threaded mode, progress is delivered via InputEvent::WebKitProgressChanged
+        log::debug!("webkit_get_progress: use InputEvent::WebKitProgressChanged callback instead");
+        let _ = webkit_id;
+        -1.0
     }
 
     #[cfg(not(feature = "wpe-webkit"))]
@@ -2937,6 +2725,8 @@ pub unsafe extern "C" fn neomacs_display_webkit_get_progress(
 }
 
 /// Check if WebKit view is loading
+/// NOTE: In threaded mode, loading state is inferred from progress events.
+/// This function returns -1 (unknown) - use progress callbacks instead.
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_webkit_is_loading(
     _handle: *mut NeomacsDisplay,
@@ -2944,17 +2734,10 @@ pub unsafe extern "C" fn neomacs_display_webkit_is_loading(
 ) -> c_int {
     #[cfg(feature = "wpe-webkit")]
     {
-        WEBKIT_CACHE.with(|cache| {
-            if let Some(ref c) = *cache.borrow() {
-                match c.is_loading(webkit_id) {
-                    Some(true) => 1,
-                    Some(false) => 0,
-                    None => -1,
-                }
-            } else {
-                -1
-            }
-        })
+        // In threaded mode, loading state is inferred from progress (0.0 < progress < 1.0 means loading)
+        log::debug!("webkit_is_loading: use InputEvent::WebKitProgressChanged callback instead");
+        let _ = webkit_id;
+        -1
     }
 
     #[cfg(not(feature = "wpe-webkit"))]
@@ -2972,56 +2755,26 @@ pub unsafe extern "C" fn neomacs_display_webkit_free_string(s: *mut c_char) {
     }
 }
 
-/// Update WebKit view - pumps GLib main context to process events
-/// This MUST be called regularly (e.g., every frame or via timer) for WebKit to render
+/// Update WebKit view - no-op in threaded mode
+/// In threaded mode, GLib main context is pumped automatically on the render thread.
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_webkit_update(
     _handle: *mut NeomacsDisplay,
     webkit_id: u32,
 ) -> c_int {
-    #[cfg(feature = "wpe-webkit")]
-    {
-        return WEBKIT_CACHE.with(|cache| {
-            let mut cache = cache.borrow_mut();
-            if let Some(ref mut cache) = *cache {
-                if let Some(view) = cache.get_mut(webkit_id) {
-                    view.update();
-                    return 0;
-                }
-            }
-            -1
-        });
-    }
-
-    #[cfg(not(feature = "wpe-webkit"))]
-    {
-        let _ = webkit_id;
-        -1
-    }
+    // In threaded mode, GLib pumping happens automatically on render thread
+    let _ = webkit_id;
+    0
 }
 
-/// Update all WebKit views - pumps GLib main context
-/// Call this once per frame to process all webkit events
+/// Update all WebKit views - no-op in threaded mode
+/// In threaded mode, GLib main context is pumped automatically on the render thread.
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_webkit_update_all(
     _handle: *mut NeomacsDisplay,
 ) -> c_int {
-    #[cfg(feature = "wpe-webkit")]
-    {
-        return WEBKIT_CACHE.with(|cache| {
-            let mut cache = cache.borrow_mut();
-            if let Some(ref mut cache) = *cache {
-                cache.update_all();
-                return 0;
-            }
-            -1
-        });
-    }
-
-    #[cfg(not(feature = "wpe-webkit"))]
-    {
-        -1
-    }
+    // In threaded mode, GLib pumping happens automatically on render thread
+    0
 }
 
 /// Add a WPE glyph to the current row

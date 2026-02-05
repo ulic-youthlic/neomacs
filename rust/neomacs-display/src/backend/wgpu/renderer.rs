@@ -884,79 +884,13 @@ impl WgpuRenderer {
     }
 
     /// Process pending webkit frames from WPE views.
-    /// This imports DMA-BUF frames into the wgpu texture cache.
-    /// Also pumps GLib main context to process WebKit events.
+    /// NOTE: In threaded mode, frame processing is done in render_thread.rs
+    /// which calls update_webkit_view_dmabuf/update_webkit_view_pixels directly.
+    /// This method is kept for API compatibility but is a no-op.
     #[cfg(feature = "wpe-webkit")]
     pub fn process_webkit_frames(&mut self) {
-        use super::external_buffer::DmaBufBuffer;
-
-        // Pump GLib events to process WebKit callbacks (including buffer-rendered)
-        crate::ffi::WEBKIT_CACHE.with(|cache| {
-            let mut cache = cache.borrow_mut();
-            if let Some(ref mut wpe_cache) = *cache {
-                wpe_cache.update_all();
-            }
-        });
-
-        crate::ffi::WEBKIT_CACHE.with(|cache| {
-            let cache = cache.borrow();
-            if let Some(ref wpe_cache) = *cache {
-                for (view_id, view) in wpe_cache.views() {
-                    // Check if view has a new frame available
-                    if let Some(dmabuf_data) = view.take_latest_dmabuf() {
-                        log::debug!("process_webkit_frames: importing DMA-BUF for view {}", view_id);
-
-                        // Convert Vec to fixed size arrays
-                        let num_planes = dmabuf_data.fds.len().min(4) as u32;
-                        let mut fds = [-1i32; 4];
-                        let mut strides = [0u32; 4];
-                        let mut offsets = [0u32; 4];
-
-                        for i in 0..num_planes as usize {
-                            fds[i] = dmabuf_data.fds[i];
-                            strides[i] = dmabuf_data.strides[i];
-                            offsets[i] = dmabuf_data.offsets[i];
-                        }
-
-                        // Create DmaBufBuffer from the data
-                        let buffer = DmaBufBuffer::new(
-                            fds,
-                            strides,
-                            offsets,
-                            num_planes,
-                            dmabuf_data.width,
-                            dmabuf_data.height,
-                            dmabuf_data.fourcc,
-                            dmabuf_data.modifier,
-                        );
-
-                        // Import into webkit cache - try DMA-BUF first, fallback to pixels
-                        if self.webkit_cache.update_view(*view_id, buffer, &self.device, &self.queue) {
-                            log::info!("process_webkit_frames: successfully imported view {} frame via DMA-BUF", view_id);
-                        } else {
-                            // DMA-BUF import failed (e.g., incompatible modifier), try pixel fallback
-                            log::info!("process_webkit_frames: DMA-BUF import failed for view {}, trying pixel fallback", view_id);
-                            if let Some(pixel_data) = view.take_latest_pixels() {
-                                if self.webkit_cache.update_view_from_pixels(
-                                    *view_id,
-                                    pixel_data.width,
-                                    pixel_data.height,
-                                    &pixel_data.pixels,
-                                    &self.device,
-                                    &self.queue,
-                                ) {
-                                    log::info!("process_webkit_frames: successfully imported view {} frame via pixel upload", view_id);
-                                } else {
-                                    log::warn!("process_webkit_frames: pixel fallback also failed for view {}", view_id);
-                                }
-                            } else {
-                                log::warn!("process_webkit_frames: no pixel fallback available for view {}", view_id);
-                            }
-                        }
-                    }
-                }
-            }
-        });
+        // In threaded mode, frame processing happens in render_thread.rs
+        // The render thread calls update_webkit_view_dmabuf/update_webkit_view_pixels directly
     }
 
     /// Render floating webkit views to the screen.
