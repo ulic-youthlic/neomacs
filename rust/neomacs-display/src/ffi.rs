@@ -2549,7 +2549,7 @@ pub unsafe extern "C" fn neomacs_display_hide_floating_webkit(
     display.get_target_scene().remove_floating_webkit(webkit_id);
 }
 
-/// Find which floating webkit view is at the given coordinates
+/// Find which webkit view (floating or inline) is at the given coordinates
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_webkit_at_position(
     handle: *mut NeomacsDisplay,
@@ -2583,6 +2583,29 @@ pub unsafe extern "C" fn neomacs_display_webkit_at_position(
                 *out_rel_y = y - wy;
             }
             return 1;
+        }
+    }
+
+    // Check inline webkit views from the glyph buffer
+    for glyph in display.frame_glyphs.glyphs.iter().rev() {
+        if let FrameGlyph::WebKit { webkit_id, x: wx, y: wy, width, height } = glyph {
+            let gwx = *wx as i32;
+            let gwy = *wy as i32;
+            let gww = *width as i32;
+            let gwh = *height as i32;
+
+            if x >= gwx && x < gwx + gww && y >= gwy && y < gwy + gwh {
+                if !out_webkit_id.is_null() {
+                    *out_webkit_id = *webkit_id;
+                }
+                if !out_rel_x.is_null() {
+                    *out_rel_x = x - gwx;
+                }
+                if !out_rel_y.is_null() {
+                    *out_rel_y = y - gwy;
+                }
+                return 1;
+            }
         }
     }
 

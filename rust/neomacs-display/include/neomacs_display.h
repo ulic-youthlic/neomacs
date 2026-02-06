@@ -733,7 +733,7 @@ void neomacs_display_set_floating_webkit(struct NeomacsDisplay *handle,
 void neomacs_display_hide_floating_webkit(struct NeomacsDisplay *handle, uint32_t webkitId);
 
 /**
- * Find which floating webkit view is at the given coordinates
+ * Find which webkit view (floating or inline) is at the given coordinates
  */
 int neomacs_display_webkit_at_position(struct NeomacsDisplay *handle,
                                        int x,

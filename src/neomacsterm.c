@@ -3944,16 +3944,35 @@ neomacs_display_wakeup_handler (int fd, void *data)
 
         case NEOMACS_EVENT_MOUSE_PRESS:
         case NEOMACS_EVENT_MOUSE_RELEASE:
-          inev.ie.kind = MOUSE_CLICK_EVENT;
-          inev.ie.code = ev->button - 1;  /* Emacs buttons are 0-indexed */
-          inev.ie.modifiers = (ev->kind == NEOMACS_EVENT_MOUSE_PRESS) ? down_modifier : up_modifier;
-          if (ev->modifiers & NEOMACS_SHIFT_MASK) inev.ie.modifiers |= shift_modifier;
-          if (ev->modifiers & NEOMACS_CTRL_MASK) inev.ie.modifiers |= ctrl_modifier;
-          if (ev->modifiers & NEOMACS_META_MASK) inev.ie.modifiers |= meta_modifier;
-          XSETINT (inev.ie.x, ev->x);
-          XSETINT (inev.ie.y, ev->y);
-          XSETFRAME (inev.ie.frame_or_window, f);
-          neomacs_evq_enqueue (&inev);
+          {
+            /* Check if click is on a webkit view (floating or inline) */
+            struct neomacs_display_info *dpyinfo = FRAME_NEOMACS_DISPLAY_INFO (f);
+            if (ev->kind == NEOMACS_EVENT_MOUSE_PRESS
+                && dpyinfo && dpyinfo->display_handle)
+              {
+                uint32_t webkit_id = 0;
+                int rel_x = 0, rel_y = 0;
+                if (neomacs_display_webkit_at_position (dpyinfo->display_handle,
+                                                         ev->x, ev->y,
+                                                         &webkit_id, &rel_x, &rel_y))
+                  {
+                    neomacs_display_webkit_click (dpyinfo->display_handle,
+                                                  webkit_id, rel_x, rel_y, ev->button);
+                    break;  /* Event handled by webkit */
+                  }
+              }
+
+            inev.ie.kind = MOUSE_CLICK_EVENT;
+            inev.ie.code = ev->button - 1;  /* Emacs buttons are 0-indexed */
+            inev.ie.modifiers = (ev->kind == NEOMACS_EVENT_MOUSE_PRESS) ? down_modifier : up_modifier;
+            if (ev->modifiers & NEOMACS_SHIFT_MASK) inev.ie.modifiers |= shift_modifier;
+            if (ev->modifiers & NEOMACS_CTRL_MASK) inev.ie.modifiers |= ctrl_modifier;
+            if (ev->modifiers & NEOMACS_META_MASK) inev.ie.modifiers |= meta_modifier;
+            XSETINT (inev.ie.x, ev->x);
+            XSETINT (inev.ie.y, ev->y);
+            XSETFRAME (inev.ie.frame_or_window, f);
+            neomacs_evq_enqueue (&inev);
+          }
           break;
 
         case NEOMACS_EVENT_RESIZE:
