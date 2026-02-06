@@ -766,6 +766,19 @@ neomacs_extract_full_frame (struct frame *f)
       }
   }
 
+  /* The minibuffer/echo area window is NOT part of the root window tree.
+     Extract it separately so echo area text is rendered. */
+  {
+    Lisp_Object mini = FRAME_MINIBUF_WINDOW (f);
+    if (!NILP (mini))
+      {
+        struct window *mw = XWINDOW (mini);
+        if (FRAME_HAS_MINIBUF_P (f)
+            && mw->current_matrix)
+          neomacs_extract_window_glyphs (mw, NULL);
+      }
+  }
+
   /* Now extract cursor position and vertical borders */
 
   /* Draw vertical window borders */
