@@ -53,6 +53,10 @@ os_pipe = "1.1"
 # FFI
 libc = "0.2"
 
+# Terminal emulation (neo-term)
+alacritty_terminal = { version = "0.25", optional = true }
+parking_lot = { version = "0.12", optional = true }
+
 [build-dependencies]
 cbindgen = "0.27"
 which = "7.0"
@@ -61,13 +65,15 @@ pkg-config = "0.3"
 
 [features]
 # Default: winit-wgpu backend with video and webkit support
-default = ["winit-backend", "video", "wpe-webkit"]
+default = ["winit-backend", "video", "wpe-webkit", "neo-term"]
 winit-backend = ["winit", "wgpu", "raw-window-handle", "arboard", "bytemuck", "pollster", "image"]
 tty-backend = []
 # Video with GStreamer - includes ash and wgpu-hal for DMA-BUF zero-copy
 video = ["gstreamer", "gstreamer-video", "gstreamer-app", "gstreamer-allocators", "winit-backend", "ash", "wgpu-hal"]
 # wpe-webkit requires winit-backend and ash for Vulkan DMA-BUF import
 wpe-webkit = ["winit-backend", "ash"]
+# GPU-accelerated terminal emulator
+neo-term = ["alacritty_terminal", "parking_lot"]
 
 [profile.release]
 lto = true

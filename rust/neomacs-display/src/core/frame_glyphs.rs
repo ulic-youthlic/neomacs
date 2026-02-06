@@ -116,6 +116,16 @@ pub enum FrameGlyph {
         height: f32,
         color: Color,
     },
+
+    /// Terminal glyph (inline in buffer or window-mode)
+    #[cfg(feature = "neo-term")]
+    Terminal {
+        terminal_id: u32,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+    },
 }
 
 impl FrameGlyph {
@@ -441,6 +451,12 @@ impl FrameGlyphBuffer {
     /// Add border
     pub fn add_border(&mut self, x: f32, y: f32, width: f32, height: f32, color: Color) {
         self.glyphs.push(FrameGlyph::Border { x, y, width, height, color });
+    }
+
+    /// Add terminal glyph (inline or window mode)
+    #[cfg(feature = "neo-term")]
+    pub fn add_terminal(&mut self, terminal_id: u32, x: f32, y: f32, width: f32, height: f32) {
+        self.glyphs.push(FrameGlyph::Terminal { terminal_id, x, y, width, height });
     }
 
     /// Get glyph count

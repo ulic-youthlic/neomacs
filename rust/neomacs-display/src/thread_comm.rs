@@ -71,6 +71,12 @@ pub enum InputEvent {
         width: u32,
         height: u32,
     },
+    /// Terminal child process exited
+    #[cfg(feature = "neo-term")]
+    TerminalExited { id: u32 },
+    /// Terminal title changed
+    #[cfg(feature = "neo-term")]
+    TerminalTitleChanged { id: u32, title: String },
 }
 
 /// Command from Emacs to render thread
@@ -147,6 +153,27 @@ pub enum RenderCommand {
         scroll_easing: u32,
         trail_size: f32,
     },
+    /// Create a terminal
+    #[cfg(feature = "neo-term")]
+    TerminalCreate {
+        id: u32,
+        cols: u16,
+        rows: u16,
+        mode: u8, // 0=Window, 1=Inline, 2=Floating
+        shell: Option<String>,
+    },
+    /// Write input to a terminal
+    #[cfg(feature = "neo-term")]
+    TerminalWrite { id: u32, data: Vec<u8> },
+    /// Resize a terminal
+    #[cfg(feature = "neo-term")]
+    TerminalResize { id: u32, cols: u16, rows: u16 },
+    /// Destroy a terminal
+    #[cfg(feature = "neo-term")]
+    TerminalDestroy { id: u32 },
+    /// Set floating terminal position and opacity
+    #[cfg(feature = "neo-term")]
+    TerminalSetFloat { id: u32, x: f32, y: f32, opacity: f32 },
 }
 
 /// Wakeup pipe for signaling Emacs from render thread

@@ -999,4 +999,47 @@ int neomacs_display_get_threaded_wakeup_fd(void);
  */
 struct NeomacsDisplay *neomacs_display_get_threaded_handle(void);
 
+/* ============================================================================
+ * Terminal (neo-term) API
+ * ============================================================================ */
+
+/**
+ * Create a new terminal.
+ * mode: 0=Window, 1=Inline, 2=Floating
+ * shell: optional shell path (NULL for default)
+ * Returns terminal ID (>0 on success, 0 on failure).
+ */
+uint32_t neomacs_display_terminal_create(uint16_t cols, uint16_t rows,
+                                          uint8_t mode, const char *shell);
+
+/**
+ * Write input data to a terminal (keyboard input from user).
+ */
+void neomacs_display_terminal_write(uint32_t terminal_id,
+                                     const uint8_t *data, size_t len);
+
+/**
+ * Resize a terminal.
+ */
+void neomacs_display_terminal_resize(uint32_t terminal_id,
+                                      uint16_t cols, uint16_t rows);
+
+/**
+ * Destroy a terminal.
+ */
+void neomacs_display_terminal_destroy(uint32_t terminal_id);
+
+/**
+ * Set floating terminal position and opacity.
+ */
+void neomacs_display_terminal_set_float(uint32_t terminal_id,
+                                         float x, float y, float opacity);
+
+/**
+ * Get visible text from a terminal.
+ * Returns a malloc'd C string (caller must free with free()).
+ * Returns NULL on failure.
+ */
+char *neomacs_display_terminal_get_text(uint32_t terminal_id);
+
 #endif  /* NEOMACS_DISPLAY_H */

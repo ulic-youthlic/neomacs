@@ -665,6 +665,46 @@ void neomacs_display_set_mouse_motion_callback(MouseMotionCallbackFn callback, v
 void neomacs_display_set_mouse_scroll_callback(MouseScrollCallbackFn callback, void *userData);
 
 /**
+ * Create a new terminal.
+ *
+ * Returns terminal ID (>0 on success, 0 on failure).
+ * `mode`: 0=Window, 1=Inline, 2=Floating
+ * `shell`: optional shell path (NULL for default)
+ */
+uint32_t neomacs_display_terminal_create(uint16_t cols,
+                                         uint16_t rows,
+                                         uint8_t mode,
+                                         const char *shell);
+
+/**
+ * Write input data to a terminal (keyboard input from user).
+ */
+void neomacs_display_terminal_write(uint32_t terminalId, const uint8_t *data, uintptr_t len);
+
+/**
+ * Resize a terminal.
+ */
+void neomacs_display_terminal_resize(uint32_t terminalId, uint16_t cols, uint16_t rows);
+
+/**
+ * Destroy a terminal.
+ */
+void neomacs_display_terminal_destroy(uint32_t terminalId);
+
+/**
+ * Set floating terminal position and opacity.
+ */
+void neomacs_display_terminal_set_float(uint32_t terminalId, float x, float y, float opacity);
+
+/**
+ * Get visible text from a terminal.
+ *
+ * Returns a malloc'd C string (caller must free with `free()`).
+ * Returns NULL on failure.
+ */
+char *neomacs_display_terminal_get_text(uint32_t terminalId);
+
+/**
  * Set callback for WebKit new window/tab requests
  */
 void neomacs_display_webkit_set_new_window_callback(bool (*callback)(uint32_t,

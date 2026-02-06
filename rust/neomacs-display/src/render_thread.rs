@@ -216,6 +216,10 @@ struct RenderApp {
 
     #[cfg(feature = "wpe-webkit")]
     webkit_views: HashMap<u32, WpeWebView>,
+
+    // Terminal manager (neo-term)
+    #[cfg(feature = "neo-term")]
+    terminal_manager: crate::terminal::TerminalManager,
 }
 
 impl RenderApp {
@@ -292,6 +296,8 @@ impl RenderApp {
             wpe_backend: None,
             #[cfg(feature = "wpe-webkit")]
             webkit_views: HashMap::new(),
+            #[cfg(feature = "neo-term")]
+            terminal_manager: crate::terminal::TerminalManager::new(),
         }
     }
 
@@ -699,6 +705,52 @@ impl RenderApp {
                     }
                     if !scroll_enabled {
                         self.scroll_slides.clear();
+                    }
+                }
+                #[cfg(feature = "neo-term")]
+                RenderCommand::TerminalCreate { id, cols, rows, mode, shell } => {
+                    let term_mode = match mode {
+                        1 => crate::terminal::TerminalMode::Inline,
+                        2 => crate::terminal::TerminalMode::Floating,
+                        _ => crate::terminal::TerminalMode::Window,
+                    };
+                    match crate::terminal::TerminalView::new(
+                        id, cols, rows, term_mode, shell.as_deref(),
+                    ) {
+                        Ok(view) => {
+                            self.terminal_manager.terminals.insert(id, view);
+                            log::info!("Terminal {} created ({}x{}, {:?})", id, cols, rows, term_mode);
+                        }
+                        Err(e) => {
+                            log::error!("Failed to create terminal {}: {}", id, e);
+                        }
+                    }
+                }
+                #[cfg(feature = "neo-term")]
+                RenderCommand::TerminalWrite { id, data } => {
+                    if let Some(view) = self.terminal_manager.get_mut(id) {
+                        if let Err(e) = view.write(&data) {
+                            log::warn!("Terminal {} write error: {}", id, e);
+                        }
+                    }
+                }
+                #[cfg(feature = "neo-term")]
+                RenderCommand::TerminalResize { id, cols, rows } => {
+                    if let Some(view) = self.terminal_manager.get_mut(id) {
+                        view.resize(cols, rows);
+                    }
+                }
+                #[cfg(feature = "neo-term")]
+                RenderCommand::TerminalDestroy { id } => {
+                    self.terminal_manager.destroy(id);
+                    log::info!("Terminal {} destroyed", id);
+                }
+                #[cfg(feature = "neo-term")]
+                RenderCommand::TerminalSetFloat { id, x, y, opacity } => {
+                    if let Some(view) = self.terminal_manager.get_mut(id) {
+                        view.float_x = x;
+                        view.float_y = y;
+                        view.float_opacity = opacity;
                     }
                 }
             }
@@ -1402,11 +1454,195 @@ impl RenderApp {
     }
 
     /// Render the current frame
+    /// Update terminal content and expand Terminal glyphs into renderable cells.
+    #[cfg(feature = "neo-term")]
+    fn update_terminals(&mut self) {
+        use crate::terminal::TerminalMode;
+
+        // Update all terminal content (check for PTY data)
+        let _changed = self.terminal_manager.update_all();
+
+        // Expand Terminal glyphs in current_frame into Char/Stretch glyphs
+        if let Some(ref mut frame) = self.current_frame {
+            let mut extra_glyphs = Vec::new();
+
+            for glyph in &frame.glyphs {
+                if let FrameGlyph::Terminal { terminal_id, x, y, width, height } = glyph {
+                    if let Some(view) = self.terminal_manager.get(*terminal_id) {
+                        if let Some(content) = view.content() {
+                            let cell_w = if content.cols > 0 { *width / content.cols as f32 } else { 8.0 };
+                            let cell_h = if content.rows > 0 { *height / content.rows as f32 } else { 16.0 };
+                            let ascent = cell_h * 0.8;
+
+                            // Add background rect for terminal area
+                            extra_glyphs.push(FrameGlyph::Stretch {
+                                x: *x,
+                                y: *y,
+                                width: *width,
+                                height: *height,
+                                bg: content.default_bg,
+                                is_overlay: false,
+                            });
+
+                            // Add each cell
+                            for cell in &content.cells {
+                                let cx = *x + cell.col as f32 * cell_w;
+                                let cy = *y + cell.row as f32 * cell_h;
+
+                                // Background (only if different from default)
+                                if cell.bg != content.default_bg {
+                                    extra_glyphs.push(FrameGlyph::Stretch {
+                                        x: cx,
+                                        y: cy,
+                                        width: cell_w,
+                                        height: cell_h,
+                                        bg: cell.bg,
+                                        is_overlay: false,
+                                    });
+                                }
+
+                                // Character (skip spaces and null chars)
+                                if cell.c != ' ' && cell.c != '\0' {
+                                    use alacritty_terminal::term::cell::Flags as CellFlags;
+                                    extra_glyphs.push(FrameGlyph::Char {
+                                        char: cell.c,
+                                        x: cx,
+                                        y: cy,
+                                        width: cell_w,
+                                        height: cell_h,
+                                        ascent,
+                                        fg: cell.fg,
+                                        bg: None,
+                                        face_id: 0, // Default monospace face
+                                        bold: cell.flags.contains(CellFlags::BOLD),
+                                        italic: cell.flags.contains(CellFlags::ITALIC),
+                                        font_size: cell_h * 0.75,
+                                        underline: if cell.flags.contains(CellFlags::UNDERLINE) { 1 } else { 0 },
+                                        underline_color: None,
+                                        strike_through: if cell.flags.contains(CellFlags::STRIKEOUT) { 1 } else { 0 },
+                                        strike_through_color: None,
+                                        overline: 0,
+                                        overline_color: None,
+                                        is_overlay: false,
+                                    });
+                                }
+                            }
+
+                            // Terminal cursor
+                            if content.cursor.visible {
+                                let cx = *x + content.cursor.col as f32 * cell_w;
+                                let cy = *y + content.cursor.row as f32 * cell_h;
+                                extra_glyphs.push(FrameGlyph::Border {
+                                    x: cx,
+                                    y: cy,
+                                    width: cell_w,
+                                    height: cell_h,
+                                    color: content.default_fg,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            if !extra_glyphs.is_empty() {
+                frame.glyphs.extend(extra_glyphs);
+                self.frame_dirty = true;
+            }
+        }
+
+        // Render floating terminals (not placed by FrameGlyph::Terminal)
+        if let Some(ref mut frame) = self.current_frame {
+            let mut float_glyphs = Vec::new();
+            for id in self.terminal_manager.ids() {
+                if let Some(view) = self.terminal_manager.get(id) {
+                    if view.mode != TerminalMode::Floating {
+                        continue;
+                    }
+                    if let Some(content) = view.content() {
+                        let x = view.float_x;
+                        let y = view.float_y;
+                        let cell_w = 8.0_f32;
+                        let cell_h = 16.0_f32;
+                        let width = content.cols as f32 * cell_w;
+                        let height = content.rows as f32 * cell_h;
+                        let ascent = cell_h * 0.8;
+
+                        // Floating terminal background (with opacity)
+                        let mut bg = content.default_bg;
+                        bg.a = view.float_opacity;
+                        float_glyphs.push(FrameGlyph::Stretch {
+                            x, y, width, height, bg,
+                            is_overlay: true,
+                        });
+
+                        for cell in &content.cells {
+                            let cx = x + cell.col as f32 * cell_w;
+                            let cy = y + cell.row as f32 * cell_h;
+
+                            if cell.bg != content.default_bg {
+                                let mut cbg = cell.bg;
+                                cbg.a = view.float_opacity;
+                                float_glyphs.push(FrameGlyph::Stretch {
+                                    x: cx, y: cy, width: cell_w, height: cell_h,
+                                    bg: cbg, is_overlay: true,
+                                });
+                            }
+
+                            if cell.c != ' ' && cell.c != '\0' {
+                                use alacritty_terminal::term::cell::Flags as CellFlags;
+                                let mut fg = cell.fg;
+                                fg.a = view.float_opacity;
+                                float_glyphs.push(FrameGlyph::Char {
+                                    char: cell.c,
+                                    x: cx, y: cy,
+                                    width: cell_w, height: cell_h,
+                                    ascent, fg,
+                                    bg: None, face_id: 0,
+                                    bold: cell.flags.contains(CellFlags::BOLD),
+                                    italic: cell.flags.contains(CellFlags::ITALIC),
+                                    font_size: cell_h * 0.75,
+                                    underline: if cell.flags.contains(CellFlags::UNDERLINE) { 1 } else { 0 },
+                                    underline_color: None,
+                                    strike_through: if cell.flags.contains(CellFlags::STRIKEOUT) { 1 } else { 0 },
+                                    strike_through_color: None,
+                                    overline: 0, overline_color: None,
+                                    is_overlay: true,
+                                });
+                            }
+                        }
+
+                        // Floating cursor
+                        if content.cursor.visible {
+                            let cx = x + content.cursor.col as f32 * cell_w;
+                            let cy = y + content.cursor.row as f32 * cell_h;
+                            let mut fg = content.default_fg;
+                            fg.a = view.float_opacity;
+                            float_glyphs.push(FrameGlyph::Border {
+                                x: cx, y: cy, width: cell_w, height: cell_h,
+                                color: fg,
+                            });
+                        }
+                    }
+                }
+            }
+
+            if !float_glyphs.is_empty() {
+                frame.glyphs.extend(float_glyphs);
+                self.frame_dirty = true;
+            }
+        }
+    }
+
     fn render(&mut self) {
         // Early return checks
         if self.current_frame.is_none() || self.surface.is_none() || self.renderer.is_none() {
             return;
         }
+
+        // Update terminals (expand terminal glyphs into renderable cells)
+        #[cfg(feature = "neo-term")]
+        self.update_terminals();
 
         // Process webkit frames (import DMA-BUF to textures)
         self.process_webkit_frames();

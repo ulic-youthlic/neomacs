@@ -2159,6 +2159,135 @@ static WEBKIT_VIEW_ID_COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic:
 #[cfg(feature = "video")]
 static VIDEO_ID_COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(1);
 
+/// Atomic counter for generating terminal IDs in threaded mode
+#[cfg(feature = "neo-term")]
+static TERMINAL_ID_COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(1);
+
+// ============================================================================
+// Terminal (neo-term) FFI
+// ============================================================================
+
+/// Create a new terminal.
+///
+/// Returns terminal ID (>0 on success, 0 on failure).
+/// `mode`: 0=Window, 1=Inline, 2=Floating
+/// `shell`: optional shell path (NULL for default)
+#[cfg(feature = "neo-term")]
+#[no_mangle]
+pub unsafe extern "C" fn neomacs_display_terminal_create(
+    cols: u16,
+    rows: u16,
+    mode: u8,
+    shell: *const c_char,
+) -> u32 {
+    if let Some(ref state) = THREADED_STATE {
+        let id = TERMINAL_ID_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let shell_str = if shell.is_null() {
+            None
+        } else {
+            std::ffi::CStr::from_ptr(shell).to_str().ok().map(|s| s.to_string())
+        };
+        let cmd = RenderCommand::TerminalCreate {
+            id,
+            cols,
+            rows,
+            mode,
+            shell: shell_str,
+        };
+        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        log::info!("terminal_create: id={}, {}x{}, mode={}", id, cols, rows, mode);
+        return id;
+    }
+    0
+}
+
+/// Write input data to a terminal (keyboard input from user).
+#[cfg(feature = "neo-term")]
+#[no_mangle]
+pub unsafe extern "C" fn neomacs_display_terminal_write(
+    terminal_id: u32,
+    data: *const u8,
+    len: usize,
+) {
+    if data.is_null() || len == 0 {
+        return;
+    }
+    if let Some(ref state) = THREADED_STATE {
+        let bytes = std::slice::from_raw_parts(data, len).to_vec();
+        let cmd = RenderCommand::TerminalWrite {
+            id: terminal_id,
+            data: bytes,
+        };
+        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+    }
+}
+
+/// Resize a terminal.
+#[cfg(feature = "neo-term")]
+#[no_mangle]
+pub unsafe extern "C" fn neomacs_display_terminal_resize(
+    terminal_id: u32,
+    cols: u16,
+    rows: u16,
+) {
+    if let Some(ref state) = THREADED_STATE {
+        let cmd = RenderCommand::TerminalResize {
+            id: terminal_id,
+            cols,
+            rows,
+        };
+        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+    }
+}
+
+/// Destroy a terminal.
+#[cfg(feature = "neo-term")]
+#[no_mangle]
+pub unsafe extern "C" fn neomacs_display_terminal_destroy(
+    terminal_id: u32,
+) {
+    if let Some(ref state) = THREADED_STATE {
+        let cmd = RenderCommand::TerminalDestroy { id: terminal_id };
+        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+    }
+}
+
+/// Set floating terminal position and opacity.
+#[cfg(feature = "neo-term")]
+#[no_mangle]
+pub unsafe extern "C" fn neomacs_display_terminal_set_float(
+    terminal_id: u32,
+    x: f32,
+    y: f32,
+    opacity: f32,
+) {
+    if let Some(ref state) = THREADED_STATE {
+        let cmd = RenderCommand::TerminalSetFloat {
+            id: terminal_id,
+            x,
+            y,
+            opacity,
+        };
+        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+    }
+}
+
+/// Get visible text from a terminal.
+///
+/// Returns a malloc'd C string (caller must free with `free()`).
+/// Returns NULL on failure.
+#[cfg(feature = "neo-term")]
+#[no_mangle]
+pub unsafe extern "C" fn neomacs_display_terminal_get_text(
+    terminal_id: u32,
+) -> *mut c_char {
+    // Terminal state is on the render thread. For now, return NULL.
+    // Text extraction requires synchronous access which will be added
+    // when the TerminalManager is integrated into the render thread.
+    log::debug!("terminal_get_text: id={} - not yet implemented for threaded mode", terminal_id);
+    std::ptr::null_mut()
+}
+
 /// Callback type for webkit new window requests
 pub type WebKitNewWindowCallback = extern "C" fn(u32, *const c_char, *const c_char) -> bool;
 
@@ -3479,6 +3608,13 @@ pub unsafe extern "C" fn neomacs_display_drain_input(
                     | InputEvent::WebKitProgressChanged { .. }
                     | InputEvent::WebKitLoadFinished { .. } => {
                         // Skip these in the event queue - they're handled via webkit-specific API
+                        continue;
+                    }
+                    // Terminal events
+                    #[cfg(feature = "neo-term")]
+                    InputEvent::TerminalExited { .. }
+                    | InputEvent::TerminalTitleChanged { .. } => {
+                        // TODO: expose to C via terminal-specific API
                         continue;
                     }
                 }
