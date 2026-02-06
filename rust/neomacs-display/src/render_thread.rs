@@ -23,7 +23,10 @@ use crate::backend::wgpu::{
 };
 use crate::core::face::Face;
 use crate::core::frame_glyphs::{FrameGlyph, FrameGlyphBuffer};
-use crate::core::types::{AnimatedCursor, Color, Rect};
+use crate::core::types::{
+    AnimatedCursor, Color, CursorAnimStyle, Rect,
+    ease_out_quad, ease_out_cubic, ease_out_expo, ease_in_out_cubic, ease_linear,
+};
 use crate::thread_comm::{InputEvent, RenderCommand, RenderComms};
 
 #[cfg(all(feature = "wpe-webkit", wpe_platform_available))]
@@ -142,6 +145,8 @@ struct RenderApp {
     // Cursor animation (smooth motion)
     cursor_anim_enabled: bool,
     cursor_anim_speed: f32,
+    cursor_anim_style: CursorAnimStyle,
+    cursor_anim_duration: f32, // seconds, for non-Exponential styles
     cursor_target: Option<CursorTarget>,
     cursor_current_x: f32,
     cursor_current_y: f32,
@@ -149,6 +154,17 @@ struct RenderApp {
     cursor_current_h: f32,
     cursor_animating: bool,
     last_anim_time: std::time::Instant,
+    // For easing/linear styles: capture start position when animation begins
+    cursor_start_x: f32,
+    cursor_start_y: f32,
+    cursor_start_w: f32,
+    cursor_start_h: f32,
+    cursor_anim_start_time: std::time::Instant,
+    // For critically-damped spring: velocity per axis
+    cursor_velocity_x: f32,
+    cursor_velocity_y: f32,
+    cursor_velocity_w: f32,
+    cursor_velocity_h: f32,
 
     // Per-window metadata from previous frame (for transition detection)
     prev_window_infos: HashMap<i64, crate::core::frame_glyphs::WindowInfo>,
@@ -208,6 +224,8 @@ impl RenderApp {
             cursor_blink_interval: std::time::Duration::from_millis(500),
             cursor_anim_enabled: true,
             cursor_anim_speed: 15.0,
+            cursor_anim_style: CursorAnimStyle::Exponential,
+            cursor_anim_duration: 0.15,
             cursor_target: None,
             cursor_current_x: 0.0,
             cursor_current_y: 0.0,
@@ -215,6 +233,15 @@ impl RenderApp {
             cursor_current_h: 0.0,
             cursor_animating: false,
             last_anim_time: std::time::Instant::now(),
+            cursor_start_x: 0.0,
+            cursor_start_y: 0.0,
+            cursor_start_w: 0.0,
+            cursor_start_h: 0.0,
+            cursor_anim_start_time: std::time::Instant::now(),
+            cursor_velocity_x: 0.0,
+            cursor_velocity_y: 0.0,
+            cursor_velocity_w: 0.0,
+            cursor_velocity_h: 0.0,
             prev_window_infos: HashMap::new(),
             crossfade_enabled: true,
             crossfade_duration: std::time::Duration::from_millis(200),
@@ -591,15 +618,18 @@ impl RenderApp {
                 }
                 RenderCommand::SetAnimationConfig {
                     cursor_enabled, cursor_speed,
+                    cursor_style, cursor_duration_ms,
                     crossfade_enabled, crossfade_duration_ms,
                     scroll_enabled, scroll_duration_ms,
                 } => {
-                    log::debug!("Animation config: cursor={}/{}, crossfade={}/{}ms, scroll={}/{}ms",
-                        cursor_enabled, cursor_speed,
+                    log::debug!("Animation config: cursor={}/{}/style={:?}/{}ms, crossfade={}/{}ms, scroll={}/{}ms",
+                        cursor_enabled, cursor_speed, cursor_style, cursor_duration_ms,
                         crossfade_enabled, crossfade_duration_ms,
                         scroll_enabled, scroll_duration_ms);
                     self.cursor_anim_enabled = cursor_enabled;
                     self.cursor_anim_speed = cursor_speed;
+                    self.cursor_anim_style = cursor_style;
+                    self.cursor_anim_duration = cursor_duration_ms as f32 / 1000.0;
                     self.crossfade_enabled = crossfade_enabled;
                     self.crossfade_duration = std::time::Duration::from_millis(crossfade_duration_ms as u64);
                     self.scroll_enabled = scroll_enabled;
@@ -662,8 +692,20 @@ impl RenderApp {
                     self.cursor_current_h = new_target.height;
                     self.cursor_animating = false;
                 } else if target_moved {
+                    let now = std::time::Instant::now();
                     self.cursor_animating = true;
-                    self.last_anim_time = std::time::Instant::now();
+                    self.last_anim_time = now;
+                    // Capture start position for easing/linear/spring styles
+                    self.cursor_start_x = self.cursor_current_x;
+                    self.cursor_start_y = self.cursor_current_y;
+                    self.cursor_start_w = self.cursor_current_w;
+                    self.cursor_start_h = self.cursor_current_h;
+                    self.cursor_anim_start_time = now;
+                    // For spring: reset velocities
+                    self.cursor_velocity_x = 0.0;
+                    self.cursor_velocity_y = 0.0;
+                    self.cursor_velocity_w = 0.0;
+                    self.cursor_velocity_h = 0.0;
                 }
 
                 self.cursor_target = Some(new_target);
@@ -677,7 +719,7 @@ impl RenderApp {
             return false;
         }
         let target = match self.cursor_target.as_ref() {
-            Some(t) => t,
+            Some(t) => t.clone(),
             None => return false,
         };
 
@@ -685,29 +727,90 @@ impl RenderApp {
         let dt = now.duration_since(self.last_anim_time).as_secs_f32();
         self.last_anim_time = now;
 
-        // Exponential interpolation
-        let factor = 1.0 - (-self.cursor_anim_speed * dt).exp();
+        match self.cursor_anim_style {
+            CursorAnimStyle::Exponential => {
+                let factor = 1.0 - (-self.cursor_anim_speed * dt).exp();
+                let dx = target.x - self.cursor_current_x;
+                let dy = target.y - self.cursor_current_y;
+                let dw = target.width - self.cursor_current_w;
+                let dh = target.height - self.cursor_current_h;
+                self.cursor_current_x += dx * factor;
+                self.cursor_current_y += dy * factor;
+                self.cursor_current_w += dw * factor;
+                self.cursor_current_h += dh * factor;
+                if dx.abs() < 0.5 && dy.abs() < 0.5 && dw.abs() < 0.5 && dh.abs() < 0.5 {
+                    self.snap_cursor(&target);
+                }
+            }
+            CursorAnimStyle::CriticallyDampedSpring => {
+                // Critically-damped spring: zeta=1, omega=4/duration
+                let omega = 4.0 / self.cursor_anim_duration;
+                let exp_term = (-omega * dt).exp();
 
-        let dx = target.x - self.cursor_current_x;
-        let dy = target.y - self.cursor_current_y;
-        let dw = target.width - self.cursor_current_w;
-        let dh = target.height - self.cursor_current_h;
+                // Per-axis: x(t) = (x0 + (v0 + omega*x0)*t) * exp(-omega*t)
+                // where x0 = offset from target, v0 = velocity
+                macro_rules! spring_axis {
+                    ($cur:expr, $vel:expr, $tgt:expr) => {{
+                        let x0 = $cur - $tgt;
+                        let v0 = $vel;
+                        let new_x = (x0 + (v0 + omega * x0) * dt) * exp_term;
+                        $vel = ((v0 + omega * x0) * exp_term)
+                             - omega * (x0 + (v0 + omega * x0) * dt) * exp_term;
+                        $cur = $tgt + new_x;
+                    }};
+                }
+                spring_axis!(self.cursor_current_x, self.cursor_velocity_x, target.x);
+                spring_axis!(self.cursor_current_y, self.cursor_velocity_y, target.y);
+                spring_axis!(self.cursor_current_w, self.cursor_velocity_w, target.width);
+                spring_axis!(self.cursor_current_h, self.cursor_velocity_h, target.height);
 
-        self.cursor_current_x += dx * factor;
-        self.cursor_current_y += dy * factor;
-        self.cursor_current_w += dw * factor;
-        self.cursor_current_h += dh * factor;
-
-        // Snap when close enough
-        if dx.abs() < 0.5 && dy.abs() < 0.5 && dw.abs() < 0.5 && dh.abs() < 0.5 {
-            self.cursor_current_x = target.x;
-            self.cursor_current_y = target.y;
-            self.cursor_current_w = target.width;
-            self.cursor_current_h = target.height;
-            self.cursor_animating = false;
+                // Snap when close and velocity low
+                let dx = (self.cursor_current_x - target.x).abs();
+                let dy = (self.cursor_current_y - target.y).abs();
+                let dw = (self.cursor_current_w - target.width).abs();
+                let dh = (self.cursor_current_h - target.height).abs();
+                let vx = self.cursor_velocity_x.abs();
+                let vy = self.cursor_velocity_y.abs();
+                if dx < 0.5 && dy < 0.5 && dw < 0.5 && dh < 0.5 && vx < 1.0 && vy < 1.0 {
+                    self.snap_cursor(&target);
+                    self.cursor_velocity_x = 0.0;
+                    self.cursor_velocity_y = 0.0;
+                    self.cursor_velocity_w = 0.0;
+                    self.cursor_velocity_h = 0.0;
+                }
+            }
+            style => {
+                // Duration-based easing styles
+                let elapsed = now.duration_since(self.cursor_anim_start_time).as_secs_f32();
+                let raw_t = (elapsed / self.cursor_anim_duration).min(1.0);
+                let t = match style {
+                    CursorAnimStyle::EaseOutQuad => ease_out_quad(raw_t),
+                    CursorAnimStyle::EaseOutCubic => ease_out_cubic(raw_t),
+                    CursorAnimStyle::EaseOutExpo => ease_out_expo(raw_t),
+                    CursorAnimStyle::EaseInOutCubic => ease_in_out_cubic(raw_t),
+                    CursorAnimStyle::Linear => ease_linear(raw_t),
+                    _ => raw_t, // unreachable
+                };
+                self.cursor_current_x = self.cursor_start_x + (target.x - self.cursor_start_x) * t;
+                self.cursor_current_y = self.cursor_start_y + (target.y - self.cursor_start_y) * t;
+                self.cursor_current_w = self.cursor_start_w + (target.width - self.cursor_start_w) * t;
+                self.cursor_current_h = self.cursor_start_h + (target.height - self.cursor_start_h) * t;
+                if raw_t >= 1.0 {
+                    self.snap_cursor(&target);
+                }
+            }
         }
 
         true
+    }
+
+    /// Snap cursor to target and stop animating
+    fn snap_cursor(&mut self, target: &CursorTarget) {
+        self.cursor_current_x = target.x;
+        self.cursor_current_y = target.y;
+        self.cursor_current_w = target.width;
+        self.cursor_current_h = target.height;
+        self.cursor_animating = false;
     }
 
     /// Check if any transitions are currently active

@@ -130,7 +130,8 @@ DISPLAY is the name of the display Emacs should connect to."
 ;; Animation configuration
 (declare-function neomacs-set-cursor-animation "neomacsterm.c" (enabled &optional speed))
 (declare-function neomacs-set-animation-config "neomacsterm.c"
-                  (cursor-enabled cursor-speed crossfade-enabled crossfade-duration
+                  (cursor-enabled cursor-speed cursor-style cursor-duration
+                   crossfade-enabled crossfade-duration
                    scroll-enabled scroll-duration))
 
 (defun neomacs--sync-cursor-blink ()
@@ -159,7 +160,10 @@ Also suppresses the Emacs-side blink timer since the render thread handles it."
 (defun neomacs--setup-animations ()
   "Set up render-thread animations (smooth cursor, crossfade, scroll slide)."
   (when (fboundp 'neomacs-set-animation-config)
-    (neomacs-set-animation-config t 15.0 t 200 t 150)))
+    ;; Args: cursor-enabled cursor-speed cursor-style cursor-duration
+    ;;       crossfade-enabled crossfade-duration scroll-enabled scroll-duration
+    ;; Style 1 = critically-damped-spring (Neovide-like), 150ms duration
+    (neomacs-set-animation-config t 15.0 1 150 t 200 t 150)))
 
 ;; Provide the feature
 (provide 'neomacs-win)

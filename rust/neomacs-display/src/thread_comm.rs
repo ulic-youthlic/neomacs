@@ -137,6 +137,8 @@ pub enum RenderCommand {
     SetAnimationConfig {
         cursor_enabled: bool,
         cursor_speed: f32,
+        cursor_style: crate::core::types::CursorAnimStyle,
+        cursor_duration_ms: u32,
         crossfade_enabled: bool,
         crossfade_duration_ms: u32,
         scroll_enabled: bool,

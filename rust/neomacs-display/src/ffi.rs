@@ -1869,14 +1869,19 @@ pub unsafe extern "C" fn neomacs_display_set_animation_config(
     _handle: *mut NeomacsDisplay,
     cursor_enabled: c_int,
     cursor_speed: f32,
+    cursor_style: u8,
+    cursor_duration_ms: u32,
     crossfade_enabled: c_int,
     crossfade_duration_ms: u32,
     scroll_enabled: c_int,
     scroll_duration_ms: u32,
 ) {
+    use crate::core::types::CursorAnimStyle;
     let cmd = RenderCommand::SetAnimationConfig {
         cursor_enabled: cursor_enabled != 0,
         cursor_speed: if cursor_speed > 0.0 { cursor_speed } else { 15.0 },
+        cursor_style: CursorAnimStyle::from_u8(cursor_style),
+        cursor_duration_ms: if cursor_duration_ms > 0 { cursor_duration_ms } else { 150 },
         crossfade_enabled: crossfade_enabled != 0,
         crossfade_duration_ms: if crossfade_duration_ms > 0 { crossfade_duration_ms } else { 200 },
         scroll_enabled: scroll_enabled != 0,

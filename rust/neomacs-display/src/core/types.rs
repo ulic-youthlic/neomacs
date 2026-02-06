@@ -191,6 +191,81 @@ pub struct AnimatedCursor {
     pub height: f32,
 }
 
+/// Cursor animation style.
+///
+/// Controls how the smooth cursor interpolates between positions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub enum CursorAnimStyle {
+    /// Exponential decay (current default). No fixed duration; `speed` controls rate.
+    Exponential = 0,
+    /// Critically-damped spring (Neovide-style). Physics-based, natural feel.
+    CriticallyDampedSpring = 1,
+    /// Ease-out quadratic: gentle deceleration.
+    EaseOutQuad = 2,
+    /// Ease-out cubic: stronger deceleration.
+    EaseOutCubic = 3,
+    /// Ease-out exponential: sharp initial speed, rapid deceleration.
+    EaseOutExpo = 4,
+    /// Ease-in-out cubic: smooth S-curve acceleration + deceleration.
+    EaseInOutCubic = 5,
+    /// Linear: constant speed.
+    Linear = 6,
+}
+
+impl CursorAnimStyle {
+    pub fn from_u8(v: u8) -> Self {
+        match v {
+            1 => Self::CriticallyDampedSpring,
+            2 => Self::EaseOutQuad,
+            3 => Self::EaseOutCubic,
+            4 => Self::EaseOutExpo,
+            5 => Self::EaseInOutCubic,
+            6 => Self::Linear,
+            _ => Self::Exponential,
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Easing functions (t in 0.0..=1.0, returns 0.0..=1.0)
+// ---------------------------------------------------------------------------
+
+/// Ease-out quadratic: `−t(t−2)` — gentle deceleration.
+pub fn ease_out_quad(t: f32) -> f32 {
+    -t * (t - 2.0)
+}
+
+/// Ease-out cubic: `(t−1)³ + 1` — stronger deceleration.
+pub fn ease_out_cubic(t: f32) -> f32 {
+    let n = t - 1.0;
+    n * n * n + 1.0
+}
+
+/// Ease-out exponential: `1 − 2^(−10t)` — sharp deceleration.
+pub fn ease_out_expo(t: f32) -> f32 {
+    if t >= 1.0 {
+        1.0
+    } else {
+        1.0 - 2f32.powf(-10.0 * t)
+    }
+}
+
+/// Ease-in-out cubic: smooth S-curve.
+pub fn ease_in_out_cubic(t: f32) -> f32 {
+    if t < 0.5 {
+        4.0 * t * t * t
+    } else {
+        let n = -2.0 * t + 2.0;
+        1.0 - n * n * n / 2.0
+    }
+}
+
+/// Linear easing (identity).
+pub fn ease_linear(t: f32) -> f32 {
+    t
+}
+
 /// 2D transform matrix
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]

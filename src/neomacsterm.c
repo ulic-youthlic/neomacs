@@ -3650,15 +3650,20 @@ Higher values make the cursor move faster.  */)
   return anim_enabled ? Qt : Qnil;
 }
 
-DEFUN ("neomacs-set-animation-config", Fneomacs_set_animation_config, Sneomacs_set_animation_config, 6, 6, 0,
+DEFUN ("neomacs-set-animation-config", Fneomacs_set_animation_config, Sneomacs_set_animation_config, 8, 8, 0,
        doc: /* Configure all animation settings in the render thread.
 CURSOR-ENABLED non-nil enables smooth cursor animation.
 CURSOR-SPEED is the exponential interpolation rate (default 15.0).
+CURSOR-STYLE is the animation style (integer):
+  0=exponential, 1=critically-damped-spring, 2=ease-out-quad,
+  3=ease-out-cubic, 4=ease-out-expo, 5=ease-in-out-cubic, 6=linear.
+CURSOR-DURATION is duration in milliseconds for non-exponential styles (default 150).
 CROSSFADE-ENABLED non-nil enables buffer-switch crossfade.
 CROSSFADE-DURATION is duration in milliseconds (default 200).
 SCROLL-ENABLED non-nil enables scroll slide animation.
 SCROLL-DURATION is duration in milliseconds (default 150).  */)
   (Lisp_Object cursor_enabled, Lisp_Object cursor_speed,
+   Lisp_Object cursor_style, Lisp_Object cursor_duration,
    Lisp_Object crossfade_enabled, Lisp_Object crossfade_duration,
    Lisp_Object scroll_enabled, Lisp_Object scroll_duration)
 {
@@ -3671,6 +3676,14 @@ SCROLL-DURATION is duration in milliseconds (default 150).  */)
   if (NUMBERP (cursor_speed))
     cs = (float) XFLOATINT (cursor_speed);
 
+  uint8_t cst = 0;
+  if (FIXNUMP (cursor_style))
+    cst = (uint8_t) XFIXNUM (cursor_style);
+
+  uint32_t cd = 150;
+  if (NUMBERP (cursor_duration))
+    cd = (uint32_t) XFIXNUM (cursor_duration);
+
   int cfe = !NILP (crossfade_enabled);
   uint32_t cfd = 200;
   if (NUMBERP (crossfade_duration))
@@ -3682,7 +3695,7 @@ SCROLL-DURATION is duration in milliseconds (default 150).  */)
     sd = (uint32_t) XFIXNUM (scroll_duration);
 
   neomacs_display_set_animation_config (dpyinfo->display_handle,
-                                         ce, cs, cfe, cfd, se, sd);
+                                         ce, cs, cst, cd, cfe, cfd, se, sd);
   return Qt;
 }
 

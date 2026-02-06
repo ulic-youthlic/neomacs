@@ -573,6 +573,8 @@ void neomacs_display_set_cursor_animation(struct NeomacsDisplay *handle, int ena
 void neomacs_display_set_animation_config(struct NeomacsDisplay *handle,
                                           int cursorEnabled,
                                           float cursorSpeed,
+                                          uint8_t cursorStyle,
+                                          uint32_t cursorDurationMs,
                                           int crossfadeEnabled,
                                           uint32_t crossfadeDurationMs,
                                           int scrollEnabled,
