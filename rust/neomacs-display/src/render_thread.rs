@@ -224,7 +224,7 @@ impl RenderApp {
             cursor_blink_interval: std::time::Duration::from_millis(500),
             cursor_anim_enabled: true,
             cursor_anim_speed: 15.0,
-            cursor_anim_style: CursorAnimStyle::Exponential,
+            cursor_anim_style: CursorAnimStyle::CriticallyDampedSpring,
             cursor_anim_duration: 0.15,
             cursor_target: None,
             cursor_current_x: 0.0,

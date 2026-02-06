@@ -3654,9 +3654,14 @@ DEFUN ("neomacs-set-animation-config", Fneomacs_set_animation_config, Sneomacs_s
        doc: /* Configure all animation settings in the render thread.
 CURSOR-ENABLED non-nil enables smooth cursor animation.
 CURSOR-SPEED is the exponential interpolation rate (default 15.0).
-CURSOR-STYLE is the animation style (integer):
-  0=exponential, 1=critically-damped-spring, 2=ease-out-quad,
-  3=ease-out-cubic, 4=ease-out-expo, 5=ease-in-out-cubic, 6=linear.
+CURSOR-STYLE is a symbol naming the animation style:
+  `exponential'  - smooth deceleration, no fixed duration (uses CURSOR-SPEED)
+  `spring'       - critically-damped spring, Neovide-like feel
+  `ease-out-quad'  - gentle deceleration curve
+  `ease-out-cubic' - stronger deceleration curve
+  `ease-out-expo'  - sharp deceleration curve
+  `ease-in-out-cubic' - smooth S-curve acceleration + deceleration
+  `linear'       - constant speed, uniform motion
 CURSOR-DURATION is duration in milliseconds for non-exponential styles (default 150).
 CROSSFADE-ENABLED non-nil enables buffer-switch crossfade.
 CROSSFADE-DURATION is duration in milliseconds (default 200).
@@ -3676,8 +3681,26 @@ SCROLL-DURATION is duration in milliseconds (default 150).  */)
   if (NUMBERP (cursor_speed))
     cs = (float) XFLOATINT (cursor_speed);
 
-  uint8_t cst = 0;
-  if (FIXNUMP (cursor_style))
+  /* Map symbol to style ID */
+  uint8_t cst = 1; /* default: spring */
+  if (SYMBOLP (cursor_style))
+    {
+      if (EQ (cursor_style, Qexponential))
+        cst = 0;
+      else if (EQ (cursor_style, Qspring))
+        cst = 1;
+      else if (EQ (cursor_style, Qease_out_quad))
+        cst = 2;
+      else if (EQ (cursor_style, Qease_out_cubic))
+        cst = 3;
+      else if (EQ (cursor_style, Qease_out_expo))
+        cst = 4;
+      else if (EQ (cursor_style, Qease_in_out_cubic))
+        cst = 5;
+      else if (EQ (cursor_style, Qlinear))
+        cst = 6;
+    }
+  else if (FIXNUMP (cursor_style))
     cst = (uint8_t) XFIXNUM (cursor_style);
 
   uint32_t cd = 150;
@@ -4098,6 +4121,15 @@ syms_of_neomacsterm (void)
   DEFSYM (Qneomacs, "neomacs");
   /* Qvideo and Qwebkit are defined in xdisp.c for use in VIDEOP/WEBKITP */
   DEFSYM (QCid, ":id");
+
+  /* Cursor animation style symbols */
+  DEFSYM (Qexponential, "exponential");
+  DEFSYM (Qspring, "spring");
+  DEFSYM (Qease_out_quad, "ease-out-quad");
+  DEFSYM (Qease_out_cubic, "ease-out-cubic");
+  DEFSYM (Qease_out_expo, "ease-out-expo");
+  DEFSYM (Qease_in_out_cubic, "ease-in-out-cubic");
+  DEFSYM (Qlinear, "linear");
 
   /* WebKit new window callback */
   DEFVAR_LISP ("neomacs-webkit-new-window-function", Vneomacs_webkit_new_window_function,

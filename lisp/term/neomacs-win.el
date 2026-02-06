@@ -158,12 +158,17 @@ Also suppresses the Emacs-side blink timer since the render thread handles it."
 
 ;; Animation setup
 (defun neomacs--setup-animations ()
-  "Set up render-thread animations (smooth cursor, crossfade, scroll slide)."
+  "Set up render-thread animations (smooth cursor, crossfade, scroll slide).
+Cursor animation styles:
+  `exponential'      - smooth deceleration, no fixed duration (uses speed param)
+  `spring'           - critically-damped spring, Neovide-like feel (default)
+  `ease-out-quad'    - gentle deceleration curve
+  `ease-out-cubic'   - stronger deceleration curve
+  `ease-out-expo'    - sharp deceleration curve
+  `ease-in-out-cubic' - smooth S-curve
+  `linear'           - constant speed"
   (when (fboundp 'neomacs-set-animation-config)
-    ;; Args: cursor-enabled cursor-speed cursor-style cursor-duration
-    ;;       crossfade-enabled crossfade-duration scroll-enabled scroll-duration
-    ;; Style 1 = critically-damped-spring (Neovide-like), 150ms duration
-    (neomacs-set-animation-config t 15.0 1 150 t 200 t 150)))
+    (neomacs-set-animation-config t 15.0 'spring 150 t 200 t 150)))
 
 ;; Provide the feature
 (provide 'neomacs-win)
