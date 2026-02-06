@@ -1762,6 +1762,9 @@ impl WgpuRenderer {
     }
 
     /// Render a scroll slide transition within a scissor region
+    ///
+    /// Uses content-region UV mapping so only the content area of each offscreen
+    /// texture is sampled — the mode-line is never included in the sliding quads.
     pub fn render_scroll_slide(
         &self,
         surface_view: &wgpu::TextureView,
@@ -1790,19 +1793,32 @@ impl WgpuRenderer {
         let h = surface_height as f32;
         let dir = direction as f32;
 
+        // UV coordinates for the content region within the full-frame texture.
+        // bounds is already content-only (mode-line excluded by caller).
+        let uv_left = bounds.x / w;
+        let uv_top = bounds.y / h;
+        let uv_right = (bounds.x + bounds.width) / w;
+        let uv_bottom = (bounds.y + bounds.height) / h;
+
         // Old texture slides out by offset in direction
         let old_y_offset = -dir * offset;
         // New texture slides in from opposite side
         let new_y_offset = dir * (bounds.height - offset);
 
+        // Build a content-region quad: position covers the content bounds shifted
+        // by y_off, UV maps to exactly the content region in the full-frame texture.
         let make_quad = |y_off: f32| -> [GlyphVertex; 6] {
+            let x0 = bounds.x;
+            let x1 = bounds.x + bounds.width;
+            let y0 = bounds.y + y_off;
+            let y1 = bounds.y + bounds.height + y_off;
             [
-                GlyphVertex { position: [0.0, y_off], tex_coords: [0.0, 0.0], color: [1.0, 1.0, 1.0, 1.0] },
-                GlyphVertex { position: [w, y_off], tex_coords: [1.0, 0.0], color: [1.0, 1.0, 1.0, 1.0] },
-                GlyphVertex { position: [w, h + y_off], tex_coords: [1.0, 1.0], color: [1.0, 1.0, 1.0, 1.0] },
-                GlyphVertex { position: [0.0, y_off], tex_coords: [0.0, 0.0], color: [1.0, 1.0, 1.0, 1.0] },
-                GlyphVertex { position: [w, h + y_off], tex_coords: [1.0, 1.0], color: [1.0, 1.0, 1.0, 1.0] },
-                GlyphVertex { position: [0.0, h + y_off], tex_coords: [0.0, 1.0], color: [1.0, 1.0, 1.0, 1.0] },
+                GlyphVertex { position: [x0, y0], tex_coords: [uv_left, uv_top], color: [1.0, 1.0, 1.0, 1.0] },
+                GlyphVertex { position: [x1, y0], tex_coords: [uv_right, uv_top], color: [1.0, 1.0, 1.0, 1.0] },
+                GlyphVertex { position: [x1, y1], tex_coords: [uv_right, uv_bottom], color: [1.0, 1.0, 1.0, 1.0] },
+                GlyphVertex { position: [x0, y0], tex_coords: [uv_left, uv_top], color: [1.0, 1.0, 1.0, 1.0] },
+                GlyphVertex { position: [x1, y1], tex_coords: [uv_right, uv_bottom], color: [1.0, 1.0, 1.0, 1.0] },
+                GlyphVertex { position: [x0, y1], tex_coords: [uv_left, uv_bottom], color: [1.0, 1.0, 1.0, 1.0] },
             ]
         };
 
