@@ -96,6 +96,55 @@ struct ScrollTransition {
     old_bind_group: wgpu::BindGroup,
 }
 
+#[cfg(feature = "wpe-webkit")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WebKitImportPolicy {
+    /// Prefer raw pixel upload first, fallback to DMA-BUF.
+    PixelsFirst,
+    /// Prefer DMA-BUF import first, fallback to raw pixels.
+    DmaBufFirst,
+    /// Default compatibility mode (currently PixelsFirst).
+    Auto,
+}
+
+#[cfg(feature = "wpe-webkit")]
+impl WebKitImportPolicy {
+    fn from_env() -> Self {
+        match std::env::var("NEOMACS_WEBKIT_IMPORT").ok().as_deref() {
+            Some("dmabuf-first") | Some("dmabuf") | Some("dma-buf-first") => {
+                log::info!("NEOMACS_WEBKIT_IMPORT=dmabuf-first");
+                Self::DmaBufFirst
+            }
+            Some("pixels-first") | Some("pixels") => {
+                log::info!("NEOMACS_WEBKIT_IMPORT=pixels-first");
+                Self::PixelsFirst
+            }
+            Some("auto") => {
+                log::info!("NEOMACS_WEBKIT_IMPORT=auto (effective: pixels-first)");
+                Self::Auto
+            }
+            Some(val) => {
+                log::warn!(
+                    "NEOMACS_WEBKIT_IMPORT={}: unrecognized value, defaulting to auto (effective: pixels-first)",
+                    val
+                );
+                Self::Auto
+            }
+            None => {
+                log::info!("NEOMACS_WEBKIT_IMPORT not set (effective: pixels-first)");
+                Self::Auto
+            }
+        }
+    }
+
+    fn effective(self) -> Self {
+        match self {
+            Self::Auto => Self::PixelsFirst,
+            other => other,
+        }
+    }
+}
+
 /// Target position/style for cursor animation
 #[derive(Debug, Clone)]
 struct CursorTarget {
@@ -221,6 +270,9 @@ struct RenderApp {
     #[cfg(feature = "wpe-webkit")]
     webkit_views: HashMap<u32, WpeWebView>,
 
+    #[cfg(feature = "wpe-webkit")]
+    webkit_import_policy: WebKitImportPolicy,
+
     // Terminal manager (neo-term)
     #[cfg(feature = "neo-term")]
     terminal_manager: crate::terminal::TerminalManager,
@@ -234,6 +286,9 @@ impl RenderApp {
         title: String,
         image_dimensions: SharedImageDimensions,
     ) -> Self {
+        #[cfg(feature = "wpe-webkit")]
+        let webkit_import_policy = WebKitImportPolicy::from_env();
+
         Self {
             comms,
             window: None,
@@ -302,6 +357,8 @@ impl RenderApp {
             wpe_backend: None,
             #[cfg(feature = "wpe-webkit")]
             webkit_views: HashMap::new(),
+            #[cfg(feature = "wpe-webkit")]
+            webkit_import_policy,
             #[cfg(feature = "neo-term")]
             terminal_manager: crate::terminal::TerminalManager::new(),
         }
@@ -1144,6 +1201,7 @@ impl RenderApp {
     /// Process webkit frames and import to wgpu textures
     #[cfg(all(feature = "wpe-webkit", target_os = "linux"))]
     fn process_webkit_frames(&mut self) {
+        use crate::backend::wpe::DmaBufData;
         use crate::backend::wgpu::external_buffer::DmaBufBuffer;
 
         // Get mutable reference to renderer - we need to update its internal webkit cache
@@ -1160,50 +1218,87 @@ impl RenderApp {
             return;
         }
 
-        for (view_id, view) in &self.webkit_views {
-            // Prefer pixel upload over DMA-BUF zero-copy.
-            //
-            // wgpu's create_texture_from_hal() always inserts textures with
-            // UNINITIALIZED tracking state, causing a second UNDEFINED layout
-            // transition that discards DMA-BUF content on AMD RADV (and
-            // potentially other drivers with compressed modifiers like DCC/CCS).
-            // Until wgpu supports pre-initialized HAL textures, pixel upload
-            // via wpe_buffer_import_to_pixels() is the reliable path.
-            if let Some(raw_pixels) = view.take_latest_pixels() {
-                // Drain any pending DMA-BUF so it doesn't accumulate
-                let _ = view.take_latest_dmabuf();
-                if renderer.update_webkit_view_pixels(*view_id, raw_pixels.width, raw_pixels.height, &raw_pixels.pixels) {
-                    log::debug!("Uploaded pixels for webkit view {}", view_id);
-                }
+        let policy = self.webkit_import_policy.effective();
+
+        let try_upload_dmabuf = |renderer: &mut WgpuRenderer, view_id: u32, dmabuf: DmaBufData| -> bool {
+            let num_planes = dmabuf.fds.len().min(4) as u32;
+            let mut fds = [-1i32; 4];
+            let mut strides = [0u32; 4];
+            let mut offsets = [0u32; 4];
+
+            for i in 0..num_planes as usize {
+                fds[i] = dmabuf.fds[i];
+                strides[i] = dmabuf.strides[i];
+                offsets[i] = dmabuf.offsets[i];
             }
-            // DMA-BUF zero-copy fallback (only if no pixel data available)
-            else if let Some(dmabuf) = view.take_latest_dmabuf() {
-                let num_planes = dmabuf.fds.len().min(4) as u32;
-                let mut fds = [-1i32; 4];
-                let mut strides = [0u32; 4];
-                let mut offsets = [0u32; 4];
 
-                for i in 0..num_planes as usize {
-                    fds[i] = dmabuf.fds[i];
-                    strides[i] = dmabuf.strides[i];
-                    offsets[i] = dmabuf.offsets[i];
+            let buffer = DmaBufBuffer::new(
+                fds,
+                strides,
+                offsets,
+                num_planes,
+                dmabuf.width,
+                dmabuf.height,
+                dmabuf.fourcc,
+                dmabuf.modifier,
+            );
+
+            renderer.update_webkit_view_dmabuf(view_id, buffer)
+        };
+
+        for (view_id, view) in &self.webkit_views {
+            match policy {
+                WebKitImportPolicy::DmaBufFirst => {
+                    if let Some(dmabuf) = view.take_latest_dmabuf() {
+                        if try_upload_dmabuf(renderer, *view_id, dmabuf) {
+                            // Discard pending pixel fallback when DMA-BUF succeeds.
+                            let _ = view.take_latest_pixels();
+                            log::debug!("Imported DMA-BUF for webkit view {} (dmabuf-first)", view_id);
+                        } else if let Some(raw_pixels) = view.take_latest_pixels() {
+                            if renderer.update_webkit_view_pixels(*view_id, raw_pixels.width, raw_pixels.height, &raw_pixels.pixels) {
+                                log::debug!("Uploaded pixels for webkit view {} (dmabuf-first fallback)", view_id);
+                            } else {
+                                log::warn!("Both DMA-BUF and pixel upload failed for webkit view {}", view_id);
+                            }
+                        } else {
+                            log::warn!("Both DMA-BUF import and pixel fallback unavailable for webkit view {}", view_id);
+                        }
+                    } else if let Some(raw_pixels) = view.take_latest_pixels() {
+                        if renderer.update_webkit_view_pixels(*view_id, raw_pixels.width, raw_pixels.height, &raw_pixels.pixels) {
+                            log::debug!("Uploaded pixels for webkit view {} (dmabuf-first: no dmabuf frame)", view_id);
+                        }
+                    }
                 }
-
-                let buffer = DmaBufBuffer::new(
-                    fds,
-                    strides,
-                    offsets,
-                    num_planes,
-                    dmabuf.width,
-                    dmabuf.height,
-                    dmabuf.fourcc,
-                    dmabuf.modifier,
-                );
-
-                if renderer.update_webkit_view_dmabuf(*view_id, buffer) {
-                    log::debug!("Imported DMA-BUF for webkit view {} (no pixel data available)", view_id);
-                } else {
-                    log::warn!("Both pixel and DMA-BUF import failed for webkit view {}", view_id);
+                WebKitImportPolicy::PixelsFirst | WebKitImportPolicy::Auto => {
+                    // Prefer pixel upload over DMA-BUF zero-copy.
+                    //
+                    // wgpu's create_texture_from_hal() always inserts textures with
+                    // UNINITIALIZED tracking state, causing a second UNDEFINED layout
+                    // transition that discards DMA-BUF content on AMD RADV (and
+                    // potentially other drivers with compressed modifiers like DCC/CCS).
+                    // Until wgpu supports pre-initialized HAL textures, pixel upload
+                    // via wpe_buffer_import_to_pixels() is the reliable path.
+                    if let Some(raw_pixels) = view.take_latest_pixels() {
+                        // Drain any pending DMA-BUF so it doesn't accumulate
+                        let _ = view.take_latest_dmabuf();
+                        if renderer.update_webkit_view_pixels(*view_id, raw_pixels.width, raw_pixels.height, &raw_pixels.pixels) {
+                            log::debug!("Uploaded pixels for webkit view {}", view_id);
+                        }
+                    }
+                    // DMA-BUF zero-copy fallback (only if no pixel data available)
+                    else if let Some(dmabuf) = view.take_latest_dmabuf() {
+                        if try_upload_dmabuf(renderer, *view_id, dmabuf) {
+                            log::debug!("Imported DMA-BUF for webkit view {} (pixels-first fallback)", view_id);
+                        } else if let Some(raw_pixels) = view.take_latest_pixels() {
+                            if renderer.update_webkit_view_pixels(*view_id, raw_pixels.width, raw_pixels.height, &raw_pixels.pixels) {
+                                log::debug!("Uploaded pixels for webkit view {} (pixels-first second fallback)", view_id);
+                            } else {
+                                log::warn!("Both pixel and DMA-BUF import failed for webkit view {}", view_id);
+                            }
+                        } else {
+                            log::warn!("Both pixel and DMA-BUF import failed for webkit view {}", view_id);
+                        }
+                    }
                 }
             }
         }
