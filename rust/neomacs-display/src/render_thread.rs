@@ -1507,6 +1507,16 @@ impl RenderApp {
         // Update all terminal content (check for PTY data)
         self.terminal_manager.update_all();
 
+        // Check for exited terminals and notify Emacs
+        for id in self.terminal_manager.ids() {
+            if let Some(view) = self.terminal_manager.get_mut(id) {
+                if view.event_proxy.is_exited() && !view.exit_notified {
+                    view.exit_notified = true;
+                    self.comms.send_input(InputEvent::TerminalExited { id });
+                }
+            }
+        }
+
         // Expand FrameGlyph::Terminal entries (placed by C redisplay) into cells
         if let Some(ref mut frame) = self.current_frame {
             let mut extra_glyphs = Vec::new();

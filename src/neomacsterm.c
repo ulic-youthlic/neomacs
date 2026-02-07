@@ -4373,6 +4373,14 @@ neomacs_display_wakeup_handler (int fd, void *data)
           }
           break;
 
+        case NEOMACS_EVENT_TERMINAL_EXITED:
+          {
+            Lisp_Object handler = intern ("neo-term--handle-exit");
+            if (!NILP (Ffboundp (handler)))
+              safe_calln (Fsymbol_function (handler), make_fixnum (ev->keysym));
+          }
+          break;
+
         default:
           break;
         }

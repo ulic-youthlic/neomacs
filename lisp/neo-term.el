@@ -178,6 +178,19 @@ Returns terminal ID or nil on failure."
     (neo-term--destroy neo-term--id))
   (kill-buffer))
 
+(defun neo-term--handle-exit (terminal-id)
+  "Handle terminal TERMINAL-ID process exit."
+  (dolist (buf (buffer-list))
+    (with-current-buffer buf
+      (when (and (eq major-mode 'neo-term-mode)
+                 (eql neo-term--id terminal-id))
+        (neo-term--destroy terminal-id)
+        (setq neo-term--id nil)
+        (let ((inhibit-read-only t))
+          (goto-char (point-max))
+          (insert "\n[Process exited]\n"))
+        (message "neo-term: terminal %d exited" terminal-id)))))
+
 ;;; Public API
 
 ;;;###autoload

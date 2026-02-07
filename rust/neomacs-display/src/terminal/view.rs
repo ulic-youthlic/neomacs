@@ -60,6 +60,8 @@ pub struct NeomacsEventProxy {
     id: TerminalId,
     /// Signals that the terminal has new content to render.
     wakeup: Arc<std::sync::atomic::AtomicBool>,
+    /// Signals that the terminal child process has exited.
+    exited: Arc<std::sync::atomic::AtomicBool>,
 }
 
 impl NeomacsEventProxy {
@@ -67,6 +69,7 @@ impl NeomacsEventProxy {
         Self {
             id,
             wakeup: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            exited: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         }
     }
 
@@ -78,6 +81,11 @@ impl NeomacsEventProxy {
     /// Check if wakeup is pending without consuming it.
     pub fn peek_wakeup(&self) -> bool {
         self.wakeup.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    /// Check if the terminal child process has exited.
+    pub fn is_exited(&self) -> bool {
+        self.exited.load(std::sync::atomic::Ordering::Relaxed)
     }
 }
 
@@ -95,6 +103,7 @@ impl EventListener for NeomacsEventProxy {
             }
             TermEvent::Exit => {
                 log::info!("Terminal {}: child process exited", self.id);
+                self.exited.store(true, std::sync::atomic::Ordering::Relaxed);
             }
             _ => {}
         }
@@ -120,6 +129,8 @@ pub struct TerminalView {
     pub last_content: Option<TerminalContent>,
     /// Whether content changed since last render.
     pub dirty: bool,
+    /// Whether the Emacs side has been notified about process exit.
+    pub exit_notified: bool,
     /// Floating position (only used in Floating mode).
     pub float_x: f32,
     pub float_y: f32,
@@ -226,6 +237,7 @@ impl TerminalView {
             _reader_thread: Some(reader_thread),
             last_content: None,
             dirty: true,
+            exit_notified: false,
             float_x: 0.0,
             float_y: 0.0,
             float_opacity: 1.0,

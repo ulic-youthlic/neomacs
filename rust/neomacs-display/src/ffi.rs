@@ -25,6 +25,7 @@ use crate::backend::wgpu::{
     NEOMACS_EVENT_RESIZE, NEOMACS_EVENT_CLOSE,
     NEOMACS_EVENT_FOCUS_IN, NEOMACS_EVENT_FOCUS_OUT,
     NEOMACS_EVENT_IMAGE_DIMENSIONS_READY,
+    NEOMACS_EVENT_TERMINAL_EXITED,
 };
 
 /// Resize callback function type for C FFI
@@ -3618,8 +3619,12 @@ pub unsafe extern "C" fn neomacs_display_drain_input(
                     }
                     // Terminal events
                     #[cfg(feature = "neo-term")]
-                    InputEvent::TerminalExited { .. }
-                    | InputEvent::TerminalTitleChanged { .. } => {
+                    InputEvent::TerminalExited { id } => {
+                        out.kind = NEOMACS_EVENT_TERMINAL_EXITED;
+                        out.keysym = id;  // reuse keysym field for terminal ID
+                    }
+                    #[cfg(feature = "neo-term")]
+                    InputEvent::TerminalTitleChanged { .. } => {
                         // TODO: expose to C via terminal-specific API
                         continue;
                     }

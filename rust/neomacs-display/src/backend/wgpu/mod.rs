@@ -67,6 +67,7 @@ pub use events::{
     NEOMACS_EVENT_RESIZE, NEOMACS_EVENT_CLOSE,
     NEOMACS_EVENT_FOCUS_IN, NEOMACS_EVENT_FOCUS_OUT,
     NEOMACS_EVENT_IMAGE_DIMENSIONS_READY,
+    NEOMACS_EVENT_TERMINAL_EXITED,
 };
 
 #[cfg(all(feature = "wpe-webkit", target_os = "linux"))]
