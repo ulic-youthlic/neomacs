@@ -3796,34 +3796,34 @@ CROSSFADE-ENABLED non-nil enables buffer-switch crossfade.
 CROSSFADE-DURATION is duration in milliseconds (default 200).
 SCROLL-ENABLED non-nil enables scroll slide animation.
 SCROLL-DURATION is duration in milliseconds (default 150).
-SCROLL-EFFECT is an integer index selecting the scroll animation effect:
-  0  slide               - content slides in scroll direction (default)
-  1  crossfade           - alpha blend between old and new
-  2  scale-zoom          - destination zooms from 95% to 100%
-  3  fade-edges          - lines fade at viewport edges
-  4  cascade             - lines drop in with stagger delay
-  5  parallax            - layers scroll at different speeds
-  6  tilt                - subtle 3D perspective tilt
-  7  page-curl           - page turning effect
-  8  card-flip           - card flips around X-axis
-  9  cylinder-roll       - content wraps around cylinder
-  10 wobbly              - jelly-like deformation
-  11 wave                - sine-wave distortion
-  12 per-line-spring     - each line springs independently
-  13 liquid              - noise-based fluid distortion
-  14 motion-blur         - vertical blur during scroll
-  15 chromatic-aberration - RGB channel separation
-  16 ghost-trails        - semi-transparent afterimages
-  17 color-temperature   - warm/cool tint by direction
-  18 crt-scanlines       - retro scanline overlay
-  19 depth-of-field      - center sharp, edges dim
-  20 typewriter-reveal   - lines appear left-to-right
-SCROLL-EASING is an integer index selecting the scroll easing function:
-  0  ease-out-quad       - standard deceleration (default)
-  1  ease-out-cubic      - stronger deceleration
-  2  spring              - critically damped spring with overshoot
-  3  linear              - constant speed
-  4  ease-in-out-cubic   - smooth S-curve
+SCROLL-EFFECT is a symbol (or integer index) selecting the scroll animation effect:
+  `slide'                - content slides in scroll direction (default)
+  `crossfade'            - alpha blend between old and new
+  `scale-zoom'           - destination zooms from 95% to 100%
+  `fade-edges'           - lines fade at viewport edges
+  `cascade'              - lines drop in with stagger delay
+  `parallax'             - layers scroll at different speeds
+  `tilt'                 - subtle 3D perspective tilt
+  `page-curl'            - page turning effect
+  `card-flip'            - card flips around X-axis
+  `cylinder-roll'        - content wraps around cylinder
+  `wobbly'               - jelly-like deformation
+  `wave'                 - sine-wave distortion
+  `per-line-spring'      - each line springs independently
+  `liquid'               - noise-based fluid distortion
+  `motion-blur'          - vertical blur during scroll
+  `chromatic-aberration' - RGB channel separation
+  `ghost-trails'         - semi-transparent afterimages
+  `color-temperature'    - warm/cool tint by direction
+  `crt-scanlines'        - retro scanline overlay
+  `depth-of-field'       - center sharp, edges dim
+  `typewriter-reveal'    - lines appear left-to-right
+SCROLL-EASING is a symbol (or integer index) selecting the scroll easing function:
+  `ease-out-quad'        - standard deceleration (default)
+  `ease-out-cubic'       - stronger deceleration
+  `spring'               - critically damped spring with overshoot
+  `linear'               - constant speed
+  `ease-in-out-cubic'    - smooth S-curve
 Optional TRAIL-SIZE (0.0-1.0) controls the spring cursor trail effect (default 0.7).
   0.0 means no trail (all corners move together like a rigid rectangle).
   0.7 is the default with a visible trailing stretch effect.
@@ -3891,12 +3891,46 @@ usage: (neomacs-set-animation-config CURSOR-ENABLED CURSOR-SPEED CURSOR-STYLE CU
   if (NUMBERP (scroll_duration))
     sd = (uint32_t) XFIXNUM (scroll_duration);
 
-  uint32_t seff = 0;
-  if (FIXNUMP (scroll_effect))
+  /* Map symbol or integer to scroll effect ID */
+  uint32_t seff = 0;  /* default: slide */
+  if (SYMBOLP (scroll_effect))
+    {
+      if (EQ (scroll_effect, Qslide))                    seff = 0;
+      else if (EQ (scroll_effect, Qcrossfade))            seff = 1;
+      else if (EQ (scroll_effect, Qscale_zoom))           seff = 2;
+      else if (EQ (scroll_effect, Qfade_edges))           seff = 3;
+      else if (EQ (scroll_effect, Qcascade))              seff = 4;
+      else if (EQ (scroll_effect, Qparallax))             seff = 5;
+      else if (EQ (scroll_effect, Qtilt))                 seff = 6;
+      else if (EQ (scroll_effect, Qpage_curl))            seff = 7;
+      else if (EQ (scroll_effect, Qcard_flip))            seff = 8;
+      else if (EQ (scroll_effect, Qcylinder_roll))        seff = 9;
+      else if (EQ (scroll_effect, Qwobbly))               seff = 10;
+      else if (EQ (scroll_effect, Qwave))                 seff = 11;
+      else if (EQ (scroll_effect, Qper_line_spring))      seff = 12;
+      else if (EQ (scroll_effect, Qliquid))               seff = 13;
+      else if (EQ (scroll_effect, Qmotion_blur))          seff = 14;
+      else if (EQ (scroll_effect, Qchromatic_aberration)) seff = 15;
+      else if (EQ (scroll_effect, Qghost_trails))         seff = 16;
+      else if (EQ (scroll_effect, Qcolor_temperature))    seff = 17;
+      else if (EQ (scroll_effect, Qcrt_scanlines))        seff = 18;
+      else if (EQ (scroll_effect, Qdepth_of_field))       seff = 19;
+      else if (EQ (scroll_effect, Qtypewriter_reveal))    seff = 20;
+    }
+  else if (FIXNUMP (scroll_effect))
     seff = (uint32_t) XFIXNUM (scroll_effect);
 
-  uint32_t seas = 0;
-  if (FIXNUMP (scroll_easing))
+  /* Map symbol or integer to scroll easing ID */
+  uint32_t seas = 0;  /* default: ease-out-quad */
+  if (SYMBOLP (scroll_easing))
+    {
+      if (EQ (scroll_easing, Qease_out_quad))           seas = 0;
+      else if (EQ (scroll_easing, Qease_out_cubic))     seas = 1;
+      else if (EQ (scroll_easing, Qspring))              seas = 2;
+      else if (EQ (scroll_easing, Qlinear))              seas = 3;
+      else if (EQ (scroll_easing, Qease_in_out_cubic))  seas = 4;
+    }
+  else if (FIXNUMP (scroll_easing))
     seas = (uint32_t) XFIXNUM (scroll_easing);
 
   float ts = 0.7f;
@@ -4556,6 +4590,29 @@ syms_of_neomacsterm (void)
   DEFSYM (Qease_out_expo, "ease-out-expo");
   DEFSYM (Qease_in_out_cubic, "ease-in-out-cubic");
   DEFSYM (Qlinear, "linear");
+
+  /* Scroll effect symbols */
+  DEFSYM (Qslide, "slide");
+  DEFSYM (Qcrossfade, "crossfade");
+  DEFSYM (Qscale_zoom, "scale-zoom");
+  DEFSYM (Qfade_edges, "fade-edges");
+  DEFSYM (Qcascade, "cascade");
+  DEFSYM (Qparallax, "parallax");
+  DEFSYM (Qtilt, "tilt");
+  DEFSYM (Qpage_curl, "page-curl");
+  DEFSYM (Qcard_flip, "card-flip");
+  DEFSYM (Qcylinder_roll, "cylinder-roll");
+  DEFSYM (Qwobbly, "wobbly");
+  DEFSYM (Qwave, "wave");
+  DEFSYM (Qper_line_spring, "per-line-spring");
+  DEFSYM (Qliquid, "liquid");
+  DEFSYM (Qmotion_blur, "motion-blur");
+  DEFSYM (Qchromatic_aberration, "chromatic-aberration");
+  DEFSYM (Qghost_trails, "ghost-trails");
+  DEFSYM (Qcolor_temperature, "color-temperature");
+  DEFSYM (Qcrt_scanlines, "crt-scanlines");
+  DEFSYM (Qdepth_of_field, "depth-of-field");
+  DEFSYM (Qtypewriter_reveal, "typewriter-reveal");
 
   /* WebKit new window callback */
   DEFVAR_LISP ("neomacs-webkit-new-window-function", Vneomacs_webkit_new_window_function,
