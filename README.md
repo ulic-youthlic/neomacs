@@ -313,13 +313,49 @@ docker build -t neomacs-build-test .
 
 Uses Arch Linux. See the [Dockerfile](Dockerfile) for the full build environment.
 
-### Nix
+### NixOS / Nix
+
+Neomacs uses [nix-wpe-webkit](https://github.com/eval-exec/nix-wpe-webkit) for the WPE WebKit dependency. Pre-built binaries are available via Cachix (~60MB download instead of ~1 hour build).
+
+#### Step 1: Enable the Cachix binary cache
+
+**NixOS** — add to your configuration (e.g., `/etc/nixos/configuration.nix`):
+
+```nix
+{
+  nix.settings.substituters = [ "https://nix-wpe-webkit.cachix.org" ];
+  nix.settings.trusted-public-keys = [ "nix-wpe-webkit.cachix.org-1:ItCjHkz1Y5QcwqI9cTGNWHzcox4EqcXqKvOygxpwYHE=" ];
+}
+```
+
+**Non-NixOS** — add to `~/.config/nix/nix.conf`:
+
+```
+extra-substituters = https://nix-wpe-webkit.cachix.org
+extra-trusted-public-keys = nix-wpe-webkit.cachix.org-1:ItCjHkz1Y5QcwqI9cTGNWHzcox4EqcXqKvOygxpwYHE=
+```
+
+**One-shot** (no config changes, requires trusted user):
 
 ```bash
-# Enter development shell
-nix-shell
+nix develop --extra-substituters "https://nix-wpe-webkit.cachix.org" \
+  --extra-trusted-public-keys "nix-wpe-webkit.cachix.org-1:ItCjHkz1Y5QcwqI9cTGNWHzcox4EqcXqKvOygxpwYHE="
+```
 
-# Build
+#### Step 2: Enter development shell
+
+```bash
+# Using flakes (recommended)
+nix develop
+
+# Or using legacy nix-shell
+nix-shell
+```
+
+#### Step 3: Build
+
+```bash
+cargo build --release --manifest-path rust/neomacs-display/Cargo.toml
 ./autogen.sh
 ./configure --with-neomacs
 make -j$(nproc)

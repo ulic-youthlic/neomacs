@@ -1,15 +1,16 @@
 { pkgs ? import <nixpkgs> {} }:
 
 let
-  # WPE WebKit from eval-exec's nixpkgs PR #449108
-  # Required because webkitgtk dropped offscreen rendering support
-  # Updated to commit with ENABLE_WPE_PLATFORM enabled for GPU rendering
-  wpewebkitPkgs = import (builtins.fetchTarball {
-    url = "https://github.com/eval-exec/nixpkgs/archive/b861f05af3a7a2c2c47a5ea3b20b78dadd40b192.tar.gz";
-  }) { inherit (pkgs) system; };
-  
-  # Base wpewebkit from custom nixpkgs
-  wpewebkit= wpewebkitPkgs.wpewebkit or null;
+  # WPE WebKit from nix-wpe-webkit standalone flake (with Cachix binary cache)
+  nix-wpe-webkit-src = builtins.fetchTarball {
+    url = "https://github.com/eval-exec/nix-wpe-webkit/archive/main.tar.gz";
+  };
+  wpewebkitOverlay = import "${nix-wpe-webkit-src}/overlay.nix";
+  pkgsWithWpe = import <nixpkgs> {
+    inherit (pkgs) system;
+    overlays = [ wpewebkitOverlay ];
+  };
+  wpewebkit = pkgsWithWpe.wpewebkit;
   
   # libwpe and wpebackend-fdo from standard nixpkgs (they're stable)
   libwpe = pkgs.libwpe;
@@ -98,8 +99,9 @@ pkgs.mkShell {
 
     # xdg-dbus-proxy for WebKit sandbox
     xdg-dbus-proxy
-  ] ++ (if wpewebkit != null then [ wpewebkit ] else [])
-    ++ [ libwpe wpebackendFdo ];
+    # WPE WebKit
+    wpewebkit
+  ] ++ [ libwpe wpebackendFdo ];
 
   # Set up environment for pkg-config
   PKG_CONFIG_PATH = pkgs.lib.makeSearchPath "lib/pkgconfig" ([
@@ -129,20 +131,16 @@ pkgs.mkShell {
     pkgs.libdrm.dev
     pkgs.mesa
     pkgs.libva.dev
-  ] ++ (if wpewebkit != null then [ wpewebkit.dev or wpewebkit ] else [])
-    ++ [ libwpe wpebackendFdo ]);
+    (wpewebkit.dev or wpewebkit)
+  ] ++ [ libwpe wpebackendFdo ]);
 
   shellHook = ''
     echo "Emacs/Neomacs build environment"
     echo "GTK4 version: $(pkg-config --modversion gtk4 2>/dev/null || echo 'not found')"
     echo "GStreamer version: $(pkg-config --modversion gstreamer-1.0 2>/dev/null || echo 'not found')"
-    ${if wpewebkit != null then ''
     echo "WPE WebKit: $(pkg-config --modversion wpe-webkit-2.0 2>/dev/null || echo 'available')"
     echo "libwpe: $(pkg-config --modversion wpe-1.0 2>/dev/null || echo 'not in pkg-config')"
     echo "wpebackend-fdo: $(pkg-config --modversion wpebackend-fdo-1.0 2>/dev/null || echo 'not in pkg-config')"
-    '' else ''
-    echo "WPE WebKit: BUILDING (first run takes ~1 hour, from PR #449108)"
-    ''}
     
     # Set the library path
     export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath ([
@@ -179,8 +177,8 @@ pkgs.mkShell {
       pkgs.libgbm
       pkgs.libva
       pkgs.mesa.drivers
-    ] ++ (if wpewebkit != null then [ wpewebkit ] else [])
-      ++ [ libwpe wpebackendFdo ])}:$LD_LIBRARY_PATH"
+      wpewebkit
+    ] ++ [ libwpe wpebackendFdo ])}:$LD_LIBRARY_PATH"
     
     # WPE WebKit environment setup for headless rendering
     # Use wpebackend-fdo as the default backend
@@ -206,18 +204,14 @@ pkgs.mkShell {
     export GST_REGISTRY_FORK="no"
 
     # Add WPE libexec to PATH for WebProcess helpers
-    ${if wpewebkit != null then ''
     export PATH="${wpewebkit}/libexec/wpe-webkit-2.0:$PATH"
-    '' else ""}
     
     echo ""
     echo "To configure with Neomacs:"
     echo "  ./configure --with-neomacs"
     echo ""
-    ${if wpewebkit != null then ''
     echo "WPE WebKit environment ready"
     echo "  WPE_BACKEND_LIBRARY=$WPE_BACKEND_LIBRARY"
     echo "  GIO_MODULE_DIR=$GIO_MODULE_DIR"
-    '' else ""}
   '';
 }

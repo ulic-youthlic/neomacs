@@ -10,14 +10,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # WPE WebKit from eval-exec's nixpkgs fork (PR #449108)
-    # Contains wpewebkit with ENABLE_WPE_PLATFORM for GPU rendering
-    nixpkgs-wpewebkit = {
-      url = "github:eval-exec/nixpkgs/b861f05af3a7a2c2c47a5ea3b20b78dadd40b192";
+    # WPE WebKit standalone flake with Cachix binary cache
+    nix-wpe-webkit = {
+      url = "github:eval-exec/nix-wpe-webkit";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { self, nixpkgs, rust-overlay, nixpkgs-wpewebkit }:
+  outputs = { self, nixpkgs, rust-overlay, nix-wpe-webkit }:
     let
       supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
 
@@ -35,10 +35,8 @@
     in {
       # Overlay that provides wpewebkit and rust toolchain
       overlays.default = final: prev: {
-        # WPE WebKit from custom nixpkgs
-        wpewebkit = (import nixpkgs-wpewebkit {
-          inherit (final) system;
-        }).wpewebkit;
+        # WPE WebKit from nix-wpe-webkit flake (with Cachix binary cache)
+        wpewebkit = nix-wpe-webkit.packages.${final.system}.wpewebkit;
 
         # Rust toolchain with components needed for neomacs-display
         rust-neomacs = final.rust-bin.stable.latest.default.override {

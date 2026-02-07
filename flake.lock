@@ -1,5 +1,25 @@
 {
   "nodes": {
+    "nix-wpe-webkit": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1770385823,
+        "narHash": "sha256-x+JrlE1TjyplLR5wdCOi37vH/OhPk/Alt8Q8lTq8LKQ=",
+        "owner": "eval-exec",
+        "repo": "nix-wpe-webkit",
+        "rev": "039c6905b9fe233cd731d06d425762546073094f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "eval-exec",
+        "repo": "nix-wpe-webkit",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1770197578,
@@ -16,26 +36,10 @@
         "type": "github"
       }
     },
-    "nixpkgs-wpewebkit": {
-      "locked": {
-        "lastModified": 1770048201,
-        "narHash": "sha256-s8PDhO8ecBB1KSgazbGKtq3aiIXPEAPV/GlK+UNlkbU=",
-        "owner": "eval-exec",
-        "repo": "nixpkgs",
-        "rev": "b861f05af3a7a2c2c47a5ea3b20b78dadd40b192",
-        "type": "github"
-      },
-      "original": {
-        "owner": "eval-exec",
-        "repo": "nixpkgs",
-        "rev": "b861f05af3a7a2c2c47a5ea3b20b78dadd40b192",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
+        "nix-wpe-webkit": "nix-wpe-webkit",
         "nixpkgs": "nixpkgs",
-        "nixpkgs-wpewebkit": "nixpkgs-wpewebkit",
         "rust-overlay": "rust-overlay"
       }
     },
