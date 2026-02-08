@@ -1236,6 +1236,12 @@ void neomacs_display_set_scroll_indicators(struct NeomacsDisplay *handle,
                                             int enabled);
 
 /**
+ * Set the custom title bar height (0 = hidden, >0 = show).
+ */
+void neomacs_display_set_titlebar_height(struct NeomacsDisplay *handle,
+                                          int height);
+
+/**
  * Get dropped file paths (call after NEOMACS_EVENT_FILE_DROP).
  * Returns number of paths written to out_paths.
  * Each path must be freed with neomacs_display_free_dropped_path().

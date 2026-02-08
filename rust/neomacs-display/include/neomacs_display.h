@@ -1093,6 +1093,11 @@ void neomacs_display_request_attention(struct NeomacsDisplay *handle, int urgent
 void neomacs_display_set_scroll_indicators(struct NeomacsDisplay *handle, int enabled);
 
 /**
+ * Set the custom title bar height (0 = hidden)
+ */
+void neomacs_display_set_titlebar_height(struct NeomacsDisplay *handle, int height);
+
+/**
  * Set the window title (threaded mode)
  */
 void neomacs_display_set_title(struct NeomacsDisplay *handle, const char *title);

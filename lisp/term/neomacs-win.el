@@ -371,6 +371,19 @@ _FRAME is ignored; the menu opens on the selected frame."
   :init-value t
   (neomacs-set-scroll-indicators neomacs-scroll-indicator-mode))
 
+;;; Custom title bar
+
+(declare-function neomacs-set-titlebar-height "neomacsterm.c" (height))
+
+(define-minor-mode neomacs-custom-titlebar-mode
+  "Toggle custom title bar for borderless windows.
+When enabled, a 30-pixel title bar with close/maximize/minimize buttons
+is drawn by the render thread.  When disabled the title bar is hidden."
+  :global t
+  :group 'frames
+  :init-value nil
+  (neomacs-set-titlebar-height (if neomacs-custom-titlebar-mode 30 0)))
+
 ;; Provide the feature
 (provide 'neomacs-win)
 (provide 'term/neomacs-win)

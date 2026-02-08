@@ -251,6 +251,8 @@ pub enum RenderCommand {
     RequestAttention { urgent: bool },
     /// Toggle scroll indicators and focus ring
     SetScrollIndicators { enabled: bool },
+    /// Set custom title bar height (0 = hidden, >0 = show with given height)
+    SetTitlebarHeight { height: f32 },
 }
 
 /// Wakeup pipe for signaling Emacs from render thread

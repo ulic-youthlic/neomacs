@@ -7830,6 +7830,23 @@ nil hides them.  */)
   return !NILP (enabled) ? Qt : Qnil;
 }
 
+DEFUN ("neomacs-set-titlebar-height", Fneomacs_set_titlebar_height,
+       Sneomacs_set_titlebar_height, 1, 1, 0,
+       doc: /* Set the custom title bar height in pixels.
+HEIGHT of 0 hides the title bar; positive values set the height.
+The title bar is only visible when window decorations are disabled.  */)
+  (Lisp_Object height)
+{
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+
+  CHECK_FIXNAT (height);
+  int h = XFIXNAT (height);
+  neomacs_display_set_titlebar_height (dpyinfo->display_handle, h);
+  return make_fixnum (h);
+}
+
 DEFUN ("neomacs-set-cursor-blink", Fneomacs_set_cursor_blink, Sneomacs_set_cursor_blink, 1, 2, 0,
        doc: /* Configure cursor blinking in the render thread.
 ENABLED non-nil enables blinking, nil disables it.
@@ -8995,6 +9012,9 @@ syms_of_neomacsterm (void)
 
   /* Scroll indicators */
   defsubr (&Sneomacs_set_scroll_indicators);
+
+  /* Title bar */
+  defsubr (&Sneomacs_set_titlebar_height);
 
   /* Cursor blink */
   defsubr (&Sneomacs_set_cursor_blink);

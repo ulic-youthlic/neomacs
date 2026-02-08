@@ -2194,6 +2194,18 @@ pub unsafe extern "C" fn neomacs_display_set_scroll_indicators(
     }
 }
 
+/// Set the custom title bar height (0 = hidden)
+#[no_mangle]
+pub unsafe extern "C" fn neomacs_display_set_titlebar_height(
+    _handle: *mut NeomacsDisplay,
+    height: c_int,
+) {
+    let cmd = RenderCommand::SetTitlebarHeight { height: height as f32 };
+    if let Some(ref state) = THREADED_STATE {
+        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+    }
+}
+
 /// Set the window title (threaded mode)
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_set_title(

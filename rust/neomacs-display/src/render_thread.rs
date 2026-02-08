@@ -1389,6 +1389,10 @@ impl RenderApp {
                     self.scroll_indicators_enabled = enabled;
                     self.frame_dirty = true;
                 }
+                RenderCommand::SetTitlebarHeight { height } => {
+                    self.custom_titlebar_height = height;
+                    self.frame_dirty = true;
+                }
             }
         }
 
