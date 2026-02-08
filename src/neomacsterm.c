@@ -7267,12 +7267,31 @@ neomacs_display_wakeup_handler (int fd, void *data)
                     || ev->y < r->y
                     || ev->y >= r->y + (int) r->height)
                   {
+                    Lisp_Object previous_help_echo_string
+                      = help_echo_string;
+                    help_echo_string = Qnil;
+
                     f->mouse_moved = true;
                     dpyinfo->last_mouse_scroll_bar = NULL;
                     note_mouse_highlight (f, ev->x, ev->y);
                     remember_mouse_glyph (
                         f, ev->x, ev->y, r);
                     dpyinfo->last_mouse_glyph_frame = f;
+
+                    /* Generate HELP_EVENT if help-echo changed. */
+                    if (!NILP (help_echo_string)
+                        || !NILP (previous_help_echo_string))
+                      {
+                        Lisp_Object frame;
+                        XSETFRAME (frame, f);
+                        if (!NILP (help_echo_string))
+                          gen_help_event (help_echo_string, frame,
+                                         help_echo_window,
+                                         help_echo_object,
+                                         help_echo_pos);
+                        else
+                          gen_help_event (Qnil, frame, Qnil, Qnil, 0);
+                      }
 
                     /* Re-send frame so mouse-face highlight is
                        immediately visible without waiting for
