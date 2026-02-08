@@ -8564,6 +8564,43 @@ neomacs_display_wakeup_handler (int fd, void *data)
                 dpyinfo->last_mouse_motion_y = ev->y;
               }
 
+            /* Check if we're dragging a scroll bar thumb */
+            {
+              bool scroll_drag_handled = false;
+              Lisp_Object bar_obj;
+
+              for (bar_obj = FRAME_SCROLL_BARS (f);
+                   !scroll_drag_handled && VECTORP (bar_obj);
+                   bar_obj = XSCROLL_BAR (bar_obj)->next)
+                {
+                  struct scroll_bar *bar = XSCROLL_BAR (bar_obj);
+                  if (bar->dragging >= 0 && !bar->horizontal)
+                    {
+                      int y_in_bar = ev->y - bar->top;
+                      int new_start = y_in_bar - bar->dragging;
+                      int thumb_size = bar->end - bar->start;
+                      if (new_start < 0)
+                        new_start = 0;
+                      if (new_start + thumb_size > bar->height)
+                        new_start = bar->height - thumb_size;
+
+                      EVENT_INIT (inev.ie);
+                      inev.ie.kind = SCROLL_BAR_CLICK_EVENT;
+                      inev.ie.code = 0;
+                      inev.ie.part = scroll_bar_handle;
+                      inev.ie.modifiers = 0;
+                      XSETINT (inev.ie.x, new_start);
+                      XSETINT (inev.ie.y, bar->height);
+                      inev.ie.frame_or_window = bar_obj;
+                      neomacs_evq_enqueue (&inev);
+                      scroll_drag_handled = true;
+                    }
+                }
+
+              if (scroll_drag_handled)
+                break;
+            }
+
             /* Check if mouse has moved off the glyph it was on. */
             if (dpyinfo)
               {
