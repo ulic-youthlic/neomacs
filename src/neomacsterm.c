@@ -972,10 +972,118 @@ neomacs_extract_window_glyphs (struct window *w, void *user_data)
 
                 case GLYPHLESS_GLYPH:
                   {
-                    neomacs_display_add_char_glyph (handle, ' ',
-                                                    glyph->face_id,
-                                                    glyph->pixel_width,
-                                                    row->ascent, 0);
+                    enum glyphless_display_method method
+                      = glyph->u.glyphless.method;
+                    unsigned int ch = glyph->u.glyphless.ch;
+                    int gw = glyph->pixel_width;
+
+                    if (method == GLYPHLESS_DISPLAY_THIN_SPACE)
+                      {
+                        /* Just emit a thin space.  */
+                        neomacs_display_add_char_glyph (handle, ' ',
+                                                        glyph->face_id,
+                                                        gw,
+                                                        row->ascent, 0);
+                      }
+                    else
+                      {
+                        /* For HEX_CODE, ACRONYM, EMPTY_BOX: draw a box
+                           border and the text (if any) inside it.  */
+                        unsigned long fg_pixel = face
+                          ? face->foreground : 0;
+                        uint32_t fg_rgb
+                          = (uint32_t) (fg_pixel & 0xFFFFFF);
+
+                        /* Draw box outline (1px border).  */
+                        int bx = glyph_x + WINDOW_LEFT_EDGE_X (w);
+                        int by = frame_y;
+                        int bw = gw;
+                        int bh = glyph->ascent + glyph->descent;
+                        if (bh <= 0)
+                          bh = row->height;
+
+                        /* Top edge */
+                        neomacs_display_draw_border (handle,
+                                                     bx, by, bw, 1,
+                                                     fg_rgb);
+                        /* Bottom edge */
+                        neomacs_display_draw_border (handle,
+                                                     bx, by + bh - 1,
+                                                     bw, 1, fg_rgb);
+                        /* Left edge */
+                        neomacs_display_draw_border (handle,
+                                                     bx, by, 1, bh,
+                                                     fg_rgb);
+                        /* Right edge */
+                        neomacs_display_draw_border (handle,
+                                                     bx + bw - 1, by,
+                                                     1, bh, fg_rgb);
+
+                        if (method == GLYPHLESS_DISPLAY_HEX_CODE)
+                          {
+                            /* Emit hex digits as characters.  */
+                            char buf[7];
+                            sprintf (buf, "%0*X",
+                                     ch < 0x10000 ? 4 : 6, ch);
+                            int len = strlen (buf);
+                            int char_w = gw / (len > 0 ? len : 1);
+
+                            for (int k = 0; k < len; k++)
+                              neomacs_display_add_char_glyph (
+                                handle, (unsigned int) buf[k],
+                                glyph->face_id, char_w,
+                                row->ascent, 0);
+                          }
+                        else if (method == GLYPHLESS_DISPLAY_ACRONYM)
+                          {
+                            /* Look up acronym from char table.  */
+                            const char *str = NULL;
+                            if (CHAR_TABLE_P (Vglyphless_char_display)
+                                && (CHAR_TABLE_EXTRA_SLOTS (
+                                      XCHAR_TABLE (
+                                        Vglyphless_char_display))
+                                    >= 1))
+                              {
+                                Lisp_Object acronym
+                                  = (!glyph->u.glyphless.for_no_font
+                                     ? CHAR_TABLE_REF (
+                                         Vglyphless_char_display, ch)
+                                     : XCHAR_TABLE (
+                                         Vglyphless_char_display)
+                                         ->extras[0]);
+                                if (CONSP (acronym))
+                                  acronym = XCAR (acronym);
+                                if (STRINGP (acronym))
+                                  str = SSDATA (acronym);
+                              }
+                            if (str)
+                              {
+                                int len = strlen (str);
+                                int char_w
+                                  = gw / (len > 0 ? len : 1);
+                                for (int k = 0; k < len; k++)
+                                  neomacs_display_add_char_glyph (
+                                    handle,
+                                    (unsigned int) (unsigned char) str[k],
+                                    glyph->face_id, char_w,
+                                    row->ascent, 0);
+                              }
+                            else
+                              {
+                                /* Fallback: empty box.  */
+                                neomacs_display_add_char_glyph (
+                                  handle, ' ', glyph->face_id,
+                                  gw, row->ascent, 0);
+                              }
+                          }
+                        else
+                          {
+                            /* EMPTY_BOX: just the box, no text.  */
+                            neomacs_display_add_char_glyph (
+                              handle, ' ', glyph->face_id,
+                              gw, row->ascent, 0);
+                          }
+                      }
                   }
                   break;
 
