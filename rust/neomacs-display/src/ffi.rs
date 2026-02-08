@@ -2310,6 +2310,26 @@ pub unsafe extern "C" fn neomacs_display_set_indent_guides(
     }
 }
 
+/// Configure current line highlight rendering
+#[no_mangle]
+pub unsafe extern "C" fn neomacs_display_set_line_highlight(
+    _handle: *mut NeomacsDisplay,
+    enabled: c_int,
+    r: c_int, g: c_int, b: c_int,
+    opacity: c_int,
+) {
+    let cmd = RenderCommand::SetLineHighlight {
+        enabled: enabled != 0,
+        r: r as f32 / 255.0,
+        g: g as f32 / 255.0,
+        b: b as f32 / 255.0,
+        opacity: opacity as f32 / 100.0,
+    };
+    if let Some(ref state) = THREADED_STATE {
+        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+    }
+}
+
 /// Set the window title (threaded mode)
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_set_title(

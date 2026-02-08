@@ -284,6 +284,14 @@ pub enum RenderCommand {
         /// Opacity 0.0-1.0
         opacity: f32,
     },
+    /// Configure current line highlight
+    SetLineHighlight {
+        enabled: bool,
+        /// Color as sRGB 0.0-1.0
+        r: f32, g: f32, b: f32,
+        /// Opacity 0.0-1.0
+        opacity: f32,
+    },
 }
 
 /// Wakeup pipe for signaling Emacs from render thread

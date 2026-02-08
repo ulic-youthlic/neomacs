@@ -597,6 +597,38 @@ Non-nil enables thin vertical lines at indentation levels."
                     neomacs-indent-guides)
            (neomacs-set-indent-guides t val))))
 
+;;; Current line highlight
+
+(declare-function neomacs-set-line-highlight "neomacsterm.c"
+  (&optional enabled color))
+
+(defcustom neomacs-line-highlight nil
+  "Enable GPU-rendered current line highlight.
+Non-nil highlights the line at point with a subtle background."
+  :type 'boolean
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (fboundp 'neomacs-set-line-highlight)
+           (neomacs-set-line-highlight
+            val
+            (if (boundp 'neomacs-line-highlight-color)
+                neomacs-line-highlight-color
+              nil)))))
+
+(defcustom neomacs-line-highlight-color nil
+  "Color for current line highlight.
+A color string, or nil for default."
+  :type '(choice (const :tag "Default" nil)
+                 (color :tag "Color"))
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-line-highlight)
+                    (boundp 'neomacs-line-highlight)
+                    neomacs-line-highlight)
+           (neomacs-set-line-highlight t val))))
+
 ;; Provide the feature
 (provide 'neomacs-win)
 (provide 'term/neomacs-win)

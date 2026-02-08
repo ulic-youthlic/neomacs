@@ -637,6 +637,10 @@ struct RenderApp {
     /// Indent guide config
     indent_guides_enabled: bool,
     indent_guide_color: (f32, f32, f32, f32),
+
+    /// Current line highlight config
+    line_highlight_enabled: bool,
+    line_highlight_color: (f32, f32, f32, f32),
 }
 
 /// State for a tooltip displayed as GPU overlay
@@ -802,6 +806,8 @@ impl RenderApp {
             scroll_bar_hover_brightness: 1.4,
             indent_guides_enabled: false,
             indent_guide_color: (0.3, 0.3, 0.3, 0.3),
+            line_highlight_enabled: false,
+            line_highlight_color: (0.2, 0.2, 0.3, 0.15),
         }
     }
 
@@ -1497,6 +1503,17 @@ impl RenderApp {
                     self.indent_guide_color = (c.r, c.g, c.b, c.a);
                     if let Some(renderer) = self.renderer.as_mut() {
                         renderer.set_indent_guide_config(enabled, (c.r, c.g, c.b, c.a));
+                    }
+                    self.frame_dirty = true;
+                }
+                RenderCommand::SetLineHighlight {
+                    enabled, r, g, b, opacity,
+                } => {
+                    let c = crate::core::types::Color::new(r, g, b, opacity).srgb_to_linear();
+                    self.line_highlight_enabled = enabled;
+                    self.line_highlight_color = (c.r, c.g, c.b, c.a);
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_line_highlight_config(enabled, (c.r, c.g, c.b, c.a));
                     }
                     self.frame_dirty = true;
                 }

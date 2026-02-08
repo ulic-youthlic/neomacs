@@ -53,6 +53,10 @@ pub struct WgpuRenderer {
     indent_guides_enabled: bool,
     /// Indent guide color (linear RGBA)
     indent_guide_color: (f32, f32, f32, f32),
+    /// Current line highlight enabled
+    line_highlight_enabled: bool,
+    /// Current line highlight color (linear RGBA)
+    line_highlight_color: (f32, f32, f32, f32),
 }
 
 impl WgpuRenderer {
@@ -523,7 +527,15 @@ impl WgpuRenderer {
             scroll_bar_hover_brightness: 1.4,
             indent_guides_enabled: false,
             indent_guide_color: (0.3, 0.3, 0.3, 0.3),
+            line_highlight_enabled: false,
+            line_highlight_color: (0.2, 0.2, 0.3, 0.15),
         }
+    }
+
+    /// Update line highlight config
+    pub fn set_line_highlight_config(&mut self, enabled: bool, color: (f32, f32, f32, f32)) {
+        self.line_highlight_enabled = enabled;
+        self.line_highlight_color = color;
     }
 
     /// Update indent guide config
@@ -1449,6 +1461,36 @@ impl WgpuRenderer {
                         if !overlaps_rounded_box_span(*x, *y, false, &box_spans) {
                             self.add_rect(&mut non_overlay_rect_vertices, *x, *y, *width, *height, bg_color);
                         }
+                    }
+                }
+            }
+        }
+
+        // --- Current line highlight ---
+        if self.line_highlight_enabled {
+            let (lr, lg, lb, la) = self.line_highlight_color;
+            let hl_color = Color::new(lr, lg, lb, la);
+
+            // Find the active cursor (style != 3, which is hollow/inactive)
+            for glyph in &frame_glyphs.glyphs {
+                if let FrameGlyph::Cursor { y, height, style, .. } = glyph {
+                    if *style != 3 {
+                        // Find the window this cursor belongs to
+                        for info in &frame_glyphs.window_infos {
+                            if info.selected {
+                                // Draw highlight across the window width (excluding mode-line)
+                                let hl_y = *y;
+                                let hl_h = *height;
+                                self.add_rect(
+                                    &mut non_overlay_rect_vertices,
+                                    info.bounds.x, hl_y,
+                                    info.bounds.width, hl_h,
+                                    &hl_color,
+                                );
+                                break;
+                            }
+                        }
+                        break;
                     }
                 }
             }
