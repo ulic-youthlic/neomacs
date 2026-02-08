@@ -700,6 +700,11 @@ struct RenderApp {
     header_shadow_enabled: bool,
     header_shadow_intensity: f32,
     header_shadow_size: f32,
+    /// Cursor color cycling (rainbow hue rotation)
+    cursor_color_cycle_enabled: bool,
+    cursor_color_cycle_speed: f32,
+    cursor_color_cycle_saturation: f32,
+    cursor_color_cycle_lightness: f32,
 }
 
 /// State for a tooltip displayed as GPU overlay
@@ -907,6 +912,10 @@ impl RenderApp {
             header_shadow_enabled: false,
             header_shadow_intensity: 0.3,
             header_shadow_size: 6.0,
+            cursor_color_cycle_enabled: false,
+            cursor_color_cycle_speed: 0.5,
+            cursor_color_cycle_saturation: 0.8,
+            cursor_color_cycle_lightness: 0.6,
         }
     }
 
@@ -1755,6 +1764,16 @@ impl RenderApp {
                     self.header_shadow_size = size;
                     if let Some(renderer) = self.renderer.as_mut() {
                         renderer.set_header_shadow(enabled, intensity, size);
+                    }
+                    self.frame_dirty = true;
+                }
+                RenderCommand::SetCursorColorCycle { enabled, speed, saturation, lightness } => {
+                    self.cursor_color_cycle_enabled = enabled;
+                    self.cursor_color_cycle_speed = speed;
+                    self.cursor_color_cycle_saturation = saturation;
+                    self.cursor_color_cycle_lightness = lightness;
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_cursor_color_cycle(enabled, speed, saturation, lightness);
                     }
                     self.frame_dirty = true;
                 }

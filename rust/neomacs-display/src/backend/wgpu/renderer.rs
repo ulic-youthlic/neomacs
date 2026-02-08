@@ -143,6 +143,12 @@ pub struct WgpuRenderer {
     header_shadow_enabled: bool,
     header_shadow_intensity: f32,
     header_shadow_size: f32,
+    /// Cursor color cycling (rainbow hue rotation)
+    cursor_color_cycle_enabled: bool,
+    cursor_color_cycle_speed: f32,
+    cursor_color_cycle_saturation: f32,
+    cursor_color_cycle_lightness: f32,
+    cursor_color_cycle_start: std::time::Instant,
 }
 
 /// Entry for an active line insertion/deletion animation
@@ -676,6 +682,11 @@ impl WgpuRenderer {
             header_shadow_enabled: false,
             header_shadow_intensity: 0.3,
             header_shadow_size: 6.0,
+            cursor_color_cycle_enabled: false,
+            cursor_color_cycle_speed: 0.5,
+            cursor_color_cycle_saturation: 0.8,
+            cursor_color_cycle_lightness: 0.6,
+            cursor_color_cycle_start: std::time::Instant::now(),
         }
     }
 
@@ -784,6 +795,33 @@ impl WgpuRenderer {
             }
         }
         0.0
+    }
+
+    /// Update cursor color cycling config
+    pub fn set_cursor_color_cycle(&mut self, enabled: bool, speed: f32, saturation: f32, lightness: f32) {
+        self.cursor_color_cycle_enabled = enabled;
+        self.cursor_color_cycle_speed = speed;
+        self.cursor_color_cycle_saturation = saturation;
+        self.cursor_color_cycle_lightness = lightness;
+        if enabled {
+            self.cursor_color_cycle_start = std::time::Instant::now();
+        }
+    }
+
+    /// Convert HSL to sRGB Color
+    fn hsl_to_color(h: f32, s: f32, l: f32) -> Color {
+        let c = (1.0 - (2.0 * l - 1.0).abs()) * s;
+        let x = c * (1.0 - ((h * 6.0) % 2.0 - 1.0).abs());
+        let m = l - c / 2.0;
+        let (r, g, b) = match (h * 6.0) as u32 {
+            0 => (c, x, 0.0),
+            1 => (x, c, 0.0),
+            2 => (0.0, c, x),
+            3 => (0.0, x, c),
+            4 => (x, 0.0, c),
+            _ => (c, 0.0, x),
+        };
+        Color { r: r + m, g: g + m, b: b + m, a: 1.0 }
     }
 
     /// Update header/mode-line shadow config
@@ -2042,6 +2080,17 @@ impl WgpuRenderer {
                     style,
                     color,
                 } => {
+                    // Compute effective cursor color (possibly overridden by color cycling)
+                    let cycle_color;
+                    let effective_color = if self.cursor_color_cycle_enabled && *style != 3 {
+                        let elapsed = self.cursor_color_cycle_start.elapsed().as_secs_f32();
+                        let hue = (elapsed * self.cursor_color_cycle_speed) % 1.0;
+                        cycle_color = Self::hsl_to_color(hue, self.cursor_color_cycle_saturation, self.cursor_color_cycle_lightness);
+                        self.needs_continuous_redraw = true;
+                        &cycle_color
+                    } else {
+                        color
+                    };
                     if *style == 0 {
                         // Filled box cursor: split into bg rect + behind-text trail.
                         // The static cursor bg rect uses cursor_inverse info if available,
@@ -2049,11 +2098,16 @@ impl WgpuRenderer {
                         if cursor_visible {
                             if let Some(ref inv) = frame_glyphs.cursor_inverse {
                                 // Draw cursor bg rect at static position (inverse video background)
+                                let inv_color = if self.cursor_color_cycle_enabled {
+                                    effective_color
+                                } else {
+                                    &inv.cursor_bg
+                                };
                                 self.add_rect(&mut cursor_bg_vertices,
-                                    inv.x, inv.y, inv.width, inv.height, &inv.cursor_bg);
+                                    inv.x, inv.y, inv.width, inv.height, inv_color);
                             } else {
                                 // No inverse info — draw opaque cursor at static position
-                                self.add_rect(&mut cursor_bg_vertices, *x, *y, *width, *height, color);
+                                self.add_rect(&mut cursor_bg_vertices, *x, *y, *width, *height, effective_color);
                             }
 
                             // Draw animated trail/rect behind text
@@ -2066,11 +2120,11 @@ impl WgpuRenderer {
                             if use_corners {
                                 let anim = animated_cursor.as_ref().unwrap();
                                 let corners = anim.corners.as_ref().unwrap();
-                                self.add_quad(&mut behind_text_cursor_vertices, corners, color);
+                                self.add_quad(&mut behind_text_cursor_vertices, corners, effective_color);
                             } else if let Some(ref anim) = animated_cursor {
                                 if *window_id == anim.window_id {
                                     self.add_rect(&mut behind_text_cursor_vertices,
-                                        anim.x, anim.y, anim.width, anim.height, color);
+                                        anim.x, anim.y, anim.width, anim.height, effective_color);
                                 }
                             }
                         }
@@ -2086,7 +2140,7 @@ impl WgpuRenderer {
                             let anim = animated_cursor.as_ref().unwrap();
                             let corners = anim.corners.as_ref().unwrap();
                             if cursor_visible {
-                                self.add_quad(&mut cursor_vertices, corners, color);
+                                self.add_quad(&mut cursor_vertices, corners, effective_color);
                             }
                         } else {
                             let (cx, cy, cw, ch) = if let Some(ref anim) = animated_cursor {
@@ -2104,21 +2158,21 @@ impl WgpuRenderer {
                                 match style {
                                     1 => {
                                         // Bar (thin vertical line)
-                                        self.add_rect(&mut cursor_vertices, cx, cy, 2.0, ch, color);
+                                        self.add_rect(&mut cursor_vertices, cx, cy, 2.0, ch, effective_color);
                                     }
                                     2 => {
                                         // Underline (hbar at bottom)
-                                        self.add_rect(&mut cursor_vertices, cx, cy + ch - 2.0, cw, 2.0, color);
+                                        self.add_rect(&mut cursor_vertices, cx, cy + ch - 2.0, cw, 2.0, effective_color);
                                     }
                                     3 => {
                                         // Hollow box (4 border edges)
-                                        self.add_rect(&mut cursor_vertices, cx, cy, cw, 1.0, color);
-                                        self.add_rect(&mut cursor_vertices, cx, cy + ch - 1.0, cw, 1.0, color);
-                                        self.add_rect(&mut cursor_vertices, cx, cy, 1.0, ch, color);
-                                        self.add_rect(&mut cursor_vertices, cx + cw - 1.0, cy, 1.0, ch, color);
+                                        self.add_rect(&mut cursor_vertices, cx, cy, cw, 1.0, effective_color);
+                                        self.add_rect(&mut cursor_vertices, cx, cy + ch - 1.0, cw, 1.0, effective_color);
+                                        self.add_rect(&mut cursor_vertices, cx, cy, 1.0, ch, effective_color);
+                                        self.add_rect(&mut cursor_vertices, cx + cw - 1.0, cy, 1.0, ch, effective_color);
                                     }
                                     _ => {
-                                        self.add_rect(&mut cursor_vertices, cx, cy, cw, ch, color);
+                                        self.add_rect(&mut cursor_vertices, cx, cy, cw, ch, effective_color);
                                     }
                                 }
                             }

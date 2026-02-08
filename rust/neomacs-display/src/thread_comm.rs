@@ -378,6 +378,16 @@ pub enum RenderCommand {
         /// Radius as percentage of frame diagonal (0-100)
         radius: f32,
     },
+    /// Configure cursor color cycling (rainbow hue rotation)
+    SetCursorColorCycle {
+        enabled: bool,
+        /// Cycles per second
+        speed: f32,
+        /// Saturation (0.0-1.0)
+        saturation: f32,
+        /// Lightness (0.0-1.0)
+        lightness: f32,
+    },
     /// Configure header/mode-line shadow depth effect
     SetHeaderShadow {
         enabled: bool,

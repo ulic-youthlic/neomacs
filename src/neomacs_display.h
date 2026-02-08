@@ -1353,6 +1353,13 @@ void neomacs_display_set_background_pattern(
     int r, int g, int b,
     int opacity);
 
+void neomacs_display_set_cursor_color_cycle(
+    struct NeomacsDisplay *handle,
+    int enabled,
+    int speed,
+    int saturation,
+    int lightness);
+
 void neomacs_display_set_header_shadow(
     struct NeomacsDisplay *handle,
     int enabled,

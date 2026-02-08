@@ -8281,6 +8281,36 @@ MARGIN-OPACITY is 0-100 for margin overlay opacity (default 30).  */)
   return on ? Qt : Qnil;
 }
 
+DEFUN ("neomacs-set-cursor-color-cycle",
+       Fneomacs_set_cursor_color_cycle,
+       Sneomacs_set_cursor_color_cycle, 0, 4, 0,
+       doc: /* Configure cursor color cycling (rainbow hue rotation).
+ENABLED non-nil cycles the cursor color through the rainbow.
+SPEED is cycles per second * 100 (default 50 = 0.5 cps).
+SATURATION is 0-100 (default 80).
+LIGHTNESS is 0-100 (default 60).  */)
+  (Lisp_Object enabled, Lisp_Object speed, Lisp_Object saturation, Lisp_Object lightness)
+{
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+
+  int on = !NILP (enabled);
+  int sp = 50;
+  int sat = 80;
+  int lig = 60;
+  if (FIXNUMP (speed))
+    sp = XFIXNUM (speed);
+  if (FIXNUMP (saturation))
+    sat = XFIXNUM (saturation);
+  if (FIXNUMP (lightness))
+    lig = XFIXNUM (lightness);
+
+  neomacs_display_set_cursor_color_cycle (
+    dpyinfo->display_handle, on, sp, sat, lig);
+  return on ? Qt : Qnil;
+}
+
 DEFUN ("neomacs-set-header-shadow",
        Fneomacs_set_header_shadow,
        Sneomacs_set_header_shadow, 0, 3, 0,
@@ -9730,6 +9760,7 @@ syms_of_neomacsterm (void)
   defsubr (&Sneomacs_set_vignette);
   defsubr (&Sneomacs_set_line_animation);
   defsubr (&Sneomacs_set_header_shadow);
+  defsubr (&Sneomacs_set_cursor_color_cycle);
 
   /* Cursor blink */
   defsubr (&Sneomacs_set_cursor_blink);

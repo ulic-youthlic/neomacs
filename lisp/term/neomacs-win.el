@@ -1124,6 +1124,76 @@ text content for a focused writing experience."
                 neomacs-zen-content-width nil)
             val))))
 
+;; --- Cursor color cycling ---
+(declare-function neomacs-set-cursor-color-cycle "neomacsterm.c"
+  (&optional enabled speed saturation lightness))
+
+(defcustom neomacs-cursor-color-cycle nil
+  "Enable cursor color cycling (rainbow hue rotation).
+Non-nil smoothly cycles the cursor color through the rainbow
+spectrum, creating a colorful animated cursor effect."
+  :type 'boolean
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (fboundp 'neomacs-set-cursor-color-cycle)
+           (neomacs-set-cursor-color-cycle
+            val
+            (if (boundp 'neomacs-cursor-color-cycle-speed)
+                neomacs-cursor-color-cycle-speed nil)
+            (if (boundp 'neomacs-cursor-color-cycle-saturation)
+                neomacs-cursor-color-cycle-saturation nil)
+            (if (boundp 'neomacs-cursor-color-cycle-lightness)
+                neomacs-cursor-color-cycle-lightness nil)))))
+
+(defcustom neomacs-cursor-color-cycle-speed 50
+  "Speed of cursor color cycling (cycles per second * 100).
+50 = 0.5 cycles per second (one full rainbow every 2 seconds)."
+  :type '(integer :tag "Speed")
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-color-cycle)
+                    (boundp 'neomacs-cursor-color-cycle)
+                    neomacs-cursor-color-cycle)
+           (neomacs-set-cursor-color-cycle t val
+            (if (boundp 'neomacs-cursor-color-cycle-saturation)
+                neomacs-cursor-color-cycle-saturation nil)
+            (if (boundp 'neomacs-cursor-color-cycle-lightness)
+                neomacs-cursor-color-cycle-lightness nil)))))
+
+(defcustom neomacs-cursor-color-cycle-saturation 80
+  "Saturation of cursor color cycling colors (0-100)."
+  :type '(integer :tag "Saturation")
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-color-cycle)
+                    (boundp 'neomacs-cursor-color-cycle)
+                    neomacs-cursor-color-cycle)
+           (neomacs-set-cursor-color-cycle t
+            (if (boundp 'neomacs-cursor-color-cycle-speed)
+                neomacs-cursor-color-cycle-speed nil)
+            val
+            (if (boundp 'neomacs-cursor-color-cycle-lightness)
+                neomacs-cursor-color-cycle-lightness nil)))))
+
+(defcustom neomacs-cursor-color-cycle-lightness 60
+  "Lightness of cursor color cycling colors (0-100)."
+  :type '(integer :tag "Lightness")
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-color-cycle)
+                    (boundp 'neomacs-cursor-color-cycle)
+                    neomacs-cursor-color-cycle)
+           (neomacs-set-cursor-color-cycle t
+            (if (boundp 'neomacs-cursor-color-cycle-speed)
+                neomacs-cursor-color-cycle-speed nil)
+            (if (boundp 'neomacs-cursor-color-cycle-saturation)
+                neomacs-cursor-color-cycle-saturation nil)
+            val))))
+
 ;; --- Header/mode-line shadow ---
 (declare-function neomacs-set-header-shadow "neomacsterm.c"
   (&optional enabled intensity size))
