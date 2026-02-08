@@ -89,6 +89,8 @@ static void neomacs_set_horizontal_scroll_bar (struct window *w, int portion,
 static void neomacs_condemn_scroll_bars (struct frame *frame);
 static void neomacs_redeem_scroll_bar (struct window *w);
 static void neomacs_judge_scroll_bars (struct frame *f);
+static void neomacs_set_scroll_bar_default_width (struct frame *f);
+static void neomacs_set_scroll_bar_default_height (struct frame *f);
 static void neomacs_clear_frame (struct frame *f);
 static uint32_t neomacs_get_or_load_image (struct neomacs_display_info *dpyinfo,
                                            struct image *img);
@@ -444,6 +446,8 @@ neomacs_create_terminal (struct neomacs_display_info *dpyinfo)
   terminal->condemn_scroll_bars_hook = neomacs_condemn_scroll_bars;
   terminal->redeem_scroll_bar_hook = neomacs_redeem_scroll_bar;
   terminal->judge_scroll_bars_hook = neomacs_judge_scroll_bars;
+  terminal->set_scroll_bar_default_width_hook = neomacs_set_scroll_bar_default_width;
+  terminal->set_scroll_bar_default_height_hook = neomacs_set_scroll_bar_default_height;
 
   /* Register the display connection fd for event handling */
   if (dpyinfo->connection >= 0)
@@ -4111,6 +4115,28 @@ neomacs_judge_scroll_bars (struct frame *f)
       next = b->next;
       b->next = b->prev = Qnil;
     }
+}
+
+/* Set default vertical scroll bar width for frame F.
+   GPU-rendered scroll bars use a thin 12px width. */
+static void
+neomacs_set_scroll_bar_default_width (struct frame *f)
+{
+  int unit = FRAME_COLUMN_WIDTH (f);
+  int width = 12;  /* 12px thin scroll bar for GPU rendering */
+  FRAME_CONFIG_SCROLL_BAR_COLS (f) = (width + unit - 1) / unit;
+  FRAME_CONFIG_SCROLL_BAR_WIDTH (f)
+    = FRAME_CONFIG_SCROLL_BAR_COLS (f) * unit;
+}
+
+/* Set default horizontal scroll bar height for frame F. */
+static void
+neomacs_set_scroll_bar_default_height (struct frame *f)
+{
+  int height = FRAME_LINE_HEIGHT (f);
+  int bar_height = 12;  /* 12px thin scroll bar */
+  FRAME_CONFIG_SCROLL_BAR_LINES (f) = (bar_height + height - 1) / height;
+  FRAME_CONFIG_SCROLL_BAR_HEIGHT (f) = bar_height;
 }
 
 /* Make frame visible or invisible */
