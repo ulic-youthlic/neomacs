@@ -360,6 +360,12 @@ _FRAME is ignored; the menu opens on the selected frame."
   (interactive)
   (set-frame-parameter (or frame (selected-frame)) 'fullscreen nil))
 
+;; Window snap key bindings (Super+arrow)
+(global-set-key (kbd "s-<left>")  #'neomacs-snap-left)
+(global-set-key (kbd "s-<right>") #'neomacs-snap-right)
+(global-set-key (kbd "s-<up>")    #'neomacs-maximize)
+(global-set-key (kbd "s-<down>")  #'neomacs-restore)
+
 ;;; Scroll indicators
 
 (declare-function neomacs-set-scroll-indicators "neomacsterm.c" (enabled))
