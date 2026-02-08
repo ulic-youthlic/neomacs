@@ -5586,13 +5586,20 @@ neomacs_get_or_load_image (struct neomacs_display_info *dpyinfo, struct image *i
       return 0;
     }
 
-  /* Add to cache */
-  if (neomacs_image_cache_count < IMAGE_CACHE_SIZE)
+  /* Add to cache (evict oldest entry if full) */
+  if (neomacs_image_cache_count >= IMAGE_CACHE_SIZE)
     {
-      neomacs_image_cache[neomacs_image_cache_count].emacs_img = img;
-      neomacs_image_cache[neomacs_image_cache_count].gpu_id = gpu_id;
-      neomacs_image_cache_count++;
+      /* Free the oldest GPU image */
+      neomacs_display_free_image (dpyinfo->display_handle,
+                                  neomacs_image_cache[0].gpu_id);
+      /* Shift entries down */
+      memmove (&neomacs_image_cache[0], &neomacs_image_cache[1],
+               (IMAGE_CACHE_SIZE - 1) * sizeof (neomacs_image_cache[0]));
+      neomacs_image_cache_count = IMAGE_CACHE_SIZE - 1;
     }
+  neomacs_image_cache[neomacs_image_cache_count].emacs_img = img;
+  neomacs_image_cache[neomacs_image_cache_count].gpu_id = gpu_id;
+  neomacs_image_cache_count++;
 
   return gpu_id;
 }
