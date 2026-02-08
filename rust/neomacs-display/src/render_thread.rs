@@ -2657,6 +2657,15 @@ impl ApplicationHandler for RenderApp {
                     {
                         let _ = window.drag_resize_window(dir);
                     }
+                } else if state == ElementState::Pressed
+                    && button == MouseButton::Left
+                    && !self.decorations_enabled
+                    && (self.modifiers & NEOMACS_SUPER_MASK) != 0
+                {
+                    // Borderless: Super+click to drag-move window
+                    if let Some(ref window) = self.window {
+                        let _ = window.drag_window();
+                    }
                 } else {
                     let btn = match button {
                         MouseButton::Left => 1,
