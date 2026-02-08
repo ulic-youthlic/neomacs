@@ -210,46 +210,115 @@ The goal: **Make Emacs the most powerful and beautiful computing environment on 
 
 ## Architecture
 
+Neomacs is rewriting Emacs from C to Rust with clean module boundaries. The goal is a
+layered architecture where the Elisp runtime is a self-contained core, editor subsystems
+are independent modules communicating through defined APIs, and the rendering engine runs
+on a separate GPU thread.
+
+### Current State
+
+The rendering engine and layout engine are already in Rust. The Emacs C core still runs
+the Elisp evaluator, GC, and editor subsystems — connected to Rust via FFI channels.
+
+### Target Architecture
+
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     Emacs Core (C/Lisp)                         │
-│  neomacsterm.c ──── neomacs_display.h (C FFI) ──── neomacs-win.el │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │  C FFI (ffi.rs)
-┌──────────────────────────▼──────────────────────────────────────┐
-│              Rust Display Engine (neomacs-display)               │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │                   Render Thread                           │   │
-│  │  render_thread.rs — winit event loop, frame dispatch      │   │
-│  │  thread_comm.rs   — command/event channels                │   │
-│  └──────────────────────────┬───────────────────────────────┘   │
-│                              │                                   │
-│  ┌───────────┐  ┌───────────▼──────────┐  ┌─────────────────┐  │
-│  │   Core    │  │   wgpu Backend       │  │ Media Backends  │  │
-│  │           │  │                      │  │                 │  │
-│  │ scene     │  │ renderer (145KB)     │  │ video_cache     │  │
-│  │ animation │  │ glyph_atlas          │  │  GStreamer      │  │
-│  │ cursor    │  │ image_cache          │  │  VA-API         │  │
-│  │ scroll    │  │ vulkan_dmabuf        │  │  DMA-BUF        │  │
-│  │ buffer    │  │ 4 WGSL shaders       │  │                 │  │
-│  │ transition│  │                      │  │ webkit_cache    │  │
-│  │ faces     │  │ cosmic-text          │  │  WPE WebKit     │  │
-│  │ grid      │  │  text shaping        │  │                 │  │
-│  └───────────┘  └──────────┬───────────┘  └─────────────────┘  │
-│                             │                                    │
-│                  ┌──────────▼───────────┐                       │
-│                  │   winit (Windowing)  │                       │
-│                  └──────────────────────┘                       │
-└──────────────────────────────────────────────────────────────────┘
-                              │
-                 ┌────────────┼────────────┐
-                 ▼            ▼            ▼
-           ┌─────────┐  ┌─────────┐  ┌─────────┐
-           │ Vulkan  │  │  Metal  │  │DX12/GL  │
-           │ (Linux) │  │ (macOS) │  │(Windows)│
-           └─────────┘  └─────────┘  └─────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           Neomacs (Rust)                                    │
+│                                                                             │
+│  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐  │
+│    Elisp Runtime Core                                                      │
+│  │                                                                     │  │
+│    ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                    │
+│  │ │  Evaluator   │  │  Bytecode VM │  │  GC / Alloc  │               │  │
+│    │  eval_sub()  │  │  exec_byte() │  │  generational│                    │
+│  │ │  funcall()   │  │  inline cache│  │  precise root│               │  │
+│    │  specpdl     │  │  JIT (opt.)  │  │  bump alloc  │                    │
+│  │ └──────┬───────┘  └──────┬───────┘  └──────┬───────┘               │  │
+│           │                 │                  │                            │
+│  │ ┌──────┴───────┐  ┌─────┴────────┐  ┌─────┴────────┐               │  │
+│    │ LispObject   │  │  Symbol Table │  │  Type System │                    │
+│  │ │ tagged ptr   │  │  obarray      │  │  28 PVEC_*   │               │  │
+│    │ accessor API │  │  DEFSYM       │  │  type descr. │                    │
+│  │ └──────────────┘  └──────────────┘  └──────────────┘               │  │
+│  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘  │
+│           │                 │                  │                            │
+│           ▼                 ▼                  ▼                            │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │              Runtime API (trait-based, Rust)                         │  │
+│  │  register_type()  register_root()  define_function()  eval_form()   │  │
+│  │  run_hook()       specbind()       signal_error()     schedule_gc() │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│           │                 │                  │                            │
+│     ┌─────┴────┐     ┌─────┴────┐      ┌─────┴─────┐                      │
+│     ▼          ▼     ▼          ▼      ▼           ▼                      │
+│  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐   │
+│    Editor Modules (each with defined API)                                │
+│  │                                                                    │   │
+│    ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐     │
+│  │ │  Buffer  │ │  Window  │ │  Frame   │ │ Keyboard │ │ Process  │ │   │
+│    │          │ │          │ │          │ │          │ │          │     │
+│  │ │ gap buf  │ │ tree     │ │ params   │ │ cmd loop │ │ async IO │ │   │
+│    │ markers  │ │ layout   │ │ creation │ │ keymaps  │ │ filters  │     │
+│  │ │ overlays │ │ scroll   │ │ deletion │ │ input    │ │ sentinels│ │   │
+│    │ undo     │ │ split    │ │ hooks    │ │ hooks    │ │ pipes    │     │
+│  │ │ text prop│ │ select   │ │          │ │          │ │ network  │ │   │
+│    └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘     │
+│  │                                                                    │   │
+│    ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐     │
+│  │ │  Font    │ │  Image   │ │  File IO │ │  Reader  │ │   Data   │ │   │
+│    │          │ │          │ │          │ │          │ │          │     │
+│  │ │ open/    │ │ decode   │ │ read/    │ │ tokenize │ │ arith    │ │   │
+│    │ cache    │ │ cache    │ │ write    │ │ parse    │ │ type pred│     │
+│  │ │ metrics  │ │ display  │ │ coding   │ │ intern   │ │ accessor │ │   │
+│    │ match    │ │ transform│ │ locks    │ │ load     │ │ convert  │     │
+│  │ └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘ │   │
+│  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘   │
+│           │                                                                │
+│           ▼                                                                │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │                    Rendering Engine (Rust)                           │  │
+│  │                                                                      │  │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌──────────────┐                 │  │
+│  │  │ Layout      │  │ wgpu        │  │ Animations   │                 │  │
+│  │  │ Engine      │  │ Renderer    │  │ transitions  │                 │  │
+│  │  │ (text, face)│  │ (GPU draw)  │  │ cursor blink │                 │  │
+│  │  └─────────────┘  └─────────────┘  └──────────────┘                 │  │
+│  │                                                                      │  │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌──────────────┐                 │  │
+│  │  │ winit       │  │ WebKit      │  │ GStreamer     │                 │  │
+│  │  │ (windowing) │  │ (web views) │  │ (video/media) │                 │  │
+│  │  └─────────────┘  └─────────────┘  └──────────────┘                 │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│  Threading:                                                                 │
+│  ┌──────────┐  FrameGlyphBuffer (crossbeam)  ┌──────────────┐             │
+│  │ Emacs    │ ─────────────────────────────→ │   Render     │             │
+│  │ Thread   │ ←───────────────────────────── │   Thread     │             │
+│  └──────────┘  InputEvent (crossbeam)         └──────────────┘             │
+│                                                                             │
+│                    ┌────────────┼────────────┐                              │
+│                    ▼            ▼            ▼                              │
+│              ┌─────────┐  ┌─────────┐  ┌─────────┐                         │
+│              │ Vulkan  │  │  Metal  │  │DX12/GL  │                         │
+│              │ (Linux) │  │ (macOS) │  │(Windows)│                         │
+│              └─────────┘  └─────────┘  └─────────┘                         │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+**Design principles:**
+
+- **Elisp Runtime Core** is a self-contained Rust crate. It owns LispObject, the
+  evaluator, bytecode VM, GC, specpdl, and symbol table. It does NOT know about
+  buffers, windows, frames, or any editor concept.
+- **Runtime API** is a trait-based interface. Editor modules register their types
+  (with GC trace descriptors), roots, and primitives. The GC traces registered
+  types generically — no hardcoded `mark_kboards()` or `mark_terminals()`.
+- **Editor Modules** are independent. Each owns its data structures and exposes
+  them to Lisp through the Runtime API. Modules do not reach into each other's
+  internals.
+- **Rendering Engine** runs on a separate GPU thread, communicating via crossbeam
+  channels (`FrameGlyphBuffer` down, `InputEvent` up). Already implemented.
 
 ### Why Rust?
 
@@ -265,6 +334,9 @@ The goal: **Make Emacs the most powerful and beautiful computing environment on 
 - **Safe Rust API** — no unsafe Vulkan/Metal code in application
 - **WebGPU standard** — future-proof API design
 - **Active development** — used by Firefox, Bevy, and many others
+
+For an in-depth analysis of the current Emacs C architecture, why it's hard to rewrite,
+and why Elisp is slow, see [docs/elisp-core-analysis.md](docs/elisp-core-analysis.md).
 
 ---
 
@@ -375,52 +447,6 @@ cargo build --release --manifest-path rust/neomacs-display/Cargo.toml
 ./autogen.sh
 ./configure --with-neomacs
 make -j$(nproc)
-```
-
----
-
-## Project Structure
-
-```
-neomacs/
-├── rust/neomacs-display/          # Rust display engine crate
-│   ├── src/
-│   │   ├── lib.rs                 # Crate root
-│   │   ├── ffi.rs                 # C FFI layer (~109KB)
-│   │   ├── render_thread.rs       # winit event loop + frame dispatch (~79KB)
-│   │   ├── thread_comm.rs         # Command/event channel types
-│   │   ├── core/                  # Engine core types
-│   │   │   ├── scene.rs           # Scene graph
-│   │   │   ├── animation.rs       # Base animation primitives
-│   │   │   ├── cursor_animation.rs    # 8 cursor particle modes
-│   │   │   ├── scroll_animation.rs    # 21 scroll effects + physics
-│   │   │   ├── buffer_transition.rs   # 10 buffer-switch effects
-│   │   │   ├── animation_config.rs    # Unified config system
-│   │   │   ├── frame_glyphs.rs    # Glyph buffer from Emacs
-│   │   │   ├── face.rs            # Face/style handling
-│   │   │   ├── glyph.rs           # Glyph types
-│   │   │   ├── grid.rs            # Character grid
-│   │   │   └── types.rs           # Color, Rect, CursorAnimStyle
-│   │   └── backend/
-│   │       ├── wgpu/              # GPU renderer (primary backend)
-│   │       │   ├── renderer.rs    # Main render pipeline (~145KB)
-│   │       │   ├── glyph_atlas.rs # cosmic-text glyph cache
-│   │       │   ├── image_cache.rs # Image texture management
-│   │       │   ├── video_cache.rs # GStreamer video pipeline
-│   │       │   ├── vulkan_dmabuf.rs   # DMA-BUF zero-copy import
-│   │       │   └── shaders/       # WGSL shaders (glyph, image, rect, texture)
-│   │       ├── webkit/            # WPE WebKit browser embedding
-│   │       ├── wpe/               # WPE backend support
-│   │       └── tty/               # Terminal backend
-│   ├── include/
-│   │   └── neomacs_display.h      # Generated C header
-│   └── Cargo.toml
-├── src/                           # Emacs C source
-│   ├── neomacsterm.c              # Terminal hooks + Lisp DEFUNs (~156KB)
-│   ├── neomacsfns.c               # Frame/font functions (~60KB)
-│   └── neomacs_display.h          # C header (local copy)
-├── lisp/term/neomacs-win.el       # Lisp initialization + animation config
-└── doc/display-engine/            # Design documentation
 ```
 
 ---
