@@ -2651,16 +2651,83 @@ neomacs_layout_check_display_prop (void *buffer_ptr, void *window_ptr,
           return 0;
         }
 
-      /* Check for list of display specs — handle first string/space found */
-      if (STRINGP (car))
+      /* If car is not a known keyword, treat as list of specs.
+         Each element is a single spec like (raise 0.3) or
+         (height 0.7). Process all non-replacing specs, stop
+         at first replacing spec (string/image/space). */
+      if (!EQ (car, Qspace) && !EQ (car, Qimage) && !EQ (car, Qraise)
+          && !EQ (car, Qleft_fringe) && !EQ (car, Qright_fringe)
+          && !NILP (car)
+          && !(CONSP (car) && EQ (XCAR (car), Qmargin)))
         {
-          /* Sometimes display prop is a list starting with a string */
-          ptrdiff_t len = SBYTES (car);
-          ptrdiff_t copy_len = len < str_buf_len - 1 ? len : str_buf_len - 1;
-          memcpy (str_buf, SDATA (car), copy_len);
-          str_buf[copy_len] = 0;
-          out->type = 1;
-          out->str_len = (int) copy_len;
+          Lisp_Object tail;
+          for (tail = display_prop; CONSP (tail); tail = XCDR (tail))
+            {
+              Lisp_Object spec = XCAR (tail);
+
+              /* String replacement in list form */
+              if (STRINGP (spec))
+                {
+                  ptrdiff_t len = SBYTES (spec);
+                  ptrdiff_t copy_len
+                    = len < str_buf_len - 1 ? len : str_buf_len - 1;
+                  memcpy (str_buf, SDATA (spec), copy_len);
+                  str_buf[copy_len] = 0;
+                  out->type = 1;
+                  out->str_len = (int) copy_len;
+                  set_buffer_internal_1 (old);
+                  return 0;
+                }
+
+              if (!CONSP (spec))
+                continue;
+
+              Lisp_Object scar = XCAR (spec);
+
+              /* (raise FACTOR) — accumulate */
+              if (EQ (scar, Qraise) && CONSP (XCDR (spec)))
+                {
+                  Lisp_Object factor = XCAR (XCDR (spec));
+                  if (FIXNUMP (factor))
+                    out->raise_factor += (float) XFIXNUM (factor);
+                  else if (FLOATP (factor))
+                    out->raise_factor += (float) XFLOAT_DATA (factor);
+                  continue;
+                }
+
+              /* (height FACTOR) — font scaling stub:
+                 we note it but don't have a field yet.
+                 Just skip for now. */
+              if (EQ (scar, Qheight))
+                continue;
+
+              /* (space ...) — replacing spec, stop.
+                 Extract basic :width for the space. */
+              if (EQ (scar, Qspace))
+                {
+                  Lisp_Object plist = XCDR (spec);
+                  Lisp_Object width_val
+                    = Fplist_get (plist, QCwidth, Qnil);
+                  if (FIXNUMP (width_val))
+                    out->space_width
+                      = (float) XFIXNUM (width_val);
+                  else if (FLOATP (width_val))
+                    out->space_width
+                      = (float) XFLOAT_DATA (width_val);
+                  else
+                    out->space_width = 1.0;
+                  out->type = 2;
+                  set_buffer_internal_1 (old);
+                  return 0;
+                }
+            }
+          /* Processed all list elements */
+          if (out->raise_factor != 0.0)
+            {
+              out->type = 5;
+              set_buffer_internal_1 (old);
+              return 0;
+            }
           set_buffer_internal_1 (old);
           return 0;
         }
