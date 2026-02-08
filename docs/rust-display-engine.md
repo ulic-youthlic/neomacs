@@ -246,3 +246,139 @@ Rejected. GPU compute shaders for text layout would push line breaking, glyph po
 - **The bottleneck doesn't exist** — a typical frame has ~3000-8000 visible glyphs. CPU layout for that is <1ms.
 
 Strategy 4 (CPU Rust layout + GPU render) gives 95% of the performance benefit with 10% of the complexity. Every modern editor (VS Code, Zed, Lapce, Alacritty) uses this architecture.
+
+## TUI Rendering Backend
+
+A major benefit of owning layout in Rust: one layout engine, multiple renderers. The same `RustLayoutEngine` that produces glyph batches for wgpu can also output to a terminal grid, giving us a true TUI Emacs.
+
+### Architecture
+
+```
+                              ┌─→ WgpuRenderer (GPU)
+LayoutSnapshot → RustLayout ──┤
+                              └─→ TuiRenderer (terminal)
+```
+
+The layout engine produces a backend-agnostic intermediate representation:
+
+```rust
+struct LayoutOutput {
+    rows: Vec<LayoutRow>,
+}
+
+struct LayoutRow {
+    glyphs: Vec<LayoutGlyph>,
+    y: f32,
+    height: f32,
+}
+
+struct LayoutGlyph {
+    char: char,
+    x: f32,
+    width: f32,
+    face_id: u32,
+    is_cursor: bool,
+    // ... other attributes
+}
+```
+
+The **WgpuRenderer** consumes this as pixel-positioned glyph batches (current path). The **TuiRenderer** maps this to a cell grid:
+
+```rust
+struct TuiRenderer {
+    terminal: crossterm::Terminal,   // or termwiz / ratatui backend
+    grid: Vec<Vec<Cell>>,           // rows × cols cell grid
+    prev_grid: Vec<Vec<Cell>>,      // previous frame for diffing
+}
+
+struct Cell {
+    char: char,
+    fg: Color,
+    bg: Color,
+    attrs: CellAttrs,  // bold, italic, underline, strikethrough
+}
+```
+
+### How TUI Rendering Works
+
+1. **Layout**: `RustLayoutEngine` produces `LayoutOutput` with pixel coordinates
+2. **Quantize**: TuiRenderer maps pixel positions to cell grid (divide by cell width/height)
+3. **Diff**: Compare current grid against previous grid
+4. **Emit**: Output only changed cells via ANSI escape sequences
+
+### Terminal Features
+
+| Feature | GPU (wgpu) | TUI (terminal) |
+|---------|-----------|----------------|
+| Text rendering | Glyph atlas + shader | ANSI escape sequences |
+| Colors | 32-bit RGBA linear | 256-color / 24-bit truecolor |
+| Bold/italic | Font variant selection | SGR attributes |
+| Underline | Custom pixel drawing | SGR underline (wavy if supported) |
+| Images | GPU texture | Sixel / Kitty graphics protocol |
+| Cursor | Animated, blinking | Terminal cursor escape |
+| Smooth scroll | Pixel-level | Line-level (or pixel with Kitty) |
+| Ligatures | Full OpenType | Not possible (cell grid) |
+| Variable-width | Full support | Monospace only |
+| Box drawing | SDF rounded rects | Unicode box characters |
+| Video/WebKit | Inline rendering | Not supported |
+| Mouse | Full pixel tracking | Cell-level tracking |
+| DPI scaling | Automatic | Terminal handles it |
+| Performance | 120fps GPU | 60fps terminal refresh |
+
+### Crate Choices
+
+- **crossterm** — Cross-platform terminal manipulation (input, output, raw mode). Mature, widely used.
+- **ratatui** — TUI framework built on crossterm. Provides widget abstractions, but we may only need the backend layer since we have our own layout.
+- **termwiz** — Alternative from wezterm project. Better Kitty graphics protocol support.
+
+### TUI-Specific Considerations
+
+**Cell grid quantization**: The layout engine works in pixel coordinates. For TUI, we quantize:
+```rust
+let col = (glyph.x / cell_width).floor() as usize;
+let row = (glyph.y / cell_height).floor() as usize;
+```
+
+Wide characters (CJK) occupy 2 cells. The layout engine already knows character widths from cosmic-text; TUI renderer uses `unicode-width` crate to determine cell count.
+
+**Color mapping**: Layout faces use 32-bit sRGB colors. TUI renderer maps to:
+- 24-bit truecolor (most modern terminals)
+- 256-color palette (fallback)
+- 16-color ANSI (minimal fallback)
+
+Detection via `COLORTERM=truecolor` environment variable or terminfo capabilities.
+
+**Inline images**: Modern terminals support image protocols:
+- **Kitty graphics protocol** — pixel-perfect, widely supported
+- **Sixel** — older but broadly compatible
+- **iTerm2 inline images** — macOS terminals
+
+The TUI renderer can optionally support these for `IMAGE_GLYPH` layout items.
+
+**Diffing for performance**: Unlike GPU (clear-and-rebuild each frame), terminals are slow to redraw. The TUI renderer must diff current vs previous grid and only emit changes. This is standard practice (ncurses, crossterm, ratatui all do this).
+
+### Implementation Phase
+
+TUI backend fits as an additional phase after Phase 1 (monospace ASCII):
+
+**Phase 1.5: TUI Renderer**
+
+- Implement `TuiRenderer` that consumes `LayoutOutput`
+- Cell grid quantization from pixel coordinates
+- ANSI escape sequence output via crossterm
+- Grid diffing for incremental updates
+- Basic face → SGR attribute mapping
+- Cursor display via terminal cursor
+
+**Scope**: ~1200 Rust. **Difficulty**: Medium.
+
+This phase can proceed in parallel with Phases 2-7 since TUI and GPU renderers consume the same layout output. Each layout feature (faces, display props, bidi) automatically works in both renderers once the layout engine supports it.
+
+### Use Cases
+
+- **SSH sessions** — Full Emacs over SSH without X11 forwarding or GPU
+- **Containers / CI** — Emacs in Docker, headless servers
+- **Low-resource machines** — No GPU required
+- **Terminal multiplexers** — Works inside tmux, screen, zellij
+- **Accessibility** — Screen readers work with terminal output
+- **Testing** — Deterministic text output for layout regression tests
