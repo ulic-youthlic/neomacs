@@ -1420,6 +1420,27 @@ neomacs_create_frame_widgets (struct frame *f)
           output->drawing_area = NULL;
           output->use_gpu_widget = 1;
 
+          /* Initialize cursor types for mouse-highlight.
+             Values match Rust CursorIcon mapping:
+             1=arrow, 2=text/ibeam, 3=hand/pointer,
+             5=h-resize, 6=v-resize, 7=hourglass */
+          output->text_cursor             = (Emacs_Cursor)(intptr_t) 2;
+          output->nontext_cursor          = (Emacs_Cursor)(intptr_t) 1;
+          output->modeline_cursor         = (Emacs_Cursor)(intptr_t) 1;
+          output->hand_cursor             = (Emacs_Cursor)(intptr_t) 3;
+          output->hourglass_cursor        = (Emacs_Cursor)(intptr_t) 7;
+          output->horizontal_drag_cursor  = (Emacs_Cursor)(intptr_t) 5;
+          output->vertical_drag_cursor    = (Emacs_Cursor)(intptr_t) 6;
+          output->current_cursor          = (Emacs_Cursor)(intptr_t) 1;
+          output->left_edge_cursor        = (Emacs_Cursor)(intptr_t) 5;
+          output->top_left_corner_cursor  = (Emacs_Cursor)(intptr_t) 8;
+          output->top_edge_cursor         = (Emacs_Cursor)(intptr_t) 6;
+          output->top_right_corner_cursor = (Emacs_Cursor)(intptr_t) 9;
+          output->right_edge_cursor       = (Emacs_Cursor)(intptr_t) 5;
+          output->bottom_right_corner_cursor = (Emacs_Cursor)(intptr_t) 11;
+          output->bottom_edge_cursor      = (Emacs_Cursor)(intptr_t) 6;
+          output->bottom_left_corner_cursor  = (Emacs_Cursor)(intptr_t) 10;
+
           nlog_info ("Created winit window with id %u", window_id);
           return;
         }
