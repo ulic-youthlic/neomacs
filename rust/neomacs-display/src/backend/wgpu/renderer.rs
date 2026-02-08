@@ -260,6 +260,10 @@ pub struct WgpuRenderer {
     cursor_wake_scale: f32,
     /// Timestamp of last cursor wake trigger
     cursor_wake_started: Option<std::time::Instant>,
+    /// Window content shadow/depth between split panes
+    window_content_shadow_enabled: bool,
+    window_content_shadow_size: f32,
+    window_content_shadow_opacity: f32,
     /// Cursor error pulse (brief color flash on bell)
     cursor_error_pulse_enabled: bool,
     cursor_error_pulse_color: (f32, f32, f32),
@@ -950,6 +954,9 @@ impl WgpuRenderer {
             cursor_wake_duration_ms: 120,
             cursor_wake_scale: 1.3,
             cursor_wake_started: None,
+            window_content_shadow_enabled: false,
+            window_content_shadow_size: 6.0,
+            window_content_shadow_opacity: 0.15,
             cursor_error_pulse_enabled: false,
             cursor_error_pulse_color: (1.0, 0.2, 0.2),
             cursor_error_pulse_duration_ms: 250,
@@ -1196,6 +1203,13 @@ impl WgpuRenderer {
         } else {
             1.0
         }
+    }
+
+    /// Update window content shadow config
+    pub fn set_window_content_shadow(&mut self, enabled: bool, size: f32, opacity: f32) {
+        self.window_content_shadow_enabled = enabled;
+        self.window_content_shadow_size = size;
+        self.window_content_shadow_opacity = opacity;
     }
 
     /// Update cursor error pulse config
@@ -5144,6 +5158,57 @@ impl WgpuRenderer {
                     render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
                     render_pass.set_vertex_buffer(0, progress_buffer.slice(..));
                     render_pass.draw(0..progress_vertices.len() as u32, 0..1);
+                }
+            }
+
+            // === Window content shadow/depth effect ===
+            if self.window_content_shadow_enabled && frame_glyphs.window_infos.len() > 1 {
+                let shadow_size = self.window_content_shadow_size.max(1.0);
+                let shadow_opacity = self.window_content_shadow_opacity.clamp(0.0, 1.0);
+                let mut shadow_vertices: Vec<RectVertex> = Vec::new();
+                let steps = 4;
+
+                for info in &frame_glyphs.window_infos {
+                    if info.is_minibuffer { continue; }
+                    let b = &info.bounds;
+
+                    // Inner shadow at each edge (gradient from dark to transparent)
+                    for i in 0..steps {
+                        let frac = i as f32 / steps as f32;
+                        let alpha = shadow_opacity * (1.0 - frac) * (1.0 - frac);
+                        let thickness = shadow_size / steps as f32;
+                        let c = Color::new(0.0, 0.0, 0.0, alpha);
+
+                        // Top inner shadow
+                        self.add_rect(&mut shadow_vertices,
+                            b.x, b.y + frac * shadow_size,
+                            b.width, thickness, &c);
+                        // Left inner shadow
+                        self.add_rect(&mut shadow_vertices,
+                            b.x + frac * shadow_size, b.y,
+                            thickness, b.height, &c);
+                        // Right inner shadow
+                        self.add_rect(&mut shadow_vertices,
+                            b.x + b.width - shadow_size + frac * shadow_size, b.y,
+                            thickness, b.height, &c);
+                        // Bottom inner shadow (above mode-line)
+                        let content_bottom = b.y + b.height - info.mode_line_height;
+                        self.add_rect(&mut shadow_vertices,
+                            b.x, content_bottom - shadow_size + frac * shadow_size,
+                            b.width, thickness, &c);
+                    }
+                }
+
+                if !shadow_vertices.is_empty() {
+                    let shadow_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Window Content Shadow Buffer"),
+                        contents: bytemuck::cast_slice(&shadow_vertices),
+                        usage: wgpu::BufferUsages::VERTEX,
+                    });
+                    render_pass.set_pipeline(&self.rect_pipeline);
+                    render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                    render_pass.set_vertex_buffer(0, shadow_buffer.slice(..));
+                    render_pass.draw(0..shadow_vertices.len() as u32, 0..1);
                 }
             }
 

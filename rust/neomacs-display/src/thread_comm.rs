@@ -592,6 +592,14 @@ pub enum RenderCommand {
         /// Duration of the spacing animation in milliseconds
         duration_ms: u32,
     },
+    /// Configure window content shadow/depth between split panes
+    SetWindowContentShadow {
+        enabled: bool,
+        /// Shadow size in pixels
+        size: f32,
+        /// Shadow opacity 0.0-1.0
+        opacity: f32,
+    },
     /// Configure cursor error pulse (brief color flash on bell)
     SetCursorErrorPulse {
         enabled: bool,

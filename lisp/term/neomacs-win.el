@@ -1732,6 +1732,52 @@ animates down to 100%."
                 neomacs-cursor-wake-duration nil)
             val))))
 
+;; --- Window content shadow ---
+(declare-function neomacs-set-window-content-shadow "neomacsterm.c"
+  (&optional enabled size opacity))
+
+(defcustom neomacs-window-content-shadow nil
+  "Enable window content shadow/depth between split panes.
+Non-nil renders inner shadows at window edges when multiple windows
+are visible, creating a depth/raised pane illusion."
+  :type 'boolean
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (fboundp 'neomacs-set-window-content-shadow)
+           (neomacs-set-window-content-shadow val
+            (if (boundp 'neomacs-window-content-shadow-size)
+                neomacs-window-content-shadow-size nil)
+            (if (boundp 'neomacs-window-content-shadow-opacity)
+                neomacs-window-content-shadow-opacity nil)))))
+
+(defcustom neomacs-window-content-shadow-size 6
+  "Shadow spread size in pixels."
+  :type '(integer :tag "Size (px)")
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-window-content-shadow)
+                    (boundp 'neomacs-window-content-shadow)
+                    neomacs-window-content-shadow)
+           (neomacs-set-window-content-shadow t val
+            (if (boundp 'neomacs-window-content-shadow-opacity)
+                neomacs-window-content-shadow-opacity nil)))))
+
+(defcustom neomacs-window-content-shadow-opacity 15
+  "Shadow opacity (0-100)."
+  :type '(integer :tag "Opacity (%)")
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-window-content-shadow)
+                    (boundp 'neomacs-window-content-shadow)
+                    neomacs-window-content-shadow)
+           (neomacs-set-window-content-shadow t
+            (if (boundp 'neomacs-window-content-shadow-size)
+                neomacs-window-content-shadow-size nil)
+            val))))
+
 ;; --- Cursor error pulse ---
 (declare-function neomacs-set-cursor-error-pulse "neomacsterm.c"
   (&optional enabled color duration-ms))

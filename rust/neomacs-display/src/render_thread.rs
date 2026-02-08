@@ -771,6 +771,10 @@ struct RenderApp {
     cursor_wake_enabled: bool,
     cursor_wake_duration_ms: u32,
     cursor_wake_scale: f32,
+    /// Window content shadow/depth between split panes
+    window_content_shadow_enabled: bool,
+    window_content_shadow_size: f32,
+    window_content_shadow_opacity: f32,
     /// Cursor error pulse (brief color flash on bell)
     cursor_error_pulse_enabled: bool,
     cursor_error_pulse_color: (f32, f32, f32),
@@ -1089,6 +1093,9 @@ impl RenderApp {
             cursor_wake_enabled: false,
             cursor_wake_duration_ms: 120,
             cursor_wake_scale: 1.3,
+            window_content_shadow_enabled: false,
+            window_content_shadow_size: 6.0,
+            window_content_shadow_opacity: 0.15,
             cursor_error_pulse_enabled: false,
             cursor_error_pulse_color: (1.0, 0.2, 0.2),
             cursor_error_pulse_duration_ms: 250,
@@ -2154,6 +2161,15 @@ impl RenderApp {
                     self.cursor_wake_scale = scale;
                     if let Some(renderer) = self.renderer.as_mut() {
                         renderer.set_cursor_wake(enabled, duration_ms, scale);
+                    }
+                    self.frame_dirty = true;
+                }
+                RenderCommand::SetWindowContentShadow { enabled, size, opacity } => {
+                    self.window_content_shadow_enabled = enabled;
+                    self.window_content_shadow_size = size;
+                    self.window_content_shadow_opacity = opacity;
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_window_content_shadow(enabled, size, opacity);
                     }
                     self.frame_dirty = true;
                 }

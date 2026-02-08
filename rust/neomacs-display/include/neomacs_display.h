@@ -1459,6 +1459,14 @@ void neomacs_display_set_cursor_wake(struct NeomacsDisplay *handle,
                                      int scalePct);
 
 /**
+ * Configure window content shadow/depth between split panes
+ */
+void neomacs_display_set_window_content_shadow(struct NeomacsDisplay *handle,
+                                               int enabled,
+                                               int size,
+                                               int opacity);
+
+/**
  * Configure cursor error pulse (brief color flash on bell)
  */
 void neomacs_display_set_cursor_error_pulse(struct NeomacsDisplay *handle,

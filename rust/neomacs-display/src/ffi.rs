@@ -2967,6 +2967,24 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_wake(
     }
 }
 
+/// Configure window content shadow/depth between split panes
+#[no_mangle]
+pub unsafe extern "C" fn neomacs_display_set_window_content_shadow(
+    _handle: *mut NeomacsDisplay,
+    enabled: c_int,
+    size: c_int,
+    opacity: c_int,
+) {
+    let cmd = RenderCommand::SetWindowContentShadow {
+        enabled: enabled != 0,
+        size: size as f32,
+        opacity: opacity as f32 / 100.0,
+    };
+    if let Some(ref state) = THREADED_STATE {
+        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+    }
+}
+
 /// Configure cursor error pulse (brief color flash on bell)
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_set_cursor_error_pulse(

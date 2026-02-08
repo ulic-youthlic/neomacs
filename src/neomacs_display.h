@@ -1467,6 +1467,12 @@ void neomacs_display_set_cursor_wake(
     int duration_ms,
     int scale_pct);
 
+void neomacs_display_set_window_content_shadow(
+    struct NeomacsDisplay *handle,
+    int enabled,
+    int size,
+    int opacity);
+
 void neomacs_display_set_cursor_error_pulse(
     struct NeomacsDisplay *handle,
     int enabled,

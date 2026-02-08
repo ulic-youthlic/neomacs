@@ -8885,6 +8885,30 @@ SCALE-PCT is the initial scale percentage (default 130, meaning 130%).  */)
   return on ? Qt : Qnil;
 }
 
+DEFUN ("neomacs-set-window-content-shadow",
+       Fneomacs_set_window_content_shadow,
+       Sneomacs_set_window_content_shadow, 0, 3, 0,
+       doc: /* Configure window content shadow/depth between split panes.
+ENABLED non-nil renders inner shadows at window edges when multiple
+windows are visible, creating a depth/raised pane illusion.
+SIZE is the shadow spread in pixels (default 6).
+OPACITY is 0-100 percentage (default 15).  */)
+  (Lisp_Object enabled, Lisp_Object size, Lisp_Object opacity)
+{
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+
+  int on = !NILP (enabled);
+  int sz = 6;
+  int op = 15;
+  if (FIXNUMP (size)) sz = XFIXNUM (size);
+  if (FIXNUMP (opacity)) op = XFIXNUM (opacity);
+
+  neomacs_display_set_window_content_shadow (dpyinfo->display_handle, on, sz, op);
+  return on ? Qt : Qnil;
+}
+
 DEFUN ("neomacs-set-cursor-error-pulse",
        Fneomacs_set_cursor_error_pulse,
        Sneomacs_set_cursor_error_pulse, 0, 3, 0,
@@ -10507,6 +10531,7 @@ syms_of_neomacsterm (void)
   defsubr (&Sneomacs_set_scroll_momentum);
   defsubr (&Sneomacs_set_wrap_indicator);
   defsubr (&Sneomacs_set_cursor_error_pulse);
+  defsubr (&Sneomacs_set_window_content_shadow);
   defsubr (&Sneomacs_set_region_glow);
   defsubr (&Sneomacs_set_window_glow);
   defsubr (&Sneomacs_set_scroll_progress);
