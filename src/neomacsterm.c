@@ -8399,6 +8399,36 @@ RADIUS is the inset in pixels from each edge (default 80).  */)
   return on ? Qt : Qnil;
 }
 
+DEFUN ("neomacs-set-window-glow",
+       Fneomacs_set_window_glow,
+       Sneomacs_set_window_glow, 0, 6, 0,
+       doc: /* Configure active window border glow effect.
+ENABLED non-nil draws a soft glow around the selected window border.
+R, G, B are color components 0-255 (default 102 153 255, light blue).
+RADIUS is glow size in pixels (default 8).
+INTENSITY is 0-100 for peak glow opacity (default 40).  */)
+  (Lisp_Object enabled, Lisp_Object r, Lisp_Object g, Lisp_Object b,
+   Lisp_Object radius, Lisp_Object intensity)
+{
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+
+  int on = !NILP (enabled);
+  int cr = 102, cg = 153, cb = 255;
+  int rad = 8;
+  int inten = 40;
+  if (FIXNUMP (r)) cr = XFIXNUM (r);
+  if (FIXNUMP (g)) cg = XFIXNUM (g);
+  if (FIXNUMP (b)) cb = XFIXNUM (b);
+  if (FIXNUMP (radius)) rad = XFIXNUM (radius);
+  if (FIXNUMP (intensity)) inten = XFIXNUM (intensity);
+
+  neomacs_display_set_window_glow (
+    dpyinfo->display_handle, on, cr, cg, cb, rad, inten);
+  return on ? Qt : Qnil;
+}
+
 DEFUN ("neomacs-set-breadcrumb",
        Fneomacs_set_breadcrumb,
        Sneomacs_set_breadcrumb, 0, 2, 0,
@@ -9826,6 +9856,7 @@ syms_of_neomacsterm (void)
   defsubr (&Sneomacs_set_cursor_color_cycle);
   defsubr (&Sneomacs_set_window_switch_fade);
   defsubr (&Sneomacs_set_breadcrumb);
+  defsubr (&Sneomacs_set_window_glow);
 
   /* Cursor blink */
   defsubr (&Sneomacs_set_cursor_blink);

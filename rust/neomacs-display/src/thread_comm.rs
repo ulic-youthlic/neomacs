@@ -384,6 +384,16 @@ pub enum RenderCommand {
         duration_ms: u32,
         intensity: f32,
     },
+    /// Configure active window border glow
+    SetWindowGlow {
+        enabled: bool,
+        /// Glow color (sRGB 0.0-1.0)
+        color: (f32, f32, f32),
+        /// Glow radius in pixels
+        radius: f32,
+        /// Peak glow opacity (0.0-1.0)
+        intensity: f32,
+    },
     /// Configure breadcrumb/path bar overlay
     SetBreadcrumb {
         enabled: bool,

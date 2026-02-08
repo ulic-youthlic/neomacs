@@ -1378,6 +1378,13 @@ void neomacs_display_set_vignette(
     int intensity,
     int radius);
 
+void neomacs_display_set_window_glow(
+    struct NeomacsDisplay *handle,
+    int enabled,
+    int r, int g, int b,
+    int radius,
+    int intensity);
+
 void neomacs_display_set_breadcrumb(
     struct NeomacsDisplay *handle,
     int enabled,

@@ -1194,6 +1194,42 @@ spectrum, creating a colorful animated cursor effect."
                 neomacs-cursor-color-cycle-saturation nil)
             val))))
 
+;; --- Active window border glow ---
+(declare-function neomacs-set-window-glow "neomacsterm.c"
+  (&optional enabled r g b radius intensity))
+
+(defcustom neomacs-window-glow nil
+  "Enable border glow effect around the active window.
+Non-nil draws a soft glowing border to highlight the selected window."
+  :type 'boolean
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (fboundp 'neomacs-set-window-glow)
+           (neomacs-set-window-glow val))))
+
+(defcustom neomacs-window-glow-radius 8
+  "Radius of the window border glow in pixels."
+  :type '(integer :tag "Radius")
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-window-glow)
+                    (boundp 'neomacs-window-glow)
+                    neomacs-window-glow)
+           (neomacs-set-window-glow t nil nil nil val))))
+
+(defcustom neomacs-window-glow-intensity 40
+  "Peak opacity of the window border glow (0-100)."
+  :type '(integer :tag "Intensity")
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-window-glow)
+                    (boundp 'neomacs-window-glow)
+                    neomacs-window-glow)
+           (neomacs-set-window-glow t nil nil nil nil val))))
+
 ;; --- Breadcrumb/path bar ---
 (declare-function neomacs-set-breadcrumb "neomacsterm.c"
   (&optional enabled opacity))

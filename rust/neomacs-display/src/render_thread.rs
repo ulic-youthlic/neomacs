@@ -713,6 +713,11 @@ struct RenderApp {
     /// Breadcrumb/path bar overlay
     breadcrumb_enabled: bool,
     breadcrumb_opacity: f32,
+    /// Active window border glow
+    window_glow_enabled: bool,
+    window_glow_color: (f32, f32, f32),
+    window_glow_radius: f32,
+    window_glow_intensity: f32,
 }
 
 /// State for a tooltip displayed as GPU overlay
@@ -930,6 +935,10 @@ impl RenderApp {
             prev_selected_window_id: 0,
             breadcrumb_enabled: false,
             breadcrumb_opacity: 0.7,
+            window_glow_enabled: false,
+            window_glow_color: (0.4, 0.6, 1.0),
+            window_glow_radius: 8.0,
+            window_glow_intensity: 0.4,
         }
     }
 
@@ -1797,6 +1806,16 @@ impl RenderApp {
                     self.window_switch_fade_intensity = intensity;
                     if let Some(renderer) = self.renderer.as_mut() {
                         renderer.set_window_switch_fade(enabled, duration_ms, intensity);
+                    }
+                    self.frame_dirty = true;
+                }
+                RenderCommand::SetWindowGlow { enabled, color, radius, intensity } => {
+                    self.window_glow_enabled = enabled;
+                    self.window_glow_color = color;
+                    self.window_glow_radius = radius;
+                    self.window_glow_intensity = intensity;
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_window_glow(enabled, color, radius, intensity);
                     }
                     self.frame_dirty = true;
                 }

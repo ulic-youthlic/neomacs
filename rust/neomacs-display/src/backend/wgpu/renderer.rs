@@ -158,6 +158,11 @@ pub struct WgpuRenderer {
     /// Breadcrumb/path bar overlay
     breadcrumb_enabled: bool,
     breadcrumb_opacity: f32,
+    /// Active window border glow
+    window_glow_enabled: bool,
+    window_glow_color: (f32, f32, f32),
+    window_glow_radius: f32,
+    window_glow_intensity: f32,
 }
 
 /// Entry for an active window switch highlight fade
@@ -711,6 +716,10 @@ impl WgpuRenderer {
             active_window_fades: Vec::new(),
             breadcrumb_enabled: false,
             breadcrumb_opacity: 0.7,
+            window_glow_enabled: false,
+            window_glow_color: (0.4, 0.6, 1.0),
+            window_glow_radius: 8.0,
+            window_glow_intensity: 0.4,
         }
     }
 
@@ -837,6 +846,14 @@ impl WgpuRenderer {
         self.window_switch_fade_enabled = enabled;
         self.window_switch_fade_duration_ms = duration_ms;
         self.window_switch_fade_intensity = intensity;
+    }
+
+    /// Update active window border glow config
+    pub fn set_window_glow(&mut self, enabled: bool, color: (f32, f32, f32), radius: f32, intensity: f32) {
+        self.window_glow_enabled = enabled;
+        self.window_glow_color = color;
+        self.window_glow_radius = radius;
+        self.window_glow_intensity = intensity;
     }
 
     /// Update breadcrumb/path bar config
@@ -3745,6 +3762,59 @@ impl WgpuRenderer {
                     render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
                     render_pass.set_vertex_buffer(0, shadow_buffer.slice(..));
                     render_pass.draw(0..shadow_vertices.len() as u32, 0..1);
+                }
+            }
+
+            // === Active window border glow ===
+            if self.window_glow_enabled {
+                let glow_radius = self.window_glow_radius.max(1.0);
+                let intensity = self.window_glow_intensity.clamp(0.0, 1.0);
+                let (cr, cg, cb) = self.window_glow_color;
+                let steps = 10;
+                let mut glow_vertices: Vec<RectVertex> = Vec::new();
+
+                // Find the selected window
+                for info in &frame_glyphs.window_infos {
+                    if !info.selected || info.is_minibuffer { continue; }
+                    let b = &info.bounds;
+
+                    for i in 0..steps {
+                        let t = (i + 1) as f32 / steps as f32;
+                        // Quadratic falloff: brightest at edge, fading outward
+                        let alpha = intensity * (1.0 - t) * (1.0 - t);
+                        let offset = t * glow_radius;
+                        let strip_w = glow_radius / steps as f32;
+                        let color = Color::new(cr, cg, cb, alpha);
+
+                        // Top edge (outside window, above)
+                        self.add_rect(&mut glow_vertices,
+                            b.x - offset, b.y - offset,
+                            b.width + offset * 2.0, strip_w, &color);
+                        // Bottom edge (outside window, below)
+                        self.add_rect(&mut glow_vertices,
+                            b.x - offset, b.y + b.height + offset - strip_w,
+                            b.width + offset * 2.0, strip_w, &color);
+                        // Left edge (outside window)
+                        self.add_rect(&mut glow_vertices,
+                            b.x - offset, b.y - offset,
+                            strip_w, b.height + offset * 2.0, &color);
+                        // Right edge (outside window)
+                        self.add_rect(&mut glow_vertices,
+                            b.x + b.width + offset - strip_w, b.y - offset,
+                            strip_w, b.height + offset * 2.0, &color);
+                    }
+                }
+
+                if !glow_vertices.is_empty() {
+                    let glow_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Window Glow Buffer"),
+                        contents: bytemuck::cast_slice(&glow_vertices),
+                        usage: wgpu::BufferUsages::VERTEX,
+                    });
+                    render_pass.set_pipeline(&self.rect_pipeline);
+                    render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                    render_pass.set_vertex_buffer(0, glow_buffer.slice(..));
+                    render_pass.draw(0..glow_vertices.len() as u32, 0..1);
                 }
             }
 
