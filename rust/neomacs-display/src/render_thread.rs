@@ -2318,6 +2318,33 @@ impl RenderApp {
                                 });
                             }
                         }
+                    } else if (prev.bounds.width - info.bounds.width).abs() > 2.0
+                        || (prev.bounds.height - info.bounds.height).abs() > 2.0
+                    {
+                        // Window resized (balance-windows, divider drag) → crossfade
+                        if self.crossfade_enabled && !info.is_minibuffer {
+                            self.crossfades.remove(&info.window_id);
+                            self.scroll_slides.remove(&info.window_id);
+
+                            // Use full-frame crossfade (window_id 0) since
+                            // all windows resize together during balance
+                            let full_bounds = Rect::new(0.0, 0.0, frame.width, frame.height);
+                            if !self.crossfades.contains_key(&0) {
+                                if let Some((tex, view, bg)) = self.snapshot_prev_texture() {
+                                    log::debug!("Starting window-resize crossfade (bounds changed)");
+                                    self.crossfades.insert(0, CrossfadeTransition {
+                                        started: now,
+                                        duration: std::time::Duration::from_millis(150),
+                                        bounds: full_bounds,
+                                        effect: self.crossfade_effect,
+                                        easing: self.crossfade_easing,
+                                        old_texture: tex,
+                                        old_view: view,
+                                        old_bind_group: bg,
+                                    });
+                                }
+                            }
+                        }
                     }
                 }
             }
