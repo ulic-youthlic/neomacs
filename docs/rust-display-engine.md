@@ -1,4 +1,220 @@
-# Strategy 4: Full Rust Display Engine
+# Neomacs Architecture: Redesigning Emacs in Rust
+
+## What's Wrong with Official Emacs — Redesign Opportunities
+
+The official Emacs was designed in 1984 for single-core CPUs, text terminals, and kilobyte-sized files. Many of its core design decisions are fundamentally mismatched with modern hardware. This section identifies what to redesign and why.
+
+### 1. Single-Threaded Lisp Machine
+
+**The problem**: Modern CPUs have 8-32+ cores. Emacs uses **one**. Everything — Lisp execution, redisplay, process I/O, file I/O, garbage collection — runs sequentially on a single thread.
+
+**What breaks**:
+- `lsp-mode` receives JSON from language server → parses on main thread → blocks redisplay
+- `magit` runs git process → reads output → blocks typing
+- Font-lock fontifies large file → blocks everything
+- GC runs → everything freezes (50-200ms pauses)
+
+**What neomacs can do**: True multi-threaded Elisp:
+- **Render thread** (already done in neomacs)
+- **Process I/O thread** — read subprocess output without blocking Lisp
+- **Parallel fontification** — font-lock on background thread
+- **Concurrent GC** — no stop-the-world pauses
+- **Parallel Lisp execution** — multiple Lisp threads with proper synchronization
+
+### 2. CPU-Only Rendering
+
+**The problem**: Emacs draws every glyph via CPU → X11/Cairo. The GPU sits completely idle. A modern GPU has ~10,000 shader cores designed for exactly this workload (rendering thousands of small textured quads).
+
+**What neomacs already does well**: wgpu rendering, glyph atlas caching, batched instanced drawing, shader effects. This is largely solved.
+
+**What could be better**:
+- GPU-side glyph rasterization (currently cosmic-text rasterizes on CPU, uploads to GPU)
+- Compute shader for glyph positioning (minor — CPU layout is fast enough)
+
+### 3. Persistent Pixel Buffers vs Immediate Mode
+
+**The problem**: Official Emacs backends (X11, GTK) use **retained mode** — draw once to a pixel buffer, only redraw changed regions. This was optimal for 1990s X11 (network-transparent, slow connections). But modern GPUs prefer **immediate mode** — clear and redraw everything each frame. GPU rendering is so fast that the complexity of tracking dirty regions isn't worth it.
+
+```
+Official Emacs (retained):
+  Frame 1: Draw everything to pixmap
+  Frame 2: Diff desired vs current → redraw 3 changed rows
+  Frame 3: Diff → redraw 1 changed row
+  Cost: O(changed) per frame, but complex bookkeeping (~7k LOC in dispnew.c)
+
+Neomacs (immediate):
+  Frame 1: Clear → draw everything
+  Frame 2: Clear → draw everything
+  Frame 3: Clear → draw everything
+  Cost: O(total) per frame, but trivial code and GPU handles it in <1ms
+```
+
+**What neomacs does well**: Already uses immediate mode. The entire `dispnew.c` matrix diffing system (~7.6k LOC) becomes unnecessary.
+
+### 4. Character-Cell Thinking
+
+**The problem**: Emacs was designed for fixed-width character terminals. Internally, many things are measured in "columns" not pixels:
+
+- `current-column` returns column number (character count)
+- `move-to-column` moves to column N
+- `window-width` returns width in characters
+- Tab stops are character-aligned
+- Truncation/wrapping decisions use column counts
+- `hscroll` is measured in columns
+
+This breaks with:
+- **Variable-width fonts** — column N isn't at a fixed pixel position
+- **Ligatures** — "fi" is one glyph, not two columns
+- **Emoji** — may be wider than 2 columns
+- **CJK** — 2-column wide but pixel width varies with font
+
+**What neomacs can do**: Pixel-accurate layout from the start. cosmic-text handles variable-width, ligatures, and complex scripts natively. Column-based Lisp functions (`current-column`, etc.) become thin wrappers that convert pixel positions back to approximate column numbers for compatibility.
+
+### 5. No Native Text Shaping
+
+**The problem**: Emacs bolted on HarfBuzz support (Emacs 27+), but it's not deeply integrated:
+
+- Shaping runs per-glyph-string (a run of same-face characters), not per-paragraph
+- No native ligature support across face boundaries
+- Composition is handled by a separate, older system (`composite.c`)
+- Font fallback is per-character, not per-cluster
+- No support for OpenType features (stylistic alternates, contextual forms, etc.) without manual configuration
+
+**What neomacs can do**: cosmic-text + rustybuzz provide a modern text shaping pipeline:
+- Full OpenType shaping (ligatures, kerning, mark positioning)
+- Per-paragraph shaping (correct for Arabic/Devanagari)
+- Automatic font fallback per-cluster
+- All OpenType features accessible
+
+### 6. Synchronous Process I/O
+
+**The problem**: When a subprocess (LSP server, git, grep) produces output, Emacs reads it in the main thread via `process-filter`. This blocks everything:
+
+```
+User types key → command runs → spawns process → reads output →
+  BLOCKS (waiting for data) → process filter runs → parses JSON →
+  BLOCKS (parsing) → updates buffer → redisplay → finally responds to user
+```
+
+With LSP, this is catastrophic. A 100ms language server response means 100ms of frozen UI.
+
+**What neomacs can do**:
+- Process I/O on dedicated threads
+- Non-blocking process filters that accumulate output
+- Parse JSON/protocol data on background thread
+- Only deliver parsed results to Lisp thread via message queue
+
+### 7. Stop-the-World Garbage Collection
+
+**The problem**: Emacs uses a mark-and-sweep GC that freezes everything:
+
+```
+GC trigger → mark all live objects (traverse entire heap) →
+  sweep dead objects → compact → resume
+
+Duration: 50-200ms for large sessions (thousands of buffers, overlays)
+```
+
+During GC, no input processing, no redisplay, no process I/O. Users experience visible stuttering.
+
+**What neomacs can do**:
+- **Incremental GC** — mark a few objects per Lisp instruction, spread cost over time
+- **Generational GC** — young objects die fast, only scan nursery most of the time
+- **Concurrent GC** — mark phase runs on background thread
+- **Arena allocation** — temporary objects in per-command arenas, freed in bulk
+
+### 8. Internal String Encoding (Not UTF-8)
+
+**The problem**: Emacs uses its own multibyte encoding ("emacs-mule" / internal encoding), not UTF-8. Every interaction with the outside world requires conversion:
+
+```
+File on disk (UTF-8) → decode to Emacs internal → process → encode to UTF-8 → write
+Subprocess output (UTF-8) → decode → process → encode → send
+```
+
+This is slow (constant encoding/decoding overhead), complex (`FETCH_MULTIBYTE_CHAR` is not a simple byte read), and incompatible (every Rust/C library expects UTF-8).
+
+**What neomacs can do**: Use UTF-8 internally. Eliminates all encoding/decoding overhead and makes FFI with Rust trivial (Rust strings are UTF-8 natively).
+
+### 9. Gap Buffer
+
+**The problem**: Emacs uses a gap buffer — a contiguous array with a "gap" at the editing point:
+
+```
+Buffer: [H][e][l][l][o][___GAP___][w][o][r][l][d]
+                        ↑ cursor
+Insert 'X': just put it in the gap, O(1)
+Move cursor far away: move the gap = O(gap_distance), memmove
+```
+
+Good for sequential editing at one point. Bad for:
+- **Multiple cursors** — need to move gap for each cursor, O(n) per cursor
+- **Large files** — gap move = memmove of potentially megabytes
+- **Cache locality** — gap fragments the text, cache misses when reading across gap
+- **Concurrent access** — can't read text while gap is moving (thread-unsafe)
+
+**What neomacs can do**:
+- **Piece table** (used by VS Code) — O(log n) insert/delete, immutable original text
+- **Rope** (used by Xi editor, Zed) — O(log n) everything, cache-friendly, naturally supports multiple cursors and concurrent reads
+- **Hybrid** — keep gap buffer for compatibility, add parallel rope index for layout engine reads
+
+### 10. Redisplay Blocks Lisp
+
+**The problem**: `redisplay_internal()` runs synchronously. While redisplay computes layout, no Lisp can execute. For complex buffers (org-mode with many overlays, magit with thousands of diff lines), redisplay can take 50-100ms. The UI feels sluggish.
+
+**What neomacs can do**: With the Rust display engine:
+- Layout the visible region first (above-the-fold rendering)
+- Send partial results to GPU immediately
+- Continue layout for offscreen regions asynchronously
+- Lisp can resume execution while offscreen layout completes
+
+### 11. No SIMD / Vectorization
+
+**The problem**: Text processing (searching, encoding, column counting, whitespace detection) is done byte-by-byte in scalar C code. Modern CPUs have SIMD instructions (AVX2, NEON) that process 32-64 bytes simultaneously.
+
+```
+Scalar (Emacs):     for each byte: if byte == '\n' count++    → ~1 byte/cycle
+SIMD (possible):    load 32 bytes → compare all → popcount    → ~32 bytes/cycle
+```
+
+**What neomacs can do**: Rust has excellent SIMD support via `memchr` crate (10-30x faster byte search), SIMD-accelerated UTF-8 validation (`simdutf`), SIMD line counting and column calculation.
+
+### 12. Lisp Object Memory Layout
+
+**The problem**: Emacs Lisp objects are tagged pointers scattered across the heap. A cons cell, a string, and a symbol may be far apart in memory. Iterating over a list causes cache misses on every `CDR`:
+
+```
+Memory:
+  [cons1] ... 4KB gap ... [cons2] ... 8KB gap ... [cons3]
+
+  Each CDR → cache miss → ~100ns stall
+```
+
+Modern CPUs can do 10 billion operations/second but only 10 million cache misses/second. Memory layout matters more than instruction count.
+
+**What neomacs can do**:
+- **Arena-allocated lists** — cons cells for the same list in contiguous memory
+- **Struct-of-arrays** for frequently iterated data (face attributes, glyph properties)
+- **Small-string optimization** — short strings inline in the Lisp_Object, no pointer chase
+- **Bump allocation** for temporary objects (per-command arena)
+
+### Redesign Priority Order
+
+| Priority | Area | Neomacs Status | Impact |
+|----------|------|---------------|--------|
+| 1 | **Multi-threaded Lisp** | Planned | Eliminates root cause of all UI freezing |
+| 2 | **GPU rendering** | Done | 120fps, shader effects, animations |
+| 3 | **Rust display engine** | In progress (this doc) | Unified layout+render, TUI backend |
+| 4 | **Async process I/O** | Planned | LSP/subprocess won't block |
+| 5 | **Concurrent/incremental GC** | Planned | Eliminates GC pauses |
+| 6 | **UTF-8 internal encoding** | Planned | Zero conversion overhead, trivial Rust FFI |
+| 7 | **SIMD text processing** | Easy wins available | 10-30x faster search/scan |
+| 8 | **Rope/piece table** | Future | Multi-cursor, large files |
+| 9 | **Cache-friendly memory** | Future | Requires Lisp runtime redesign |
+
+---
+
+# Rust Display Engine (Strategy 4)
 
 Replace Emacs's C display engine (`xdisp.c`, `dispnew.c`, ~40k LOC) with a Rust layout engine that reads buffer data directly and produces GPU-ready glyph batches.
 
