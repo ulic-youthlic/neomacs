@@ -1681,6 +1681,8 @@ struct FaceDataFFI {
   uint32_t box_color;
   int box_line_width;
   int extend;
+  float font_char_width;
+  float font_ascent;
 };
 
 static void
@@ -1792,6 +1794,18 @@ fill_face_data (struct frame *f, struct face *face, struct FaceDataFFI *out)
 
   /* Extend: face background extends to end of visual line */
   out->extend = FACE_EXTENSIBLE_P (face) ? 1 : 0;
+
+  /* Per-face font metrics for mixed-font rendering */
+  if (face->font)
+    {
+      out->font_char_width = (float) face->font->average_width;
+      out->font_ascent = (float) FONT_BASE (face->font);
+    }
+  else
+    {
+      out->font_char_width = 0.0f; /* 0 = use window default */
+      out->font_ascent = 0.0f;
+    }
 }
 
 /* Get the resolved face at a buffer position for a window.

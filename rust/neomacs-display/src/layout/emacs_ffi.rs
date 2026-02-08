@@ -513,4 +513,8 @@ pub struct FaceDataFFI {
     pub box_line_width: c_int,
     /// Extend: face bg extends to end of visual line (0=no, 1=yes)
     pub extend: c_int,
+    /// Per-face font character width (0.0 = use window default)
+    pub font_char_width: f32,
+    /// Per-face font ascent (0.0 = use window default)
+    pub font_ascent: f32,
 }
