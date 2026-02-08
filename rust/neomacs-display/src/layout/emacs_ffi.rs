@@ -94,10 +94,12 @@ extern "C" {
     /// Get the resolved face at a buffer position for a given window.
     /// Returns face data in the FaceDataFFI struct.
     /// This calls face_at_buffer_position() internally.
+    /// If next_check_out is non-null, writes the position where the face may change.
     pub fn neomacs_layout_face_at_pos(
         window: EmacsWindow,
         charpos: i64,
         face_out: *mut FaceDataFFI,
+        next_check_out: *mut i64,
     ) -> c_int;
 
     /// Get the default face for a frame.

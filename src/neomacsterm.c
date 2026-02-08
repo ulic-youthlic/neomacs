@@ -1325,27 +1325,194 @@ neomacs_layout_ensure_fontified (void *buffer_ptr, int64_t from, int64_t to)
   return 1;
 }
 
+/* Helper: fill a FaceDataFFI struct from a resolved Emacs face.
+   The struct layout must match the Rust FaceDataFFI in emacs_ffi.rs. */
+struct FaceDataFFI {
+  uint32_t face_id;
+  uint32_t fg;
+  uint32_t bg;
+  const char *font_family;
+  int font_weight;
+  int italic;
+  int font_size;
+  int underline_style;
+  uint32_t underline_color;
+  int strike_through;
+  uint32_t strike_through_color;
+  int overline;
+  uint32_t overline_color;
+  int box_type;
+  uint32_t box_color;
+  int box_line_width;
+};
+
+static void
+fill_face_data (struct frame *f, struct face *face, struct FaceDataFFI *out)
+{
+  unsigned long fg = face->foreground;
+  unsigned long bg = face->background;
+
+  if (face->foreground_defaulted_p)
+    fg = FRAME_FOREGROUND_PIXEL (f);
+  if (face->background_defaulted_p)
+    bg = FRAME_BACKGROUND_PIXEL (f);
+
+  out->face_id = (uint32_t) face->id;
+  out->fg = ((RED_FROM_ULONG (fg) << 16) |
+             (GREEN_FROM_ULONG (fg) << 8) |
+             BLUE_FROM_ULONG (fg));
+  out->bg = ((RED_FROM_ULONG (bg) << 16) |
+             (GREEN_FROM_ULONG (bg) << 8) |
+             BLUE_FROM_ULONG (bg));
+
+  /* Font family from realized font object */
+  out->font_family = NULL;
+  if (face->font)
+    {
+      Lisp_Object family_attr = face->font->props[FONT_FAMILY_INDEX];
+      if (!NILP (family_attr) && SYMBOLP (family_attr))
+        out->font_family = SSDATA (SYMBOL_NAME (family_attr));
+    }
+  if (!out->font_family && face->lface != NULL)
+    {
+      Lisp_Object family_attr = face->lface[LFACE_FAMILY_INDEX];
+      if (!NILP (family_attr) && STRINGP (family_attr))
+        out->font_family = SSDATA (family_attr);
+    }
+
+  /* Font weight (CSS scale) */
+  out->font_weight = 400;
+  Lisp_Object weight_attr = face->lface[LFACE_WEIGHT_INDEX];
+  if (!NILP (weight_attr) && SYMBOLP (weight_attr))
+    {
+      int w = FONT_WEIGHT_NAME_NUMERIC (weight_attr);
+      if (w > 0) out->font_weight = emacs_weight_to_css (w);
+    }
+
+  /* Italic */
+  out->italic = 0;
+  Lisp_Object slant_attr = face->lface[LFACE_SLANT_INDEX];
+  if (!NILP (slant_attr) && SYMBOLP (slant_attr))
+    {
+      int s = FONT_SLANT_NAME_NUMERIC (slant_attr);
+      if (s != 100) out->italic = 1;
+    }
+
+  /* Font pixel size */
+  out->font_size = 14;
+  if (face->font)
+    out->font_size = face->font->pixel_size;
+
+  /* Underline */
+  out->underline_style = 0;
+  out->underline_color = out->fg;
+  if (face->underline != FACE_NO_UNDERLINE)
+    {
+      switch (face->underline)
+        {
+        case FACE_UNDERLINE_SINGLE: out->underline_style = 1; break;
+        case FACE_UNDERLINE_WAVE: out->underline_style = 2; break;
+        case FACE_UNDERLINE_DOUBLE_LINE: out->underline_style = 3; break;
+        case FACE_UNDERLINE_DOTS: out->underline_style = 4; break;
+        case FACE_UNDERLINE_DASHES: out->underline_style = 5; break;
+        default: out->underline_style = 1; break;
+        }
+      if (!face->underline_defaulted_p)
+        out->underline_color = ((RED_FROM_ULONG (face->underline_color) << 16) |
+                                (GREEN_FROM_ULONG (face->underline_color) << 8) |
+                                BLUE_FROM_ULONG (face->underline_color));
+    }
+
+  /* Strike-through */
+  out->strike_through = face->strike_through_p ? 1 : 0;
+  out->strike_through_color = out->fg;
+  if (out->strike_through && !face->strike_through_color_defaulted_p)
+    out->strike_through_color = ((RED_FROM_ULONG (face->strike_through_color) << 16) |
+                                 (GREEN_FROM_ULONG (face->strike_through_color) << 8) |
+                                 BLUE_FROM_ULONG (face->strike_through_color));
+
+  /* Overline */
+  out->overline = face->overline_p ? 1 : 0;
+  out->overline_color = out->fg;
+  if (out->overline && !face->overline_color_defaulted_p)
+    out->overline_color = ((RED_FROM_ULONG (face->overline_color) << 16) |
+                           (GREEN_FROM_ULONG (face->overline_color) << 8) |
+                           BLUE_FROM_ULONG (face->overline_color));
+
+  /* Box */
+  out->box_type = 0;
+  out->box_color = out->fg;
+  out->box_line_width = 0;
+  if (face->box != FACE_NO_BOX)
+    {
+      out->box_type = 1;
+      out->box_line_width = eabs (face->box_vertical_line_width);
+      if (out->box_line_width == 0) out->box_line_width = 1;
+      out->box_color = ((RED_FROM_ULONG (face->box_color) << 16) |
+                        (GREEN_FROM_ULONG (face->box_color) << 8) |
+                        BLUE_FROM_ULONG (face->box_color));
+    }
+}
+
 /* Get the resolved face at a buffer position for a window.
-   Uses face_at_buffer_position() internally. */
+   Uses face_at_buffer_position() internally.
+   Returns the face_id (>= 0) on success, -1 on error.
+   If next_check_out is non-NULL, writes the position where the face may change. */
 int
 neomacs_layout_face_at_pos (void *window_ptr, int64_t charpos,
-                            void *face_out)
+                            void *face_out, int64_t *next_check_out)
 {
-  /* TODO: Implement face resolution for Phase 2 */
-  (void) window_ptr;
-  (void) charpos;
-  (void) face_out;
-  return -1;
+  struct window *w = (struct window *) window_ptr;
+  if (!w)
+    return -1;
+
+  struct frame *f = XFRAME (w->frame);
+  if (!f)
+    return -1;
+
+  /* Set buffer to window's buffer for face resolution */
+  struct buffer *old = current_buffer;
+  if (BUFFERP (w->contents))
+    set_buffer_internal_1 (XBUFFER (w->contents));
+
+  ptrdiff_t next_check = 0;
+  int face_id = face_at_buffer_position (w, (ptrdiff_t) charpos,
+                                         &next_check,
+                                         (ptrdiff_t) charpos + 100,
+                                         false, DEFAULT_FACE_ID,
+                                         0);
+
+  struct face *face = FACE_FROM_ID_OR_NULL (f, face_id);
+  if (!face)
+    face = FACE_FROM_ID_OR_NULL (f, DEFAULT_FACE_ID);
+
+  set_buffer_internal_1 (old);
+
+  if (!face)
+    return -1;
+
+  fill_face_data (f, face, (struct FaceDataFFI *) face_out);
+
+  if (next_check_out)
+    *next_check_out = (int64_t) next_check;
+
+  return face_id;
 }
 
 /* Get the default face for a frame. */
 int
 neomacs_layout_default_face (void *frame_ptr, void *face_out)
 {
-  /* TODO: Implement for Phase 2 */
-  (void) frame_ptr;
-  (void) face_out;
-  return -1;
+  struct frame *f = (struct frame *) frame_ptr;
+  if (!f)
+    return -1;
+
+  struct face *face = FACE_FROM_ID_OR_NULL (f, DEFAULT_FACE_ID);
+  if (!face)
+    return -1;
+
+  fill_face_data (f, face, (struct FaceDataFFI *) face_out);
+  return DEFAULT_FACE_ID;
 }
 
 /* Get a byte from buffer text at a byte position. */

@@ -1,14 +1,12 @@
-//! The Rust layout engine — Phase 1: Monospace ASCII.
+//! The Rust layout engine — Phase 1+2: Monospace layout with face resolution.
 //!
-//! Reads buffer text via FFI, computes line breaks, positions glyphs on a
-//! fixed-width grid, and produces FrameGlyphBuffer compatible with the
-//! existing wgpu renderer.
-//!
-//! This is the simplest possible layout: fixed-width font, single face (default),
-//! no overlays, no display properties. It covers basic text editing in
-//! fundamental-mode.
+//! Reads buffer text via FFI, resolves faces per character position,
+//! computes line breaks, positions glyphs on a fixed-width grid, and
+//! produces FrameGlyphBuffer compatible with the existing wgpu renderer.
 
-use crate::core::frame_glyphs::{FrameGlyphBuffer, FrameGlyph};
+use std::ffi::CStr;
+
+use crate::core::frame_glyphs::FrameGlyphBuffer;
 use crate::core::types::{Color, Rect};
 use super::types::*;
 use super::emacs_ffi::*;
@@ -16,10 +14,12 @@ use super::emacs_ffi::*;
 /// The main Rust layout engine.
 ///
 /// Called on the Emacs thread during redisplay. Reads buffer data via FFI,
-/// computes layout, and produces a FrameGlyphBuffer.
+/// resolves faces, computes layout, and produces a FrameGlyphBuffer.
 pub struct LayoutEngine {
     /// Reusable text buffer to avoid allocation per frame
     text_buf: Vec<u8>,
+    /// Cached face data to avoid redundant FFI calls
+    face_data: FaceDataFFI,
 }
 
 impl LayoutEngine {
@@ -27,6 +27,7 @@ impl LayoutEngine {
     pub fn new() -> Self {
         Self {
             text_buf: Vec::with_capacity(64 * 1024), // 64KB initial
+            face_data: FaceDataFFI::default(),
         }
     }
 
@@ -114,10 +115,60 @@ impl LayoutEngine {
         }
     }
 
+    /// Apply face data from FFI to the FrameGlyphBuffer's current face state.
+    unsafe fn apply_face(&self, face: &FaceDataFFI, frame_glyphs: &mut FrameGlyphBuffer) {
+        let fg = Color::from_pixel(face.fg);
+        let bg = Color::from_pixel(face.bg);
+        let bold = face.font_weight >= 700;
+        let italic = face.italic != 0;
+
+        // Get font family string from C pointer
+        let font_family = if !face.font_family.is_null() {
+            CStr::from_ptr(face.font_family).to_str().unwrap_or("monospace")
+        } else {
+            "monospace"
+        };
+
+        let underline_color = if face.underline_style > 0 {
+            Some(Color::from_pixel(face.underline_color))
+        } else {
+            None
+        };
+
+        let strike_color = if face.strike_through > 0 {
+            Some(Color::from_pixel(face.strike_through_color))
+        } else {
+            None
+        };
+
+        let overline_color = if face.overline > 0 {
+            Some(Color::from_pixel(face.overline_color))
+        } else {
+            None
+        };
+
+        frame_glyphs.set_face_with_font(
+            face.face_id,
+            fg,
+            Some(bg),
+            font_family,
+            bold,
+            italic,
+            face.font_size as f32,
+            face.underline_style as u8,
+            underline_color,
+            face.strike_through as u8,
+            strike_color,
+            face.overline as u8,
+            overline_color,
+        );
+    }
+
     /// Layout a single window's buffer content.
     ///
-    /// Phase 1: Monospace ASCII layout.
+    /// Phase 1+2: Monospace layout with per-character face resolution.
     /// - Fixed-width characters on a grid
+    /// - Per-character face colors (syntax highlighting)
     /// - Tab expansion
     /// - Line wrapping or truncation
     /// - Cursor positioning
@@ -128,7 +179,8 @@ impl LayoutEngine {
         frame_glyphs: &mut FrameGlyphBuffer,
     ) {
         let buffer = wp.buffer_ptr;
-        if buffer.is_null() {
+        let window = wp.window_ptr;
+        if buffer.is_null() || window.is_null() {
             return;
         }
 
@@ -177,22 +229,24 @@ impl LayoutEngine {
 
         let text = &self.text_buf[..bytes_read as usize];
 
-        // Set face for all glyphs (Phase 1: use default face)
-        let fg = Color::from_pixel(params.default_fg);
-        let bg_color = Color::from_pixel(params.default_bg);
+        // Default face colors (fallback)
+        let default_fg = Color::from_pixel(params.default_fg);
+        let default_bg = Color::from_pixel(params.default_bg);
+
+        // Set initial default face
         frame_glyphs.set_face(
             0, // DEFAULT_FACE_ID
-            fg,
-            Some(bg_color),
-            false, // bold
-            false, // italic
-            0,     // underline
-            None,  // underline_color
-            0,     // strike_through
-            None,  // strike_through_color
-            0,     // overline
-            None,  // overline_color
+            default_fg,
+            Some(default_bg),
+            false, false,
+            0, None, 0, None, 0, None,
         );
+
+        // Face resolution state: we only call face_at_pos when charpos >= next_face_check
+        let mut current_face_id: i32 = -1; // force first lookup
+        let mut next_face_check: i64 = 0;
+        let mut face_fg = default_fg;
+        let mut face_bg = default_bg;
 
         // Walk through text, placing characters on the grid
         let mut col = 0i32;
@@ -203,6 +257,31 @@ impl LayoutEngine {
         let mut byte_idx = 0usize;
 
         while byte_idx < bytes_read as usize && row < max_rows {
+            // Resolve face if needed (when entering a new face region)
+            if charpos >= next_face_check || current_face_id < 0 {
+                let mut next_check: i64 = 0;
+                let fid = neomacs_layout_face_at_pos(
+                    window,
+                    charpos,
+                    &mut self.face_data as *mut FaceDataFFI,
+                    &mut next_check,
+                );
+
+                if fid >= 0 {
+                    if fid != current_face_id {
+                        current_face_id = fid;
+                        face_fg = Color::from_pixel(self.face_data.fg);
+                        face_bg = Color::from_pixel(self.face_data.bg);
+                        self.apply_face(&self.face_data, frame_glyphs);
+                    }
+                    // next_check is 0 when face_at_buffer_position returns no limit
+                    next_face_check = if next_check > charpos { next_check } else { charpos + 1 };
+                } else {
+                    // Fallback to default face
+                    next_face_check = charpos + 1;
+                }
+            }
+
             // Check if cursor is at this position
             if !cursor_placed && charpos >= params.point {
                 let cursor_x = text_x + col as f32 * char_w;
@@ -227,7 +306,7 @@ impl LayoutEngine {
                     cursor_w,
                     cursor_h,
                     cursor_style,
-                    fg,
+                    face_fg,
                 );
 
                 // Set inverse for filled box cursor
@@ -237,8 +316,8 @@ impl LayoutEngine {
                         cursor_y,
                         cursor_w,
                         cursor_h,
-                        fg,         // cursor_bg = text fg
-                        bg_color,   // cursor_fg = text bg (inverse)
+                        face_fg,     // cursor_bg = text fg
+                        face_bg,     // cursor_fg = text bg (inverse)
                     );
                 }
 
@@ -252,12 +331,12 @@ impl LayoutEngine {
 
             match ch {
                 '\n' => {
-                    // Fill rest of line with stretch
+                    // Fill rest of line with stretch (use face bg)
                     let remaining = (cols - col) as f32 * char_w;
                     if remaining > 0.0 {
                         let gx = text_x + col as f32 * char_w;
                         let gy = text_y + row as f32 * char_h;
-                        frame_glyphs.add_stretch(gx, gy, remaining, char_h, bg_color, 0, false);
+                        frame_glyphs.add_stretch(gx, gy, remaining, char_h, face_bg, self.face_data.face_id, false);
                     }
                     col = 0;
                     row += 1;
@@ -268,16 +347,15 @@ impl LayoutEngine {
                     let next_tab = ((col / tab_w) + 1) * tab_w;
                     let spaces = (next_tab - col).min(cols - col);
 
-                    // Render tab as stretch glyph
+                    // Render tab as stretch glyph (use face bg)
                     let gx = text_x + col as f32 * char_w;
                     let gy = text_y + row as f32 * char_h;
                     let tab_pixel_w = spaces as f32 * char_w;
-                    frame_glyphs.add_stretch(gx, gy, tab_pixel_w, char_h, bg_color, 0, false);
+                    frame_glyphs.add_stretch(gx, gy, tab_pixel_w, char_h, face_bg, self.face_data.face_id, false);
 
                     col += spaces;
                     if col >= cols {
                         if params.truncate_lines {
-                            // Skip to end of line
                             while byte_idx < bytes_read as usize {
                                 let (c, l) = decode_utf8(&text[byte_idx..]);
                                 byte_idx += l;
@@ -295,7 +373,7 @@ impl LayoutEngine {
                     }
                 }
                 '\r' => {
-                    // Carriage return: skip (we handle \n for line breaks)
+                    // Carriage return: skip
                 }
                 _ if ch < ' ' => {
                     // Control character: display as ^X (2 columns)
@@ -315,9 +393,7 @@ impl LayoutEngine {
                         );
                         col += 2;
                     } else {
-                        // Wrap or truncate
                         if params.truncate_lines {
-                            // Skip to next line
                             while byte_idx < bytes_read as usize {
                                 let (c, l) = decode_utf8(&text[byte_idx..]);
                                 byte_idx += l;
@@ -336,13 +412,11 @@ impl LayoutEngine {
                 }
                 _ => {
                     // Normal character
-                    // Determine display width (CJK = 2 columns)
                     let char_cols = if is_wide_char(ch) { 2 } else { 1 };
 
                     if col + char_cols > cols {
                         // Line full
                         if params.truncate_lines {
-                            // Skip rest of logical line
                             while byte_idx < bytes_read as usize {
                                 let (c, l) = decode_utf8(&text[byte_idx..]);
                                 byte_idx += l;
@@ -355,13 +429,12 @@ impl LayoutEngine {
                             }
                             continue;
                         } else {
-                            // Wrap to next visual line
-                            // Fill remaining space
+                            // Wrap: fill remaining space
                             let remaining = (cols - col) as f32 * char_w;
                             if remaining > 0.0 {
                                 let gx = text_x + col as f32 * char_w;
                                 let gy = text_y + row as f32 * char_h;
-                                frame_glyphs.add_stretch(gx, gy, remaining, char_h, bg_color, 0, false);
+                                frame_glyphs.add_stretch(gx, gy, remaining, char_h, face_bg, self.face_data.face_id, false);
                             }
                             col = 0;
                             row += 1;
@@ -401,7 +474,7 @@ impl LayoutEngine {
                 char_w,
                 char_h,
                 cursor_style,
-                fg,
+                face_fg,
             );
 
             if cursor_style == 0 {
@@ -410,19 +483,19 @@ impl LayoutEngine {
                     cursor_y,
                     char_w,
                     char_h,
-                    fg,
-                    bg_color,
+                    face_fg,
+                    face_bg,
                 );
             }
         }
 
-        // Fill remaining rows with background
+        // Fill remaining rows with default background
         let filled_rows = row + 1;
         if filled_rows < max_rows {
             let gy = text_y + filled_rows as f32 * char_h;
             let remaining_h = text_height - filled_rows as f32 * char_h;
             if remaining_h > 0.0 {
-                frame_glyphs.add_stretch(text_x, gy, text_width, remaining_h, bg_color, 0, false);
+                frame_glyphs.add_stretch(text_x, gy, text_width, remaining_h, default_bg, 0, false);
             }
         }
 
