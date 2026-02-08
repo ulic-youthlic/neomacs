@@ -757,6 +757,9 @@ struct RenderApp {
     window_watermark_enabled: bool,
     window_watermark_opacity: f32,
     window_watermark_threshold: u32,
+    /// Mode-line content transition
+    mode_line_transition_enabled: bool,
+    mode_line_transition_duration_ms: u32,
     /// Text fade-in animation for new content
     text_fade_in_enabled: bool,
     text_fade_in_duration_ms: u32,
@@ -1060,6 +1063,8 @@ impl RenderApp {
             window_watermark_enabled: false,
             window_watermark_opacity: 0.08,
             window_watermark_threshold: 10,
+            mode_line_transition_enabled: false,
+            mode_line_transition_duration_ms: 200,
             text_fade_in_enabled: false,
             text_fade_in_duration_ms: 150,
             scroll_line_spacing_enabled: false,
@@ -2081,6 +2086,14 @@ impl RenderApp {
                     self.window_watermark_threshold = threshold;
                     if let Some(renderer) = self.renderer.as_mut() {
                         renderer.set_window_watermark(enabled, opacity, threshold);
+                    }
+                    self.frame_dirty = true;
+                }
+                RenderCommand::SetModeLineTransition { enabled, duration_ms } => {
+                    self.mode_line_transition_enabled = enabled;
+                    self.mode_line_transition_duration_ms = duration_ms;
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_mode_line_transition(enabled, duration_ms);
                     }
                     self.frame_dirty = true;
                 }

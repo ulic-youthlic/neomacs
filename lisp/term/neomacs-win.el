@@ -1684,6 +1684,33 @@ apart and then settle back."
                     neomacs-scroll-line-spacing)
            (neomacs-set-scroll-line-spacing t nil val))))
 
+;; --- Mode-line content transition ---
+(declare-function neomacs-set-mode-line-transition "neomacsterm.c"
+  (&optional enabled duration-ms))
+
+(defcustom neomacs-mode-line-transition nil
+  "Enable smooth mode-line content transition.
+Non-nil makes mode-line text fade in when its content changes."
+  :type 'boolean
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (fboundp 'neomacs-set-mode-line-transition)
+           (neomacs-set-mode-line-transition val
+            (if (boundp 'neomacs-mode-line-transition-duration)
+                neomacs-mode-line-transition-duration nil)))))
+
+(defcustom neomacs-mode-line-transition-duration 200
+  "Mode-line transition fade duration in milliseconds."
+  :type '(integer :tag "Duration (ms)")
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-mode-line-transition)
+                    (boundp 'neomacs-mode-line-transition)
+                    neomacs-mode-line-transition)
+           (neomacs-set-mode-line-transition t val))))
+
 ;; --- Window background tint based on file type ---
 (declare-function neomacs-set-window-mode-tint "neomacsterm.c"
   (&optional enabled opacity))

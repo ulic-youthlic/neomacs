@@ -236,6 +236,13 @@ pub struct WgpuRenderer {
     inactive_tint_enabled: bool,
     inactive_tint_color: (f32, f32, f32),
     inactive_tint_opacity: f32,
+    /// Mode-line content transition
+    mode_line_transition_enabled: bool,
+    mode_line_transition_duration_ms: u32,
+    /// Per-window mode-line content hash for change detection
+    prev_mode_line_hashes: std::collections::HashMap<i64, u64>,
+    /// Active mode-line transition fades
+    active_mode_line_fades: Vec<ModeLineFadeEntry>,
     /// Text fade-in animation
     text_fade_in_enabled: bool,
     text_fade_in_duration_ms: u32,
@@ -279,6 +286,18 @@ struct LineAnimEntry {
     /// When the animation started
     started: std::time::Instant,
     /// Duration of the animation
+    duration: std::time::Duration,
+}
+
+/// Entry for an active mode-line content transition
+struct ModeLineFadeEntry {
+    window_id: i64,
+    /// Mode-line area (y, height) within the window
+    mode_line_y: f32,
+    mode_line_h: f32,
+    bounds_x: f32,
+    bounds_w: f32,
+    started: std::time::Instant,
     duration: std::time::Duration,
 }
 
@@ -886,6 +905,10 @@ impl WgpuRenderer {
             inactive_tint_enabled: false,
             inactive_tint_color: (0.2, 0.1, 0.0),
             inactive_tint_opacity: 0.1,
+            mode_line_transition_enabled: false,
+            mode_line_transition_duration_ms: 200,
+            prev_mode_line_hashes: std::collections::HashMap::new(),
+            active_mode_line_fades: Vec::new(),
             text_fade_in_enabled: false,
             text_fade_in_duration_ms: 150,
             active_text_fades: Vec::new(),
@@ -1096,6 +1119,33 @@ impl WgpuRenderer {
         self.cursor_shadow_offset_x = offset_x;
         self.cursor_shadow_offset_y = offset_y;
         self.cursor_shadow_opacity = opacity;
+    }
+
+    /// Update mode-line transition config
+    pub fn set_mode_line_transition(&mut self, enabled: bool, duration_ms: u32) {
+        self.mode_line_transition_enabled = enabled;
+        self.mode_line_transition_duration_ms = duration_ms;
+    }
+
+    /// Get the mode-line transition alpha for a glyph at (x, y)
+    fn mode_line_fade_alpha(&self, gx: f32, gy: f32) -> f32 {
+        if !self.mode_line_transition_enabled || self.active_mode_line_fades.is_empty() {
+            return 1.0;
+        }
+        let now = std::time::Instant::now();
+        for entry in &self.active_mode_line_fades {
+            if gx >= entry.bounds_x && gx < entry.bounds_x + entry.bounds_w
+                && gy >= entry.mode_line_y && gy < entry.mode_line_y + entry.mode_line_h
+            {
+                let elapsed = now.duration_since(entry.started).as_secs_f32();
+                let total = entry.duration.as_secs_f32();
+                if elapsed < total {
+                    let t = elapsed / total;
+                    return t; // linear fade-in
+                }
+            }
+        }
+        1.0
     }
 
     /// Update text fade-in config
@@ -2075,6 +2125,53 @@ impl WgpuRenderer {
         self.active_line_anims.retain(|a| a.started.elapsed() < a.duration);
         if !self.active_line_anims.is_empty() {
             self.needs_continuous_redraw = true;
+        }
+
+        // Clean up expired mode-line transition fades
+        self.active_mode_line_fades.retain(|e| e.started.elapsed() < e.duration);
+        if !self.active_mode_line_fades.is_empty() {
+            self.needs_continuous_redraw = true;
+        }
+
+        // Detect mode-line content changes and trigger transitions
+        if self.mode_line_transition_enabled {
+            use std::collections::hash_map::DefaultHasher;
+            use std::hash::{Hash, Hasher};
+            let now_ml = std::time::Instant::now();
+            for info in &frame_glyphs.window_infos {
+                if info.mode_line_height < 1.0 || info.is_minibuffer {
+                    continue;
+                }
+                let ml_y = info.bounds.y + info.bounds.height - info.mode_line_height;
+                // Hash overlay chars within mode-line area
+                let mut hasher = DefaultHasher::new();
+                for g in &frame_glyphs.glyphs {
+                    if let FrameGlyph::Char { x, y, char: ch, is_overlay: true, .. } = g {
+                        if *x >= info.bounds.x && *x < info.bounds.x + info.bounds.width
+                            && *y >= ml_y && *y < ml_y + info.mode_line_height
+                        {
+                            ch.hash(&mut hasher);
+                        }
+                    }
+                }
+                let hash = hasher.finish();
+                let prev = self.prev_mode_line_hashes.insert(info.window_id, hash);
+                if let Some(prev_hash) = prev {
+                    if prev_hash != hash {
+                        self.active_mode_line_fades.retain(|e| e.window_id != info.window_id);
+                        self.active_mode_line_fades.push(ModeLineFadeEntry {
+                            window_id: info.window_id,
+                            mode_line_y: ml_y,
+                            mode_line_h: info.mode_line_height,
+                            bounds_x: info.bounds.x,
+                            bounds_w: info.bounds.width,
+                            started: now_ml,
+                            duration: std::time::Duration::from_millis(self.mode_line_transition_duration_ms as u64),
+                        });
+                        self.needs_continuous_redraw = true;
+                    }
+                }
+            }
         }
 
         // Clean up expired text fade-in animations
@@ -3070,7 +3167,7 @@ impl WgpuRenderer {
 
                             // Color glyphs use white vertex color (no tinting),
                             // mask glyphs use foreground color for tinting
-                            let fade_alpha = self.text_fade_alpha(*x, *y);
+                            let fade_alpha = self.text_fade_alpha(*x, *y) * self.mode_line_fade_alpha(*x, *y);
                             let color = if cached.is_color {
                                 [1.0, 1.0, 1.0, fade_alpha]
                             } else {

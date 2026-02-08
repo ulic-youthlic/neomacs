@@ -1444,6 +1444,13 @@ void neomacs_display_set_noise_grain(struct NeomacsDisplay *handle,
                                      int size);
 
 /**
+ * Configure smooth mode-line content transition
+ */
+void neomacs_display_set_mode_line_transition(struct NeomacsDisplay *handle,
+                                              int enabled,
+                                              int durationMs);
+
+/**
  * Configure text fade-in animation for new content
  */
 void neomacs_display_set_text_fade_in(struct NeomacsDisplay *handle, int enabled, int durationMs);

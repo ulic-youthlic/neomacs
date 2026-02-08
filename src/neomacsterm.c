@@ -8840,6 +8840,27 @@ DURATION-MS is animation duration in milliseconds (default 200).  */)
   return on ? Qt : Qnil;
 }
 
+DEFUN ("neomacs-set-mode-line-transition",
+       Fneomacs_set_mode_line_transition,
+       Sneomacs_set_mode_line_transition, 0, 2, 0,
+       doc: /* Configure smooth mode-line content transition.
+ENABLED non-nil makes mode-line text fade in when its content changes,
+creating a smooth transition effect.
+DURATION-MS is the fade duration in milliseconds (default 200).  */)
+  (Lisp_Object enabled, Lisp_Object duration_ms)
+{
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+
+  int on = !NILP (enabled);
+  int dur = 200;
+  if (FIXNUMP (duration_ms)) dur = XFIXNUM (duration_ms);
+
+  neomacs_display_set_mode_line_transition (dpyinfo->display_handle, on, dur);
+  return on ? Qt : Qnil;
+}
+
 DEFUN ("neomacs-set-cursor-trail-fade",
        Fneomacs_set_cursor_trail_fade,
        Sneomacs_set_cursor_trail_fade, 0, 3, 0,
@@ -10363,6 +10384,7 @@ syms_of_neomacsterm (void)
   defsubr (&Sneomacs_set_cursor_trail_fade);
   defsubr (&Sneomacs_set_scroll_line_spacing);
   defsubr (&Sneomacs_set_text_fade_in);
+  defsubr (&Sneomacs_set_mode_line_transition);
   defsubr (&Sneomacs_set_region_glow);
   defsubr (&Sneomacs_set_window_glow);
   defsubr (&Sneomacs_set_scroll_progress);

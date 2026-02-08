@@ -1456,6 +1456,11 @@ void neomacs_display_set_window_watermark(
     int opacity,
     int threshold);
 
+void neomacs_display_set_mode_line_transition(
+    struct NeomacsDisplay *handle,
+    int enabled,
+    int duration_ms);
+
 void neomacs_display_set_text_fade_in(
     struct NeomacsDisplay *handle,
     int enabled,

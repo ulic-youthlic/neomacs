@@ -564,6 +564,12 @@ pub enum RenderCommand {
         /// Opacity of the margin overlay (0.0-1.0)
         margin_opacity: f32,
     },
+    /// Configure smooth mode-line content transition
+    SetModeLineTransition {
+        enabled: bool,
+        /// Transition duration in milliseconds
+        duration_ms: u32,
+    },
     /// Configure text fade-in animation for new content
     SetTextFadeIn {
         enabled: bool,
