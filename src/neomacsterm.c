@@ -115,6 +115,9 @@ static void neomacs_delete_frame (struct frame *f);
 static void neomacs_focus_frame (struct frame *f, bool noactivate);
 static Lisp_Object neomacs_get_focus_frame (struct frame *frame);
 static void neomacs_buffer_flipping_unblocked (struct frame *f);
+static void neomacs_set_frame_alpha (struct frame *f);
+static void neomacs_activate_menubar (struct frame *f);
+static bool neomacs_bitmap_icon (struct frame *f, Lisp_Object file);
 static uint32_t neomacs_get_or_load_image (struct neomacs_display_info *dpyinfo,
                                            struct image *img);
 
@@ -523,6 +526,9 @@ neomacs_create_terminal (struct neomacs_display_info *dpyinfo)
   terminal->focus_frame_hook = neomacs_focus_frame;
   terminal->get_focus_frame = neomacs_get_focus_frame;
   terminal->buffer_flipping_unblocked_hook = neomacs_buffer_flipping_unblocked;
+  terminal->set_frame_alpha_hook = neomacs_set_frame_alpha;
+  terminal->activate_menubar_hook = neomacs_activate_menubar;
+  terminal->set_bitmap_icon_hook = neomacs_bitmap_icon;
 
   /* Register the display connection fd for event handling */
   if (dpyinfo->connection >= 0)
@@ -533,8 +539,6 @@ neomacs_create_terminal (struct neomacs_display_info *dpyinfo)
     }
   else
     nlog_warn ("No valid connection fd to register");
-
-  /* More hooks would be set up here... */
 
   return terminal;
 }
@@ -5884,17 +5888,71 @@ neomacs_frame_up_to_date (struct frame *f)
  * Focus and Frame Management
  * ============================================================================ */
 
-/* Highlight/unhighlight frame (update cursor appearance).  */
+/* Set frame alpha (whole-window opacity) based on focus state.
+   Reads f->alpha[0] (focused) or f->alpha[1] (unfocused),
+   applies Vframe_alpha_lower_limit.  Currently a no-op for actual
+   rendering since wgpu/winit doesn't expose per-window opacity on
+   most compositors, but the hook is needed for proper Emacs integration.  */
+static void
+neomacs_set_frame_alpha (struct frame *f)
+{
+  struct neomacs_display_info *dpyinfo = FRAME_NEOMACS_DISPLAY_INFO (f);
+  double alpha = 1.0;
+  double alpha_min = 1.0;
+
+  if (dpyinfo->highlight_frame == f)
+    alpha = f->alpha[0];
+  else
+    alpha = f->alpha[1];
+
+  if (alpha < 0.0)
+    return;
+
+  if (FLOATP (Vframe_alpha_lower_limit))
+    alpha_min = XFLOAT_DATA (Vframe_alpha_lower_limit);
+  else if (FIXNUMP (Vframe_alpha_lower_limit))
+    alpha_min = (XFIXNUM (Vframe_alpha_lower_limit)) / 100.0;
+
+  if (alpha > 1.0)
+    alpha = 1.0;
+  else if (alpha < alpha_min && alpha_min <= 1.0)
+    alpha = alpha_min;
+
+  /* TODO: Send alpha to render thread when winit/compositor supports
+     per-window opacity.  For now, just validate the value.  */
+}
+
+/* Activate menu bar - no-op since neomacs doesn't have a menu bar widget.
+   The hook must exist so Emacs doesn't crash on F10 (activate-menu-bar).  */
+static void
+neomacs_activate_menubar (struct frame *f)
+{
+  /* No menu bar widget to activate.  */
+}
+
+/* Set bitmap icon for frame - no-op.
+   Wayland (our primary target) doesn't use bitmap icons
+   (icons come from desktop files).  PGTK's implementation is
+   also disabled (#if 0) for the same reason.  */
+static bool
+neomacs_bitmap_icon (struct frame *f, Lisp_Object file)
+{
+  return false;
+}
+
+/* Highlight/unhighlight frame (update cursor appearance and alpha).  */
 static void
 neomacs_frame_highlight (struct frame *f)
 {
   gui_update_cursor (f, true);
+  neomacs_set_frame_alpha (f);
 }
 
 static void
 neomacs_frame_unhighlight (struct frame *f)
 {
   gui_update_cursor (f, true);
+  neomacs_set_frame_alpha (f);
 }
 
 /* Recompute which frame should be highlighted based on focus state.  */
