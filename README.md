@@ -10,7 +10,7 @@
 
 > **Note:** Neomacs is in active alpha development. Expect rough edges, breaking changes, and missing features. Contributions and bug reports are very welcome!
 
-> **Fork notice:** Neomacs is a hard fork of GNU Emacs. The changes are too invasive to ever be accepted upstream, so we did not preserve the original git history to keep the repository lightweight. If you need the full Emacs git history for reference, open an issue and we can re-add it.
+> **Fork notice:** Neomacs is a hard fork of GNU Emacs, forked from commit [`705c0e3729`](https://git.savannah.gnu.org/cgit/emacs.git/commit/?id=705c0e3729bf53db9e84ae7c8b932ebc3b2da934). The changes are too invasive to ever be accepted upstream, so we did not preserve the original git history to keep the repository lightweight. If you need the full Emacs git history for reference, open an issue and we can re-add it.
 
 ---
 
