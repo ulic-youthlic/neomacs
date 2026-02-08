@@ -496,6 +496,14 @@ pub enum RenderCommand {
         /// Width of gradient in pixels
         width: f32,
     },
+    /// Configure window watermark for empty/small buffers
+    SetWindowWatermark {
+        enabled: bool,
+        /// Opacity of watermark text (0.0-1.0)
+        opacity: f32,
+        /// Max buffer size (chars) to show watermark
+        threshold: u32,
+    },
     /// Configure smooth cursor size transition on text-scale-adjust
     SetCursorSizeTransition {
         enabled: bool,

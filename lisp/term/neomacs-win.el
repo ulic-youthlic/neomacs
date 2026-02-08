@@ -1506,6 +1506,47 @@ activity, then smoothly restores brightness on any input."
                     neomacs-idle-dim)
            (neomacs-set-idle-dim t nil nil val))))
 
+;; --- Window watermark for empty buffers ---
+(declare-function neomacs-set-window-watermark "neomacsterm.c"
+  (&optional enabled opacity threshold))
+
+(defcustom neomacs-window-watermark nil
+  "Enable window watermark for empty buffers.
+Non-nil renders a large faded text showing the buffer name centered
+in windows whose buffer has very little content."
+  :type 'boolean
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (fboundp 'neomacs-set-window-watermark)
+           (neomacs-set-window-watermark val
+            (if (boundp 'neomacs-window-watermark-opacity)
+                neomacs-window-watermark-opacity nil)
+            (if (boundp 'neomacs-window-watermark-threshold)
+                neomacs-window-watermark-threshold nil)))))
+
+(defcustom neomacs-window-watermark-opacity 8
+  "Watermark text opacity (0-100)."
+  :type '(integer :tag "Opacity")
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-window-watermark)
+                    (boundp 'neomacs-window-watermark)
+                    neomacs-window-watermark)
+           (neomacs-set-window-watermark t val))))
+
+(defcustom neomacs-window-watermark-threshold 10
+  "Maximum buffer size in characters to show watermark."
+  :type '(integer :tag "Threshold")
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-window-watermark)
+                    (boundp 'neomacs-window-watermark)
+                    neomacs-window-watermark)
+           (neomacs-set-window-watermark t nil val))))
+
 ;; --- Cursor trail fade ---
 (declare-function neomacs-set-cursor-trail-fade "neomacsterm.c"
   (&optional enabled length fade-ms))

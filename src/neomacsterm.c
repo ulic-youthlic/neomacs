@@ -8690,6 +8690,30 @@ FADE-MS is the fade transition duration in milliseconds (default 500).  */)
   return on ? Qt : Qnil;
 }
 
+DEFUN ("neomacs-set-window-watermark",
+       Fneomacs_set_window_watermark,
+       Sneomacs_set_window_watermark, 0, 3, 0,
+       doc: /* Configure window watermark for empty buffers.
+ENABLED non-nil renders a large faded text showing the buffer name
+centered in windows whose buffer has very little content.
+OPACITY is 0-100 for watermark visibility (default 8).
+THRESHOLD is the maximum buffer size in characters to show watermark (default 10).  */)
+  (Lisp_Object enabled, Lisp_Object opacity, Lisp_Object threshold)
+{
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+
+  int on = !NILP (enabled);
+  int op = 8;
+  int thresh = 10;
+  if (FIXNUMP (opacity)) op = XFIXNUM (opacity);
+  if (FIXNUMP (threshold)) thresh = XFIXNUM (threshold);
+
+  neomacs_display_set_window_watermark (dpyinfo->display_handle, on, op, thresh);
+  return on ? Qt : Qnil;
+}
+
 DEFUN ("neomacs-set-cursor-trail-fade",
        Fneomacs_set_cursor_trail_fade,
        Sneomacs_set_cursor_trail_fade, 0, 3, 0,
@@ -10206,6 +10230,7 @@ syms_of_neomacsterm (void)
   defsubr (&Sneomacs_set_padding_gradient);
   defsubr (&Sneomacs_set_noise_grain);
   defsubr (&Sneomacs_set_idle_dim);
+  defsubr (&Sneomacs_set_window_watermark);
   defsubr (&Sneomacs_set_cursor_trail_fade);
   defsubr (&Sneomacs_set_region_glow);
   defsubr (&Sneomacs_set_window_glow);

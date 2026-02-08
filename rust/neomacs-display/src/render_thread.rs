@@ -739,6 +739,10 @@ struct RenderApp {
     cursor_trail_fade_enabled: bool,
     cursor_trail_fade_length: u32,
     cursor_trail_fade_ms: u32,
+    /// Window watermark for empty buffers
+    window_watermark_enabled: bool,
+    window_watermark_opacity: f32,
+    window_watermark_threshold: u32,
     /// Selection region glow
     region_glow_enabled: bool,
     region_glow_face_id: u32,
@@ -1021,6 +1025,9 @@ impl RenderApp {
             cursor_trail_fade_enabled: false,
             cursor_trail_fade_length: 8,
             cursor_trail_fade_ms: 300,
+            window_watermark_enabled: false,
+            window_watermark_opacity: 0.08,
+            window_watermark_threshold: 10,
             region_glow_enabled: false,
             region_glow_face_id: 0,
             region_glow_radius: 6.0,
@@ -1999,6 +2006,15 @@ impl RenderApp {
                     self.cursor_trail_fade_ms = fade_ms;
                     if let Some(renderer) = self.renderer.as_mut() {
                         renderer.set_cursor_trail_fade(enabled, length as usize, fade_ms);
+                    }
+                    self.frame_dirty = true;
+                }
+                RenderCommand::SetWindowWatermark { enabled, opacity, threshold } => {
+                    self.window_watermark_enabled = enabled;
+                    self.window_watermark_opacity = opacity;
+                    self.window_watermark_threshold = threshold;
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_window_watermark(enabled, opacity, threshold);
                     }
                     self.frame_dirty = true;
                 }
@@ -3534,6 +3550,15 @@ impl RenderApp {
                     &surface_view, &frame.window_infos,
                     self.width, self.height,
                 );
+            }
+        }
+
+        // Render window watermarks for empty/small buffers
+        if self.window_watermark_enabled {
+            if let (Some(ref renderer), Some(ref mut glyph_atlas), Some(ref frame)) =
+                (&self.renderer, &mut self.glyph_atlas, &self.current_frame)
+            {
+                renderer.render_window_watermarks(&surface_view, frame, glyph_atlas);
             }
         }
 

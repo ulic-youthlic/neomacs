@@ -176,6 +176,10 @@ pub struct WgpuRenderer {
     cursor_trail_fade_duration: std::time::Duration,
     cursor_trail_positions: Vec<(f32, f32, f32, f32, std::time::Instant)>,
     cursor_trail_last_pos: (f32, f32),
+    /// Window watermark for empty buffers
+    window_watermark_enabled: bool,
+    window_watermark_opacity: f32,
+    window_watermark_threshold: u32,
     /// Selection region glow
     region_glow_enabled: bool,
     region_glow_face_id: u32,
@@ -792,6 +796,9 @@ impl WgpuRenderer {
             cursor_trail_fade_duration: std::time::Duration::from_millis(300),
             cursor_trail_positions: Vec::new(),
             cursor_trail_last_pos: (0.0, 0.0),
+            window_watermark_enabled: false,
+            window_watermark_opacity: 0.08,
+            window_watermark_threshold: 10,
             region_glow_enabled: false,
             region_glow_face_id: 0,
             region_glow_radius: 6.0,
@@ -994,6 +1001,13 @@ impl WgpuRenderer {
     pub fn set_accent_strip(&mut self, enabled: bool, width: f32) {
         self.accent_strip_enabled = enabled;
         self.accent_strip_width = width;
+    }
+
+    /// Update window watermark config
+    pub fn set_window_watermark(&mut self, enabled: bool, opacity: f32, threshold: u32) {
+        self.window_watermark_enabled = enabled;
+        self.window_watermark_opacity = opacity;
+        self.window_watermark_threshold = threshold;
     }
 
     /// Update cursor trail fade config
@@ -6607,6 +6621,164 @@ impl WgpuRenderer {
                     vert_idx += 6;
                     i += 1;
                     while i < glyphs.len() && valid[i] && glyphs[i].0 == *key {
+                        vert_idx += 6;
+                        i += 1;
+                    }
+                    pass.draw(batch_start..vert_idx, 0..1);
+                } else {
+                    i += 1;
+                }
+            }
+        }
+        self.queue.submit(Some(encoder.finish()));
+    }
+
+    /// Render watermark text in windows with small/empty buffers.
+    pub fn render_window_watermarks(
+        &self,
+        view: &wgpu::TextureView,
+        frame_glyphs: &FrameGlyphBuffer,
+        glyph_atlas: &mut WgpuGlyphAtlas,
+    ) {
+        use wgpu::util::DeviceExt;
+
+        if !self.window_watermark_enabled { return; }
+
+        let font_size = glyph_atlas.default_font_size();
+        let scale = 3.0_f32;
+        let char_width = font_size * 0.6 * scale;
+        let char_height = font_size * scale;
+        let font_size_bits = 0.0_f32.to_bits();
+        let alpha = self.window_watermark_opacity.clamp(0.0, 1.0);
+
+        let mut overlay_glyphs: Vec<(GlyphKey, f32, f32, [f32; 4], f32)> = Vec::new();
+
+        for info in &frame_glyphs.window_infos {
+            if info.is_minibuffer { continue; }
+            if info.buffer_size > self.window_watermark_threshold as i64 { continue; }
+
+            let b = &info.bounds;
+            let content_h = b.height - info.mode_line_height;
+            if content_h < char_height * 1.5 { continue; }
+
+            // Determine watermark text: use buffer file name basename, or fallback
+            let text = if !info.buffer_file_name.is_empty() {
+                let name = info.buffer_file_name.rsplit('/').next()
+                    .unwrap_or(&info.buffer_file_name);
+                name.to_string()
+            } else {
+                "empty".to_string()
+            };
+
+            // Truncate long names to fit window width
+            let max_chars = ((b.width * 0.8) / char_width) as usize;
+            let display_text: String = if text.len() > max_chars && max_chars > 3 {
+                text.chars().take(max_chars - 2).collect::<String>() + ".."
+            } else {
+                text.clone()
+            };
+
+            let text_width = display_text.chars().count() as f32 * char_width;
+            let start_x = b.x + (b.width - text_width) / 2.0;
+            let start_y = b.y + (content_h - char_height) / 2.0;
+
+            let color = [1.0, 1.0, 1.0, alpha];
+
+            for (ci, ch) in display_text.chars().enumerate() {
+                if ch == ' ' { continue; }
+                let key = GlyphKey {
+                    charcode: ch as u32,
+                    face_id: 0,
+                    font_size_bits,
+                };
+                glyph_atlas.get_or_create(&self.device, &self.queue, &key, None);
+                overlay_glyphs.push((key, start_x + ci as f32 * char_width, start_y, color, scale));
+            }
+        }
+
+        if overlay_glyphs.is_empty() { return; }
+
+        // Sort by key for batching
+        overlay_glyphs.sort_by(|a, b| {
+            a.0.face_id.cmp(&b.0.face_id)
+                .then(a.0.font_size_bits.cmp(&b.0.font_size_bits))
+                .then(a.0.charcode.cmp(&b.0.charcode))
+        });
+
+        let sf = self.scale_factor;
+        let mut vertices: Vec<GlyphVertex> = Vec::with_capacity(overlay_glyphs.len() * 6);
+        let mut valid: Vec<bool> = Vec::with_capacity(overlay_glyphs.len());
+
+        for (key, x, y, color, s) in overlay_glyphs.iter() {
+            if let Some(cached) = glyph_atlas.get(key) {
+                let gw = cached.width as f32 / sf * s;
+                let gh = cached.height as f32 / sf * s;
+                let gx = *x + cached.bearing_x / sf * s;
+                let gy = *y + (char_height * 0.7) - cached.bearing_y / sf * s;
+
+                vertices.extend_from_slice(&[
+                    GlyphVertex { position: [gx, gy], tex_coords: [0.0, 0.0], color: *color },
+                    GlyphVertex { position: [gx + gw, gy], tex_coords: [1.0, 0.0], color: *color },
+                    GlyphVertex { position: [gx + gw, gy + gh], tex_coords: [1.0, 1.0], color: *color },
+                    GlyphVertex { position: [gx, gy], tex_coords: [0.0, 0.0], color: *color },
+                    GlyphVertex { position: [gx + gw, gy + gh], tex_coords: [1.0, 1.0], color: *color },
+                    GlyphVertex { position: [gx, gy + gh], tex_coords: [0.0, 1.0], color: *color },
+                ]);
+                valid.push(true);
+            } else {
+                valid.push(false);
+            }
+        }
+
+        if vertices.is_empty() { return; }
+
+        let buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Watermark Glyph Buffer"),
+            contents: bytemuck::cast_slice(&vertices),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+
+        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Watermark Glyph Encoder"),
+        });
+        {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Watermark Glyph Pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Load,
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            });
+            pass.set_pipeline(&self.image_pipeline);
+            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+            pass.set_vertex_buffer(0, buffer.slice(..));
+
+            let mut vert_idx = 0u32;
+            let mut i = 0;
+            while i < overlay_glyphs.len() {
+                if !valid[i] {
+                    i += 1;
+                    continue;
+                }
+                let (ref key, _, _, _, _) = overlay_glyphs[i];
+                if let Some(cached) = glyph_atlas.get(key) {
+                    if cached.is_color {
+                        pass.set_pipeline(&self.opaque_image_pipeline);
+                    } else {
+                        pass.set_pipeline(&self.image_pipeline);
+                    }
+                    pass.set_bind_group(1, &cached.bind_group, &[]);
+                    let batch_start = vert_idx;
+                    vert_idx += 6;
+                    i += 1;
+                    while i < overlay_glyphs.len() && valid[i] && overlay_glyphs[i].0 == *key {
                         vert_idx += 6;
                         i += 1;
                     }

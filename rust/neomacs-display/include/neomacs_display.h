@@ -1385,6 +1385,14 @@ void neomacs_display_set_region_glow(struct NeomacsDisplay *handle,
                                      int opacity);
 
 /**
+ * Configure window watermark for empty/small buffers
+ */
+void neomacs_display_set_window_watermark(struct NeomacsDisplay *handle,
+                                          int enabled,
+                                          int opacity,
+                                          int threshold);
+
+/**
  * Configure cursor trail fade effect
  */
 void neomacs_display_set_cursor_trail_fade(struct NeomacsDisplay *handle,
