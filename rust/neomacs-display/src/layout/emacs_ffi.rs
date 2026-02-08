@@ -371,6 +371,12 @@ pub struct DisplayPropFFI {
     pub display_fg: u32,
     /// Display string face bg (type=1), 0=use position face
     pub display_bg: u32,
+    /// Fringe bitmap ID (type=6 left-fringe, type=7 right-fringe)
+    pub fringe_bitmap_id: c_int,
+    /// Fringe face foreground color (type=6,7)
+    pub fringe_fg: u32,
+    /// Fringe face background color (type=6,7)
+    pub fringe_bg: u32,
 }
 
 /// FFI-safe window parameters struct.

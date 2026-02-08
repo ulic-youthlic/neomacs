@@ -432,6 +432,10 @@ impl LayoutEngine {
         let mut row_continued = vec![false; max_rows as usize];
         let mut row_continuation = vec![false; max_rows as usize];
         let mut row_truncated = vec![false; max_rows as usize];
+        // Per-row user fringe bitmaps from display properties
+        // (bitmap_id, fg_color, bg_color): 0=none
+        let mut row_left_fringe: Vec<(i32, u32, u32)> = vec![(0, 0, 0); max_rows as usize];
+        let mut row_right_fringe: Vec<(i32, u32, u32)> = vec![(0, 0, 0); max_rows as usize];
 
         // Per-row Y positions — supports variable row heights from
         // line-height / line-spacing text properties.
@@ -1039,6 +1043,38 @@ impl LayoutEngine {
                     raise_end = display_prop.covers_to;
                     next_display_check = display_prop.covers_to;
                     // Don't skip text - raise modifies rendering, not content
+                } else if display_prop.prop_type == 6 || display_prop.prop_type == 7 {
+                    // Left-fringe (6) or right-fringe (7) display property
+                    let r = row as usize;
+                    if display_prop.prop_type == 6 {
+                        if r < row_left_fringe.len() {
+                            row_left_fringe[r] = (
+                                display_prop.fringe_bitmap_id,
+                                display_prop.fringe_fg,
+                                display_prop.fringe_bg,
+                            );
+                        }
+                    } else {
+                        if r < row_right_fringe.len() {
+                            row_right_fringe[r] = (
+                                display_prop.fringe_bitmap_id,
+                                display_prop.fringe_fg,
+                                display_prop.fringe_bg,
+                            );
+                        }
+                    }
+                    // Skip the covered text
+                    let chars_to_skip = display_prop.covers_to - charpos;
+                    for _ in 0..chars_to_skip {
+                        if byte_idx >= bytes_read as usize { break; }
+                        let (_, ch_len) = decode_utf8(&text[byte_idx..]);
+                        byte_idx += ch_len;
+                    }
+                    charpos = display_prop.covers_to;
+                    window_end_charpos = charpos;
+                    next_display_check = display_prop.covers_to;
+                    current_face_id = -1;
+                    continue;
                 } else {
                     // No display prop: covers_to tells us when to re-check
                     next_display_check = display_prop.covers_to;
@@ -1790,6 +1826,56 @@ impl LayoutEngine {
                     // Curving arrow: continuation from previous row
                     frame_glyphs.add_char('\u{21B3}', fx, gy, char_w, char_h, ascent, false);
                 }
+
+                // User-specified left-fringe display property bitmap
+                if left_fringe_width >= char_w {
+                    if let Some(&(bid, fg, bg)) = row_left_fringe.get(r) {
+                        if bid > 0 {
+                            let ch = fringe_bitmap_to_char(bid);
+                            if fg != 0 || bg != 0 {
+                                let ffg = if fg != 0 { Color::from_pixel(fg) } else { default_fg };
+                                let fbg = if bg != 0 { Color::from_pixel(bg) } else { default_bg };
+                                frame_glyphs.set_face(
+                                    0, ffg, Some(fbg),
+                                    false, false, 0, None, 0, None, 0, None,
+                                );
+                            }
+                            let fx = left_fringe_x + (left_fringe_width - char_w) / 2.0;
+                            frame_glyphs.add_char(ch, fx, gy, char_w, char_h, ascent, false);
+                            if fg != 0 || bg != 0 {
+                                frame_glyphs.set_face(
+                                    0, default_fg, Some(default_bg),
+                                    false, false, 0, None, 0, None, 0, None,
+                                );
+                            }
+                        }
+                    }
+                }
+
+                // User-specified right-fringe display property bitmap
+                if right_fringe_width >= char_w {
+                    if let Some(&(bid, fg, bg)) = row_right_fringe.get(r) {
+                        if bid > 0 {
+                            let ch = fringe_bitmap_to_char(bid);
+                            if fg != 0 || bg != 0 {
+                                let ffg = if fg != 0 { Color::from_pixel(fg) } else { default_fg };
+                                let fbg = if bg != 0 { Color::from_pixel(bg) } else { default_bg };
+                                frame_glyphs.set_face(
+                                    0, ffg, Some(fbg),
+                                    false, false, 0, None, 0, None, 0, None,
+                                );
+                            }
+                            let fx = right_fringe_x + (right_fringe_width - char_w) / 2.0;
+                            frame_glyphs.add_char(ch, fx, gy, char_w, char_h, ascent, false);
+                            if fg != 0 || bg != 0 {
+                                frame_glyphs.set_face(
+                                    0, default_fg, Some(default_bg),
+                                    false, false, 0, None, 0, None, 0, None,
+                                );
+                            }
+                        }
+                    }
+                }
             }
 
             // EOB empty line indicators (tilde in fringe for lines past buffer end)
@@ -2206,4 +2292,35 @@ fn is_potentially_glyphless(ch: char) -> bool {
     || (0x3FFF80..=0x3FFFFF).contains(&cp)
     // Unassigned/private use — only very high ranges
     || (0xE0000..=0xE007F).contains(&cp)  // tags block
+}
+
+/// Map Emacs standard fringe bitmap IDs to Unicode characters.
+fn fringe_bitmap_to_char(bitmap_id: i32) -> char {
+    match bitmap_id {
+        1 => '?',                // question-mark
+        2 => '!',                // exclamation-mark
+        3 => '\u{2190}',         // left-arrow ←
+        4 => '\u{2192}',         // right-arrow →
+        5 => '\u{2191}',         // up-arrow ↑
+        6 => '\u{2193}',         // down-arrow ↓
+        7 => '\u{21B5}',         // left-curly-arrow ↵
+        8 => '\u{21B3}',         // right-curly-arrow ↳
+        9 => '\u{25CF}',         // large-circle ●
+        10 => '\u{25C0}',        // left-triangle ◀
+        11 => '\u{25B6}',        // right-triangle ▶
+        12 => '\u{250C}',        // top-left-angle ┌
+        13 => '\u{2510}',        // top-right-angle ┐
+        14 => '\u{2514}',        // bottom-left-angle └
+        15 => '\u{2518}',        // bottom-right-angle ┘
+        16 => '[',               // left-bracket
+        17 => ']',               // right-bracket
+        18 => '\u{25A0}',        // filled-rectangle ■
+        19 => '\u{25A1}',        // hollow-rectangle □
+        20 => '\u{25AA}',        // filled-square ▪
+        21 => '\u{25AB}',        // hollow-square ▫
+        22 => '\u{2502}',        // vertical-bar │
+        23 => '\u{2500}',        // horizontal-bar ─
+        24 => '~',               // empty-line
+        _ => '\u{25CF}',         // fallback: filled circle ●
+    }
 }

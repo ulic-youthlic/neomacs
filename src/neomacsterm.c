@@ -2307,6 +2307,9 @@ struct DisplayPropFFI {
   float raise_factor;     /* raise factor (type=5), fraction of line height */
   uint32_t display_fg;    /* display string face fg (type=1), 0=use position face */
   uint32_t display_bg;    /* display string face bg (type=1), 0=use position face */
+  int fringe_bitmap_id;   /* fringe bitmap ID (type=6,7) */
+  uint32_t fringe_fg;     /* fringe face foreground color (type=6,7) */
+  uint32_t fringe_bg;     /* fringe face background color (type=6,7) */
 };
 
 /* Check for a 'display text property at charpos.
@@ -2339,6 +2342,9 @@ neomacs_layout_check_display_prop (void *buffer_ptr, void *window_ptr,
   out->display_fg = 0;
   out->display_bg = 0;
   out->raise_factor = 0;
+  out->fringe_bitmap_id = 0;
+  out->fringe_fg = 0;
+  out->fringe_bg = 0;
 
   if (!buf)
     return -1;
@@ -2540,6 +2546,62 @@ neomacs_layout_check_display_prop (void *buffer_ptr, void *window_ptr,
           /* Raise doesn't replace text, so covers_to stays as next change */
           set_buffer_internal_1 (old);
           return 0;
+        }
+
+      /* Check for (left-fringe BITMAP [FACE]) or
+         (right-fringe BITMAP [FACE]) display property */
+      if ((EQ (car, Qleft_fringe)
+           || EQ (car, Qright_fringe))
+          && CONSP (XCDR (display_prop)))
+        {
+          Lisp_Object bitmap_spec = XCAR (XCDR (display_prop));
+          int bitmap_id = lookup_fringe_bitmap (bitmap_spec);
+          if (bitmap_id > 0)
+            {
+              out->type = EQ (car, Qleft_fringe) ? 6 : 7;
+              out->fringe_bitmap_id = bitmap_id;
+
+              /* Resolve fringe face colors */
+              struct window *sw
+                = window_ptr ? (struct window *) window_ptr : NULL;
+              struct frame *sf
+                = sw ? XFRAME (sw->frame) : NULL;
+              if (sf)
+                {
+                  int fface_id = FRINGE_FACE_ID;
+                  /* Check for optional FACE argument */
+                  Lisp_Object rest = XCDR (XCDR (display_prop));
+                  if (CONSP (rest) && SYMBOLP (XCAR (rest)))
+                    {
+                      int nid = lookup_named_face (
+                          sw, sf, XCAR (rest), false);
+                      if (nid >= 0)
+                        fface_id = nid;
+                    }
+
+                  struct face *fface
+                    = FACE_FROM_ID_OR_NULL (sf, fface_id);
+                  if (fface)
+                    {
+                      unsigned long fg = fface->foreground;
+                      unsigned long bg = fface->background;
+                      if (fface->foreground_defaulted_p)
+                        fg = FRAME_FOREGROUND_PIXEL (sf);
+                      if (fface->background_defaulted_p)
+                        bg = FRAME_BACKGROUND_PIXEL (sf);
+                      out->fringe_fg
+                        = ((RED_FROM_ULONG (fg) << 16)
+                           | (GREEN_FROM_ULONG (fg) << 8)
+                           | BLUE_FROM_ULONG (fg));
+                      out->fringe_bg
+                        = ((RED_FROM_ULONG (bg) << 16)
+                           | (GREEN_FROM_ULONG (bg) << 8)
+                           | BLUE_FROM_ULONG (bg));
+                    }
+                }
+              set_buffer_internal_1 (old);
+              return 0;
+            }
         }
 
       /* Check for (image ...) display property */
