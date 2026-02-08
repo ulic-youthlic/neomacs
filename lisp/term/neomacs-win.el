@@ -389,6 +389,19 @@ _FRAME is ignored; the menu opens on the selected frame."
   :init-value t
   (neomacs-set-scroll-indicators neomacs-scroll-indicator-mode))
 
+;;; Desktop notifications
+
+(defun neomacs-notify (title body &optional urgency)
+  "Show a desktop notification with TITLE and BODY.
+URGENCY is one of `low', `normal' (default), or `critical'."
+  (interactive "sTitle: \nsBody: ")
+  (require 'notifications)
+  (notifications-notify
+   :title title
+   :body body
+   :app-name "Neomacs"
+   :urgency (or urgency 'normal)))
+
 ;;; Custom title bar
 
 (declare-function neomacs-set-titlebar-height "neomacsterm.c" (height))
