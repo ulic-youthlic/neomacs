@@ -223,87 +223,86 @@ the Elisp evaluator, GC, and editor subsystems — connected to Rust via FFI cha
 ### Target Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           Neomacs (Rust)                                    │
-│                                                                             │
-│  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐  │
-│    Elisp Runtime Core                                                      │
-│  │                                                                     │  │
-│    ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                    │
-│  │ │  Evaluator   │  │  Bytecode VM │  │  GC / Alloc  │               │  │
-│    │  eval_sub()  │  │  exec_byte() │  │  generational│                    │
-│  │ │  funcall()   │  │  inline cache│  │  precise root│               │  │
-│    │  specpdl     │  │  JIT (opt.)  │  │  bump alloc  │                    │
-│  │ └──────┬───────┘  └──────┬───────┘  └──────┬───────┘               │  │
-│           │                 │                  │                            │
-│  │ ┌──────┴───────┐  ┌─────┴────────┐  ┌─────┴────────┐               │  │
-│    │ LispObject   │  │  Symbol Table │  │  Type System │                    │
-│  │ │ tagged ptr   │  │  obarray      │  │  28 PVEC_*   │               │  │
-│    │ accessor API │  │  DEFSYM       │  │  type descr. │                    │
-│  │ └──────────────┘  └──────────────┘  └──────────────┘               │  │
-│  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘  │
-│           │                 │                  │                            │
-│           ▼                 ▼                  ▼                            │
-│  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │              Runtime API (trait-based, Rust)                         │  │
-│  │  register_type()  register_root()  define_function()  eval_form()   │  │
-│  │  run_hook()       specbind()       signal_error()     schedule_gc() │  │
-│  └──────────────────────────────────────────────────────────────────────┘  │
-│           │                 │                  │                            │
-│     ┌─────┴────┐     ┌─────┴────┐      ┌─────┴─────┐                      │
-│     ▼          ▼     ▼          ▼      ▼           ▼                      │
-│  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐   │
-│    Editor Modules (each with defined API)                                │
-│  │                                                                    │   │
-│    ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐     │
-│  │ │  Buffer  │ │  Window  │ │  Frame   │ │ Keyboard │ │ Process  │ │   │
-│    │          │ │          │ │          │ │          │ │          │     │
-│  │ │ gap buf  │ │ tree     │ │ params   │ │ cmd loop │ │ async IO │ │   │
-│    │ markers  │ │ layout   │ │ creation │ │ keymaps  │ │ filters  │     │
-│  │ │ overlays │ │ scroll   │ │ deletion │ │ input    │ │ sentinels│ │   │
-│    │ undo     │ │ split    │ │ hooks    │ │ hooks    │ │ pipes    │     │
-│  │ │ text prop│ │ select   │ │          │ │          │ │ network  │ │   │
-│    └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘     │
-│  │                                                                    │   │
-│    ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐     │
-│  │ │  Font    │ │  Image   │ │  File IO │ │  Reader  │ │   Data   │ │   │
-│    │          │ │          │ │          │ │          │ │          │     │
-│  │ │ open/    │ │ decode   │ │ read/    │ │ tokenize │ │ arith    │ │   │
-│    │ cache    │ │ cache    │ │ write    │ │ parse    │ │ type pred│     │
-│  │ │ metrics  │ │ display  │ │ coding   │ │ intern   │ │ accessor │ │   │
-│    │ match    │ │ transform│ │ locks    │ │ load     │ │ convert  │     │
-│  │ └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘ │   │
-│  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘   │
-│           │                                                                │
-│           ▼                                                                │
-│  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │                    Rendering Engine (Rust)                           │  │
-│  │                                                                      │  │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌──────────────┐                 │  │
-│  │  │ Layout      │  │ wgpu        │  │ Animations   │                 │  │
-│  │  │ Engine      │  │ Renderer    │  │ transitions  │                 │  │
-│  │  │ (text, face)│  │ (GPU draw)  │  │ cursor blink │                 │  │
-│  │  └─────────────┘  └─────────────┘  └──────────────┘                 │  │
-│  │                                                                      │  │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌──────────────┐                 │  │
-│  │  │ winit       │  │ WebKit      │  │ GStreamer     │                 │  │
-│  │  │ (windowing) │  │ (web views) │  │ (video/media) │                 │  │
-│  │  └─────────────┘  └─────────────┘  └──────────────┘                 │  │
-│  └──────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-│  Threading:                                                                 │
-│  ┌──────────┐  FrameGlyphBuffer (crossbeam)  ┌──────────────┐             │
-│  │ Emacs    │ ─────────────────────────────→ │   Render     │             │
-│  │ Thread   │ ←───────────────────────────── │   Thread     │             │
-│  └──────────┘  InputEvent (crossbeam)         └──────────────┘             │
-│                                                                             │
-│                    ┌────────────┼────────────┐                              │
-│                    ▼            ▼            ▼                              │
-│              ┌─────────┐  ┌─────────┐  ┌─────────┐                         │
-│              │ Vulkan  │  │  Metal  │  │DX12/GL  │                         │
-│              │ (Linux) │  │ (macOS) │  │(Windows)│                         │
-│              └─────────┘  └─────────┘  └─────────┘                         │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────┐
+│                          Neomacs (Rust)                                │
+│                                                                       │
+│  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ │
+│  │ Elisp Runtime Core                                              │ │
+│  │                                                                 │ │
+│  │ ┌──────────────┐  ┌──────────────┐  ┌──────────────┐           │ │
+│  │ │  Evaluator   │  │  Bytecode VM │  │  GC / Alloc  │           │ │
+│  │ │  eval_sub()  │  │  exec_byte() │  │  generational│           │ │
+│  │ │  funcall()   │  │  inline cache│  │  precise root│           │ │
+│  │ │  specpdl     │  │  JIT (opt.)  │  │  bump alloc  │           │ │
+│  │ └──────┬───────┘  └──────┬───────┘  └──────┬───────┘           │ │
+│  │        │                 │                  │                   │ │
+│  │ ┌──────┴───────┐  ┌─────┴────────┐  ┌─────┴────────┐          │ │
+│  │ │ LispObject   │  │ Symbol Table │  │ Type System  │          │ │
+│  │ │ tagged ptr   │  │ obarray      │  │ 28 PVEC_*    │          │ │
+│  │ │ accessor API │  │ DEFSYM       │  │ type descr.  │          │ │
+│  │ └──────────────┘  └──────────────┘  └──────────────┘          │ │
+│  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ │
+│           │                 │                  │                      │
+│           ▼                 ▼                  ▼                      │
+│  ┌───────────────────────────────────────────────────────────────┐   │
+│  │             Runtime API (trait-based, Rust)                   │   │
+│  │ register_type()  register_root()  define_function()          │   │
+│  │ run_hook()       specbind()       signal_error()             │   │
+│  └───────────────────────────────────────────────────────────────┘   │
+│           │                 │                  │                      │
+│           ▼                 ▼                  ▼                      │
+│  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ │
+│  │ Editor Modules (each with defined API)                          │ │
+│  │                                                                 │ │
+│  │ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐│ │
+│  │ │  Buffer  │ │  Window  │ │  Frame   │ │ Keyboard │ │Process ││ │
+│  │ │          │ │          │ │          │ │          │ │        ││ │
+│  │ │ gap buf  │ │ tree     │ │ params   │ │ cmd loop │ │async IO││ │
+│  │ │ markers  │ │ layout   │ │ creation │ │ keymaps  │ │filters ││ │
+│  │ │ overlays │ │ scroll   │ │ deletion │ │ input    │ │sentinel││ │
+│  │ │ undo     │ │ split    │ │ hooks    │ │ hooks    │ │pipes   ││ │
+│  │ │ text prop│ │ select   │ │          │ │          │ │network ││ │
+│  │ └──────────┘ └──────────┘ └──────────┘ └──────────┘ └────────┘│ │
+│  │                                                                 │ │
+│  │ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐│ │
+│  │ │  Font    │ │  Image   │ │  File IO │ │  Reader  │ │  Data  ││ │
+│  │ │          │ │          │ │          │ │          │ │        ││ │
+│  │ │ open     │ │ decode   │ │ read     │ │ tokenize │ │arith   ││ │
+│  │ │ cache    │ │ cache    │ │ write    │ │ parse    │ │type    ││ │
+│  │ │ metrics  │ │ display  │ │ coding   │ │ intern   │ │accessor││ │
+│  │ │ match    │ │ transform│ │ locks    │ │ load     │ │convert ││ │
+│  │ └──────────┘ └──────────┘ └──────────┘ └──────────┘ └────────┘│ │
+│  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ │
+│           │                                                          │
+│           ▼                                                          │
+│  ┌───────────────────────────────────────────────────────────────┐   │
+│  │                  Rendering Engine (Rust)                      │   │
+│  │                                                               │   │
+│  │ ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │   │
+│  │ │ Layout      │  │ wgpu        │  │ Animations  │            │   │
+│  │ │ Engine      │  │ Renderer    │  │ transitions │            │   │
+│  │ │ (text,face) │  │ (GPU draw)  │  │ cursor blink│            │   │
+│  │ └─────────────┘  └─────────────┘  └─────────────┘            │   │
+│  │                                                               │   │
+│  │ ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │   │
+│  │ │ winit       │  │ WebKit      │  │ GStreamer    │            │   │
+│  │ │ (windowing) │  │ (web views) │  │ (video)     │            │   │
+│  │ └─────────────┘  └─────────────┘  └─────────────┘            │   │
+│  └───────────────────────────────────────────────────────────────┘   │
+│                                                                       │
+│  Threading:                                                           │
+│  ┌──────────┐  FrameGlyphBuffer (crossbeam)  ┌──────────┐           │
+│  │  Emacs   │ ─────────────────────────────→ │  Render  │           │
+│  │  Thread  │ ←───────────────────────────── │  Thread  │           │
+│  └──────────┘  InputEvent (crossbeam)         └──────────┘           │
+│                                                                       │
+│                  ┌────────────┼────────────┐                          │
+│                  ▼            ▼            ▼                          │
+│            ┌─────────┐  ┌─────────┐  ┌─────────┐                     │
+│            │ Vulkan  │  │  Metal  │  │ DX12/GL │                     │
+│            │ (Linux) │  │ (macOS) │  │(Windows)│                     │
+│            └─────────┘  └─────────┘  └─────────┘                     │
+└───────────────────────────────────────────────────────────────────────┘
 ```
 
 **Design principles:**
