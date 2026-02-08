@@ -723,6 +723,10 @@ struct RenderApp {
     scroll_progress_height: f32,
     scroll_progress_color: (f32, f32, f32),
     scroll_progress_opacity: f32,
+    /// Inactive window color tint
+    inactive_tint_enabled: bool,
+    inactive_tint_color: (f32, f32, f32),
+    inactive_tint_opacity: f32,
 }
 
 /// State for a tooltip displayed as GPU overlay
@@ -948,6 +952,9 @@ impl RenderApp {
             scroll_progress_height: 2.0,
             scroll_progress_color: (0.4, 0.6, 1.0),
             scroll_progress_opacity: 0.8,
+            inactive_tint_enabled: false,
+            inactive_tint_color: (0.2, 0.1, 0.0),
+            inactive_tint_opacity: 0.1,
         }
     }
 
@@ -1815,6 +1822,15 @@ impl RenderApp {
                     self.window_switch_fade_intensity = intensity;
                     if let Some(renderer) = self.renderer.as_mut() {
                         renderer.set_window_switch_fade(enabled, duration_ms, intensity);
+                    }
+                    self.frame_dirty = true;
+                }
+                RenderCommand::SetInactiveTint { enabled, color, opacity } => {
+                    self.inactive_tint_enabled = enabled;
+                    self.inactive_tint_color = color;
+                    self.inactive_tint_opacity = opacity;
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_inactive_tint(enabled, color, opacity);
                     }
                     self.frame_dirty = true;
                 }

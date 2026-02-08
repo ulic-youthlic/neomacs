@@ -399,6 +399,10 @@ typedef struct WindowParamsFFI {
    */
   float leftMarginWidth;
   float rightMarginWidth;
+  /**
+   * Buffer file name (NULL if no file)
+   */
+  const char *bufferFileName;
 } WindowParamsFFI;
 
 /**
@@ -669,7 +673,8 @@ void neomacs_display_add_window_info(struct NeomacsDisplay *handle,
                                      float modeLineHeight,
                                      int selected,
                                      int isMinibuffer,
-                                     float charHeight);
+                                     float charHeight,
+                                     const char *bufferFileName);
 
 /**
  * Set cursor for a specific window
@@ -1271,12 +1276,79 @@ void neomacs_display_set_background_pattern(struct NeomacsDisplay *handle,
                                             int opacity);
 
 /**
+ * Configure cursor color cycling (rainbow hue rotation)
+ */
+void neomacs_display_set_cursor_color_cycle(struct NeomacsDisplay *handle,
+                                            int enabled,
+                                            int speed,
+                                            int saturation,
+                                            int lightness);
+
+/**
+ * Configure header/mode-line shadow depth effect
+ */
+void neomacs_display_set_header_shadow(struct NeomacsDisplay *handle,
+                                       int enabled,
+                                       int intensity,
+                                       int size);
+
+/**
+ * Configure line insertion/deletion animation
+ */
+void neomacs_display_set_line_animation(struct NeomacsDisplay *handle, int enabled, int durationMs);
+
+/**
  * Configure vignette effect (edge darkening)
  */
 void neomacs_display_set_vignette(struct NeomacsDisplay *handle,
                                   int enabled,
                                   int intensity,
                                   int radius);
+
+/**
+ * Configure inactive window color tint
+ */
+void neomacs_display_set_inactive_tint(struct NeomacsDisplay *handle,
+                                       int enabled,
+                                       int r,
+                                       int g,
+                                       int b,
+                                       int opacity);
+
+/**
+ * Configure scroll progress indicator bar
+ */
+void neomacs_display_set_scroll_progress(struct NeomacsDisplay *handle,
+                                         int enabled,
+                                         int height,
+                                         int r,
+                                         int g,
+                                         int b,
+                                         int opacity);
+
+/**
+ * Configure active window border glow
+ */
+void neomacs_display_set_window_glow(struct NeomacsDisplay *handle,
+                                     int enabled,
+                                     int r,
+                                     int g,
+                                     int b,
+                                     int radius,
+                                     int intensity);
+
+/**
+ * Configure breadcrumb/path bar overlay
+ */
+void neomacs_display_set_breadcrumb(struct NeomacsDisplay *handle, int enabled, int opacity);
+
+/**
+ * Configure window switch highlight fade
+ */
+void neomacs_display_set_window_switch_fade(struct NeomacsDisplay *handle,
+                                            int enabled,
+                                            int durationMs,
+                                            int intensity);
 
 /**
  * Configure mode-line separator style (threaded mode)

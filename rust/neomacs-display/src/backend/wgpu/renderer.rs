@@ -168,6 +168,10 @@ pub struct WgpuRenderer {
     scroll_progress_height: f32,
     scroll_progress_color: (f32, f32, f32),
     scroll_progress_opacity: f32,
+    /// Inactive window color tint
+    inactive_tint_enabled: bool,
+    inactive_tint_color: (f32, f32, f32),
+    inactive_tint_opacity: f32,
 }
 
 /// Entry for an active window switch highlight fade
@@ -729,6 +733,9 @@ impl WgpuRenderer {
             scroll_progress_height: 2.0,
             scroll_progress_color: (0.4, 0.6, 1.0),
             scroll_progress_opacity: 0.8,
+            inactive_tint_enabled: false,
+            inactive_tint_color: (0.2, 0.1, 0.0),
+            inactive_tint_opacity: 0.1,
         }
     }
 
@@ -855,6 +862,13 @@ impl WgpuRenderer {
         self.window_switch_fade_enabled = enabled;
         self.window_switch_fade_duration_ms = duration_ms;
         self.window_switch_fade_intensity = intensity;
+    }
+
+    /// Update inactive window tint config
+    pub fn set_inactive_tint(&mut self, enabled: bool, color: (f32, f32, f32), opacity: f32) {
+        self.inactive_tint_enabled = enabled;
+        self.inactive_tint_color = color;
+        self.inactive_tint_opacity = opacity;
     }
 
     /// Update scroll progress indicator config
@@ -3439,6 +3453,34 @@ impl WgpuRenderer {
                 // Signal that we need continuous redraws during transition
                 if any_transitioning {
                     self.needs_continuous_redraw = true;
+                }
+            }
+
+            // === Inactive window color tint ===
+            if self.inactive_tint_enabled && frame_glyphs.window_infos.len() > 1 {
+                let (tr, tg, tb) = self.inactive_tint_color;
+                let opacity = self.inactive_tint_opacity.clamp(0.0, 1.0);
+                let mut tint_vertices: Vec<RectVertex> = Vec::new();
+
+                for info in &frame_glyphs.window_infos {
+                    if info.selected { continue; }
+                    let b = &info.bounds;
+                    let tint_color = Color::new(tr, tg, tb, opacity);
+                    self.add_rect(&mut tint_vertices, b.x, b.y, b.width, b.height, &tint_color);
+                }
+
+                if !tint_vertices.is_empty() {
+                    let tint_buffer = self.device.create_buffer_init(
+                        &wgpu::util::BufferInitDescriptor {
+                            label: Some("Inactive Tint Buffer"),
+                            contents: bytemuck::cast_slice(&tint_vertices),
+                            usage: wgpu::BufferUsages::VERTEX,
+                        },
+                    );
+                    render_pass.set_pipeline(&self.rect_pipeline);
+                    render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                    render_pass.set_vertex_buffer(0, tint_buffer.slice(..));
+                    render_pass.draw(0..tint_vertices.len() as u32, 0..1);
                 }
             }
 

@@ -1330,6 +1330,32 @@ Higher values make the flash brighter."
                 neomacs-window-switch-fade-duration nil)
             val))))
 
+;; --- Inactive window color tint ---
+(declare-function neomacs-set-inactive-tint "neomacsterm.c"
+  (&optional enabled r g b opacity))
+
+(defcustom neomacs-inactive-tint nil
+  "Enable color tint overlay on inactive windows.
+Non-nil applies a subtle color wash on non-selected windows
+to visually distinguish them from the active window."
+  :type 'boolean
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (fboundp 'neomacs-set-inactive-tint)
+           (neomacs-set-inactive-tint val))))
+
+(defcustom neomacs-inactive-tint-opacity 10
+  "Opacity of the inactive window color tint (0-100)."
+  :type '(integer :tag "Opacity")
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-inactive-tint)
+                    (boundp 'neomacs-inactive-tint)
+                    neomacs-inactive-tint)
+           (neomacs-set-inactive-tint t nil nil nil val))))
+
 ;; --- Header/mode-line shadow ---
 (declare-function neomacs-set-header-shadow "neomacsterm.c"
   (&optional enabled intensity size))

@@ -384,6 +384,14 @@ pub enum RenderCommand {
         duration_ms: u32,
         intensity: f32,
     },
+    /// Configure inactive window color tint
+    SetInactiveTint {
+        enabled: bool,
+        /// Tint color (sRGB 0.0-1.0)
+        color: (f32, f32, f32),
+        /// Tint opacity (0.0-1.0)
+        opacity: f32,
+    },
     /// Configure scroll progress indicator bar
     SetScrollProgress {
         enabled: bool,
