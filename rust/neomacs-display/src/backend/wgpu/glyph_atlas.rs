@@ -2,7 +2,7 @@
 //!
 //! Caches rasterized glyphs as individual wgpu textures with bind groups.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use cosmic_text::{
     Attrs, Buffer, Family, FontSystem, Metrics, ShapeBuffer, SwashCache, Style, Weight,
@@ -67,6 +67,8 @@ pub struct WgpuGlyphAtlas {
     scale_factor: f32,
     /// Maximum cache size
     max_size: usize,
+    /// Interned font family names (avoids Box::leak memory growth)
+    interned_families: HashSet<&'static str>,
 }
 
 impl WgpuGlyphAtlas {
@@ -119,6 +121,7 @@ impl WgpuGlyphAtlas {
             default_line_height: 17.0,
             scale_factor: 1.0,
             max_size: 4096,
+            interned_families: HashSet::new(),
         }
     }
 
@@ -358,7 +361,7 @@ impl WgpuGlyphAtlas {
     }
 
     /// Convert Face to cosmic-text Attrs
-    fn face_to_attrs(&self, face: Option<&Face>) -> Attrs<'static> {
+    fn face_to_attrs(&mut self, face: Option<&Face>) -> Attrs<'static> {
         let mut attrs = Attrs::new();
 
         if let Some(f) = face {
@@ -368,11 +371,17 @@ impl WgpuGlyphAtlas {
                 "monospace" | "mono" | "" => attrs.family(Family::Monospace),
                 "serif" => attrs.family(Family::Serif),
                 "sans-serif" | "sans" | "sansserif" => attrs.family(Family::SansSerif),
-                // For specific font names, leak the string to get 'static lifetime
-                // This is acceptable because font names are reused many times
+                // For specific font names, intern the string to get 'static lifetime
+                // without unbounded memory growth (each unique name leaked only once)
                 _ => {
-                    let leaked: &'static str = Box::leak(f.font_family.clone().into_boxed_str());
-                    attrs.family(Family::Name(leaked))
+                    let interned = if let Some(&existing) = self.interned_families.get(f.font_family.as_str()) {
+                        existing
+                    } else {
+                        let leaked: &'static str = Box::leak(f.font_family.clone().into_boxed_str());
+                        self.interned_families.insert(leaked);
+                        leaked
+                    };
+                    attrs.family(Family::Name(interned))
                 }
             };
 
