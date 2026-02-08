@@ -6864,6 +6864,38 @@ neomacs_display_wakeup_handler (int fd, void *data)
           }
           break;
 
+        case NEOMACS_EVENT_MOUSE_MOVE:
+          {
+            struct neomacs_display_info *dpyinfo
+              = FRAME_NEOMACS_DISPLAY_INFO (f);
+            if (dpyinfo)
+              {
+                dpyinfo->last_mouse_motion_frame = f;
+                dpyinfo->last_mouse_motion_x = ev->x;
+                dpyinfo->last_mouse_motion_y = ev->y;
+              }
+
+            /* Check if mouse has moved off the glyph it was on. */
+            if (dpyinfo)
+              {
+                NativeRectangle *r = &dpyinfo->last_mouse_glyph;
+                if (f != dpyinfo->last_mouse_glyph_frame
+                    || ev->x < r->x
+                    || ev->x >= r->x + (int) r->width
+                    || ev->y < r->y
+                    || ev->y >= r->y + (int) r->height)
+                  {
+                    f->mouse_moved = true;
+                    dpyinfo->last_mouse_scroll_bar = NULL;
+                    note_mouse_highlight (f, ev->x, ev->y);
+                    remember_mouse_glyph (
+                        f, ev->x, ev->y, r);
+                    dpyinfo->last_mouse_glyph_frame = f;
+                  }
+              }
+          }
+          break;
+
         case NEOMACS_EVENT_RESIZE:
           {
             struct neomacs_display_info *dpyinfo = FRAME_NEOMACS_DISPLAY_INFO (f);

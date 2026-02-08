@@ -167,6 +167,11 @@ struct neomacs_display_info
   int last_mouse_motion_x;
   int last_mouse_motion_y;
 
+  /* Mouse glyph tracking for note_mouse_highlight */
+  NativeRectangle last_mouse_glyph;
+  struct frame *last_mouse_glyph_frame;
+  struct scroll_bar *last_mouse_scroll_bar;
+
   /* Last user interaction time (for focus stealing prevention) */
   guint32 last_user_time;
 
