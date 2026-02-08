@@ -284,6 +284,12 @@ pub enum RenderCommand {
         /// Opacity 0.0-1.0
         opacity: f32,
     },
+    /// Configure rainbow indent guide colors (up to 6 cycling colors by depth)
+    SetIndentGuideRainbow {
+        enabled: bool,
+        /// Colors as sRGB 0.0-1.0 tuples with opacity
+        colors: Vec<(f32, f32, f32, f32)>,
+    },
     /// Configure current line highlight
     SetLineHighlight {
         enabled: bool,

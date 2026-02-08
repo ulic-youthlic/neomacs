@@ -2312,6 +2312,38 @@ pub unsafe extern "C" fn neomacs_display_set_indent_guides(
     }
 }
 
+/// Configure rainbow indent guide colors (up to 6 cycling colors by depth)
+/// Each color is passed as R,G,B (0-255) with opacity (0-100).
+/// num_colors specifies how many color slots are used (max 6).
+#[no_mangle]
+pub unsafe extern "C" fn neomacs_display_set_indent_guide_rainbow(
+    _handle: *mut NeomacsDisplay,
+    enabled: c_int,
+    num_colors: c_int,
+    r1: c_int, g1: c_int, b1: c_int, o1: c_int,
+    r2: c_int, g2: c_int, b2: c_int, o2: c_int,
+    r3: c_int, g3: c_int, b3: c_int, o3: c_int,
+    r4: c_int, g4: c_int, b4: c_int, o4: c_int,
+    r5: c_int, g5: c_int, b5: c_int, o5: c_int,
+    r6: c_int, g6: c_int, b6: c_int, o6: c_int,
+) {
+    let all = [
+        (r1, g1, b1, o1), (r2, g2, b2, o2), (r3, g3, b3, o3),
+        (r4, g4, b4, o4), (r5, g5, b5, o5), (r6, g6, b6, o6),
+    ];
+    let n = (num_colors as usize).min(6);
+    let colors: Vec<(f32, f32, f32, f32)> = all[..n].iter().map(|(r, g, b, o)| {
+        (*r as f32 / 255.0, *g as f32 / 255.0, *b as f32 / 255.0, *o as f32 / 100.0)
+    }).collect();
+    let cmd = RenderCommand::SetIndentGuideRainbow {
+        enabled: enabled != 0,
+        colors,
+    };
+    if let Some(ref state) = THREADED_STATE {
+        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+    }
+}
+
 /// Configure current line highlight rendering
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_set_line_highlight(

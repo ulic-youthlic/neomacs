@@ -1152,6 +1152,39 @@ void neomacs_display_set_indent_guides(struct NeomacsDisplay *handle,
                                        int opacity);
 
 /**
+ * Configure rainbow indent guide colors (up to 6 cycling colors by depth)
+ * Each color is passed as R,G,B (0-255) with opacity (0-100).
+ * num_colors specifies how many color slots are used (max 6).
+ */
+void neomacs_display_set_indent_guide_rainbow(struct NeomacsDisplay *handle,
+                                              int enabled,
+                                              int numColors,
+                                              int r1,
+                                              int g1,
+                                              int b1,
+                                              int o1,
+                                              int r2,
+                                              int g2,
+                                              int b2,
+                                              int o2,
+                                              int r3,
+                                              int g3,
+                                              int b3,
+                                              int o3,
+                                              int r4,
+                                              int g4,
+                                              int b4,
+                                              int o4,
+                                              int r5,
+                                              int g5,
+                                              int b5,
+                                              int o5,
+                                              int r6,
+                                              int g6,
+                                              int b6,
+                                              int o6);
+
+/**
  * Configure current line highlight rendering
  */
 void neomacs_display_set_line_highlight(struct NeomacsDisplay *handle,

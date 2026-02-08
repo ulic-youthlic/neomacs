@@ -597,6 +597,38 @@ Non-nil enables thin vertical lines at indentation levels."
                     neomacs-indent-guides)
            (neomacs-set-indent-guides t val))))
 
+;;; Rainbow indent guides
+
+(declare-function neomacs-set-indent-guide-rainbow "neomacsterm.c"
+  (&optional enabled colors))
+
+(defcustom neomacs-indent-guide-rainbow nil
+  "Enable rainbow indent guide coloring.
+Non-nil cycles indent guide colors by depth level."
+  :type 'boolean
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (fboundp 'neomacs-set-indent-guide-rainbow)
+           (neomacs-set-indent-guide-rainbow
+            val
+            (if (boundp 'neomacs-indent-guide-rainbow-colors)
+                neomacs-indent-guide-rainbow-colors
+              nil)))))
+
+(defcustom neomacs-indent-guide-rainbow-colors
+  '("#e04040" "#e09040" "#e0e040" "#40e040" "#40e0e0" "#a040e0")
+  "List of colors for rainbow indent guides (up to 6).
+Each deeper indentation level uses the next color in the cycle."
+  :type '(repeat color)
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-indent-guide-rainbow)
+                    (boundp 'neomacs-indent-guide-rainbow)
+                    neomacs-indent-guide-rainbow)
+           (neomacs-set-indent-guide-rainbow t val))))
+
 ;;; Current line highlight
 
 (declare-function neomacs-set-line-highlight "neomacsterm.c"

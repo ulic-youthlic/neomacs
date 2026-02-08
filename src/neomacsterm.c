@@ -8160,6 +8160,67 @@ Optional COLOR is a color string for the guides (default \"gray30\").  */)
   return on ? Qt : Qnil;
 }
 
+DEFUN ("neomacs-set-indent-guide-rainbow",
+       Fneomacs_set_indent_guide_rainbow,
+       Sneomacs_set_indent_guide_rainbow, 0, 2, 0,
+       doc: /* Configure rainbow indent guide colors.
+ENABLED non-nil enables rainbow coloring (cycles colors by depth level).
+Optional COLORS is a list of color strings (up to 6).
+Default palette: red, orange, yellow, green, cyan, purple.  */)
+  (Lisp_Object enabled, Lisp_Object colors)
+{
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+
+  int on = !NILP (enabled);
+
+  /* Default rainbow palette */
+  int cr[6][4] = {
+    {228, 66, 66, 50},   /* red */
+    {228, 160, 66, 50},  /* orange */
+    {228, 228, 66, 50},  /* yellow */
+    {66, 228, 66, 50},   /* green */
+    {66, 228, 228, 50},  /* cyan */
+    {160, 66, 228, 50},  /* purple */
+  };
+  int num_colors = 6;
+
+  if (!NILP (colors) && CONSP (colors))
+    {
+      num_colors = 0;
+      Lisp_Object tail;
+      for (tail = colors; CONSP (tail) && num_colors < 6; tail = XCDR (tail))
+        {
+          Lisp_Object c = XCAR (tail);
+          if (STRINGP (c))
+            {
+              Emacs_Color ec;
+              if (neomacs_defined_color (NULL, SSDATA (c), &ec, false, false))
+                {
+                  cr[num_colors][0] = ec.red >> 8;
+                  cr[num_colors][1] = ec.green >> 8;
+                  cr[num_colors][2] = ec.blue >> 8;
+                  cr[num_colors][3] = 50;
+                  num_colors++;
+                }
+            }
+        }
+      if (num_colors == 0)
+        num_colors = 6; /* fall back to defaults */
+    }
+
+  neomacs_display_set_indent_guide_rainbow (
+    dpyinfo->display_handle, on, num_colors,
+    cr[0][0], cr[0][1], cr[0][2], cr[0][3],
+    cr[1][0], cr[1][1], cr[1][2], cr[1][3],
+    cr[2][0], cr[2][1], cr[2][2], cr[2][3],
+    cr[3][0], cr[3][1], cr[3][2], cr[3][3],
+    cr[4][0], cr[4][1], cr[4][2], cr[4][3],
+    cr[5][0], cr[5][1], cr[5][2], cr[5][3]);
+  return on ? Qt : Qnil;
+}
+
 DEFUN ("neomacs-set-scroll-bar-config",
        Fneomacs_set_scroll_bar_config,
        Sneomacs_set_scroll_bar_config, 0, 4, 0,
@@ -9384,6 +9445,7 @@ syms_of_neomacsterm (void)
   defsubr (&Sneomacs_set_background_gradient);
   defsubr (&Sneomacs_set_scroll_bar_config);
   defsubr (&Sneomacs_set_indent_guides);
+  defsubr (&Sneomacs_set_indent_guide_rainbow);
   defsubr (&Sneomacs_set_line_highlight);
   defsubr (&Sneomacs_set_show_whitespace);
   defsubr (&Sneomacs_set_inactive_dim);

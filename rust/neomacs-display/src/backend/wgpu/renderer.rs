@@ -53,6 +53,10 @@ pub struct WgpuRenderer {
     indent_guides_enabled: bool,
     /// Indent guide color (linear RGBA)
     indent_guide_color: (f32, f32, f32, f32),
+    /// Rainbow indent guide enabled (overrides single color when active)
+    indent_guide_rainbow_enabled: bool,
+    /// Rainbow indent guide colors (linear RGBA, cycling by depth)
+    indent_guide_rainbow_colors: Vec<(f32, f32, f32, f32)>,
     /// Current line highlight enabled
     line_highlight_enabled: bool,
     /// Current line highlight color (linear RGBA)
@@ -549,6 +553,8 @@ impl WgpuRenderer {
             scroll_bar_hover_brightness: 1.4,
             indent_guides_enabled: false,
             indent_guide_color: (0.3, 0.3, 0.3, 0.3),
+            indent_guide_rainbow_enabled: false,
+            indent_guide_rainbow_colors: Vec::new(),
             line_highlight_enabled: false,
             line_highlight_color: (0.2, 0.2, 0.3, 0.15),
             show_whitespace_enabled: false,
@@ -602,6 +608,12 @@ impl WgpuRenderer {
     pub fn set_indent_guide_config(&mut self, enabled: bool, color: (f32, f32, f32, f32)) {
         self.indent_guides_enabled = enabled;
         self.indent_guide_color = color;
+    }
+
+    /// Update rainbow indent guide config
+    pub fn set_indent_guide_rainbow(&mut self, enabled: bool, colors: Vec<(f32, f32, f32, f32)>) {
+        self.indent_guide_rainbow_enabled = enabled;
+        self.indent_guide_rainbow_colors = colors;
     }
 
     /// Update scroll bar rendering config
@@ -1620,15 +1632,26 @@ impl WgpuRenderer {
 
             // Draw guides at each tab-stop column within the indent region
             let tab_px = char_w * tab_w as f32;
+            let use_rainbow = self.indent_guide_rainbow_enabled
+                && !self.indent_guide_rainbow_colors.is_empty();
             for row in &rows {
                 let mut col_x = row.text_start_x + tab_px;
+                let mut depth: usize = 0;
                 while col_x < row.first_non_space_x - 1.0 {
+                    let color = if use_rainbow {
+                        let (r, g, b, a) = self.indent_guide_rainbow_colors
+                            [depth % self.indent_guide_rainbow_colors.len()];
+                        Color::new(r, g, b, a)
+                    } else {
+                        guide_color
+                    };
                     self.add_rect(
                         &mut non_overlay_rect_vertices,
                         col_x, row.y, guide_width, row.height,
-                        &guide_color,
+                        &color,
                     );
                     col_x += tab_px;
+                    depth += 1;
                 }
             }
         }

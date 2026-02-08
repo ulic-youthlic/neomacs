@@ -1278,6 +1278,17 @@ void neomacs_display_set_indent_guides(
     int r, int g, int b,
     int opacity);
 
+void neomacs_display_set_indent_guide_rainbow(
+    struct NeomacsDisplay *handle,
+    int enabled,
+    int num_colors,
+    int r1, int g1, int b1, int o1,
+    int r2, int g2, int b2, int o2,
+    int r3, int g3, int b3, int o3,
+    int r4, int g4, int b4, int o4,
+    int r5, int g5, int b5, int o5,
+    int r6, int g6, int b6, int o6);
+
 void neomacs_display_set_line_highlight(
     struct NeomacsDisplay *handle,
     int enabled,
