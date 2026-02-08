@@ -796,6 +796,11 @@ impl RenderApp {
                         let _ = window.request_inner_size(size);
                     }
                 }
+                RenderCommand::SetWindowDecorated { decorated } => {
+                    if let Some(ref window) = self.window {
+                        window.set_decorations(decorated);
+                    }
+                }
                 RenderCommand::SetCursorBlink { enabled, interval_ms } => {
                     log::debug!("Cursor blink: enabled={}, interval={}ms", enabled, interval_ms);
                     self.cursor_blink_enabled = enabled;

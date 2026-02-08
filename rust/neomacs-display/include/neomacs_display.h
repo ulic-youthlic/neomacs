@@ -1032,6 +1032,11 @@ void neomacs_display_set_position(struct NeomacsDisplay *handle, int x, int y);
 void neomacs_display_request_size(struct NeomacsDisplay *handle, int width, int height);
 
 /**
+ * Set window decorations (threaded mode)
+ */
+void neomacs_display_set_decorated(struct NeomacsDisplay *handle, int decorated);
+
+/**
  * Configure cursor blinking (enable/disable and interval)
  */
 void neomacs_display_set_cursor_blink(struct NeomacsDisplay *handle, int enabled, int intervalMs);

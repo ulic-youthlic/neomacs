@@ -624,6 +624,12 @@ void neomacs_display_request_size(struct NeomacsDisplay *handle,
                                       int width, int height);
 
 /**
+ * Set window decorations (threaded mode)
+ */
+void neomacs_display_set_decorated(struct NeomacsDisplay *handle,
+                                    int decorated);
+
+/**
  * Reset cursor blink (call when cursor moves)
  */
 void neomacs_display_reset_cursor_blink(struct NeomacsDisplay *handle);

@@ -293,15 +293,46 @@ neomacs_set_tool_bar_lines (struct frame *f, Lisp_Object value, Lisp_Object oldv
 }
 
 static void
-neomacs_set_internal_border_width (struct frame *f, Lisp_Object value, Lisp_Object oldval)
+neomacs_set_internal_border_width (struct frame *f, Lisp_Object value,
+                                    Lisp_Object oldval)
 {
-  /* Internal border width - not implemented yet */
+  int border = check_int_nonnegative (value);
+
+  if (border != FRAME_INTERNAL_BORDER_WIDTH (f))
+    {
+      f->internal_border_width = border;
+      if (FRAME_NEOMACS_P (f))
+	{
+	  adjust_frame_size (f, -1, -1, 3, false,
+			     Qinternal_border_width);
+	  SET_FRAME_GARBAGED (f);
+	}
+    }
 }
 
 static void
-neomacs_set_child_frame_border_width (struct frame *f, Lisp_Object value, Lisp_Object oldval)
+neomacs_set_child_frame_border_width (struct frame *f, Lisp_Object value,
+                                       Lisp_Object oldval)
 {
-  /* Child frame border width - not implemented yet */
+  int border;
+
+  if (NILP (value))
+    border = -1;
+  else if (RANGED_FIXNUMP (0, value, INT_MAX))
+    border = XFIXNAT (value);
+  else
+    signal_error ("Invalid child frame border width", value);
+
+  if (border != FRAME_CHILD_FRAME_BORDER_WIDTH (f))
+    {
+      f->child_frame_border_width = border;
+      if (FRAME_NEOMACS_P (f))
+	{
+	  adjust_frame_size (f, -1, -1, 3, false,
+			     Qchild_frame_border_width);
+	  SET_FRAME_GARBAGED (f);
+	}
+    }
 }
 
 static void
@@ -381,7 +412,14 @@ neomacs_set_tool_bar_position (struct frame *f, Lisp_Object arg, Lisp_Object old
 static void
 neomacs_set_undecorated (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
 {
-  /* Undecorated - not implemented yet */
+  if (!EQ (arg, oldval))
+    {
+      FRAME_UNDECORATED (f) = NILP (arg) ? false : true;
+      struct neomacs_display_info *dpyinfo = FRAME_DISPLAY_INFO (f);
+      if (dpyinfo && dpyinfo->display_handle)
+	neomacs_display_set_decorated (dpyinfo->display_handle,
+				       NILP (arg) ? 1 : 0);
+    }
 }
 
 static void

@@ -151,6 +151,8 @@ pub enum RenderCommand {
     SetWindowPosition { x: i32, y: i32 },
     /// Request window inner size change
     SetWindowSize { width: u32, height: u32 },
+    /// Set window decorations (title bar, borders)
+    SetWindowDecorated { decorated: bool },
     /// Configure cursor blinking
     SetCursorBlink { enabled: bool, interval_ms: u32 },
     /// Configure cursor animation (smooth motion)

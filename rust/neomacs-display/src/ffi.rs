@@ -2023,6 +2023,18 @@ pub unsafe extern "C" fn neomacs_display_request_size(
     }
 }
 
+/// Set window decorations (threaded mode)
+#[no_mangle]
+pub unsafe extern "C" fn neomacs_display_set_decorated(
+    _handle: *mut NeomacsDisplay,
+    decorated: c_int,
+) {
+    let cmd = RenderCommand::SetWindowDecorated { decorated: decorated != 0 };
+    if let Some(ref state) = THREADED_STATE {
+        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+    }
+}
+
 /// Configure cursor blinking (enable/disable and interval)
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_set_cursor_blink(
