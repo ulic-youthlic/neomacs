@@ -1451,6 +1451,14 @@ void neomacs_display_set_mode_line_transition(struct NeomacsDisplay *handle,
                                               int durationMs);
 
 /**
+ * Configure cursor wake animation (pop/scale effect on blink-on)
+ */
+void neomacs_display_set_cursor_wake(struct NeomacsDisplay *handle,
+                                     int enabled,
+                                     int durationMs,
+                                     int scalePct);
+
+/**
  * Configure text fade-in animation for new content
  */
 void neomacs_display_set_text_fade_in(struct NeomacsDisplay *handle, int enabled, int durationMs);

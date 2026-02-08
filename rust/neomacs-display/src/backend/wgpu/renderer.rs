@@ -254,6 +254,12 @@ pub struct WgpuRenderer {
     scroll_line_spacing_duration_ms: u32,
     /// Active scroll line spacing animations: (window_id, bounds, direction, started)
     active_scroll_spacings: Vec<ScrollSpacingEntry>,
+    /// Cursor wake animation (pop/scale effect on blink-on)
+    cursor_wake_enabled: bool,
+    cursor_wake_duration_ms: u32,
+    cursor_wake_scale: f32,
+    /// Timestamp of last cursor wake trigger
+    cursor_wake_started: Option<std::time::Instant>,
 }
 
 /// Entry for an active window switch highlight fade
@@ -916,6 +922,10 @@ impl WgpuRenderer {
             scroll_line_spacing_max: 6.0,
             scroll_line_spacing_duration_ms: 200,
             active_scroll_spacings: Vec::new(),
+            cursor_wake_enabled: false,
+            cursor_wake_duration_ms: 120,
+            cursor_wake_scale: 1.3,
+            cursor_wake_started: None,
         }
     }
 
@@ -1121,6 +1131,38 @@ impl WgpuRenderer {
         self.cursor_shadow_opacity = opacity;
     }
 
+    /// Update cursor wake animation config
+    pub fn set_cursor_wake(&mut self, enabled: bool, duration_ms: u32, scale: f32) {
+        self.cursor_wake_enabled = enabled;
+        self.cursor_wake_duration_ms = duration_ms;
+        self.cursor_wake_scale = scale;
+    }
+
+    /// Trigger a cursor wake animation
+    pub fn trigger_cursor_wake(&mut self, now: std::time::Instant) {
+        self.cursor_wake_started = Some(now);
+    }
+
+    /// Get current cursor wake scale factor (1.0 = no scaling)
+    fn cursor_wake_factor(&self) -> f32 {
+        if !self.cursor_wake_enabled {
+            return 1.0;
+        }
+        if let Some(started) = self.cursor_wake_started {
+            let elapsed = started.elapsed().as_millis() as f32;
+            let duration = self.cursor_wake_duration_ms as f32;
+            if elapsed >= duration {
+                return 1.0;
+            }
+            let t = elapsed / duration;
+            // Ease-out: scale starts large and settles to 1.0
+            let ease = t * (2.0 - t); // quadratic ease-out
+            1.0 + (self.cursor_wake_scale - 1.0) * (1.0 - ease)
+        } else {
+            1.0
+        }
+    }
+
     /// Update mode-line transition config
     pub fn set_mode_line_transition(&mut self, enabled: bool, duration_ms: u32) {
         self.mode_line_transition_enabled = enabled;
@@ -1319,6 +1361,15 @@ impl WgpuRenderer {
     }
 
     /// Convert HSL to sRGB Color
+    /// Scale a rectangle from its center by a given factor
+    fn scale_rect(x: f32, y: f32, w: f32, h: f32, scale: f32) -> (f32, f32, f32, f32) {
+        let cx = x + w * 0.5;
+        let cy = y + h * 0.5;
+        let nw = w * scale;
+        let nh = h * scale;
+        (cx - nw * 0.5, cy - nh * 0.5, nw, nh)
+    }
+
     fn hsl_to_color(h: f32, s: f32, l: f32) -> Color {
         let c = (1.0 - (2.0 * l - 1.0).abs()) * s;
         let x = c * (1.0 - ((h * 6.0) % 2.0 - 1.0).abs());
@@ -2189,6 +2240,16 @@ impl WgpuRenderer {
             self.needs_continuous_redraw = true;
         }
 
+        // Clear expired cursor wake animation
+        if let Some(started) = self.cursor_wake_started {
+            let dur = std::time::Duration::from_millis(self.cursor_wake_duration_ms as u64);
+            if started.elapsed() >= dur {
+                self.cursor_wake_started = None;
+            } else {
+                self.needs_continuous_redraw = true;
+            }
+        }
+
         // Advance glyph atlas generation for LRU tracking
         glyph_atlas.advance_generation();
 
@@ -2663,6 +2724,12 @@ impl WgpuRenderer {
                     } else {
                         color
                     };
+                    // Cursor wake animation: scale factor for pop effect
+                    let wake = self.cursor_wake_factor();
+                    let wake_active = wake != 1.0 && *style != 3;
+                    if wake_active {
+                        self.needs_continuous_redraw = true;
+                    }
                     if *style == 0 {
                         // Filled box cursor: split into bg rect + behind-text trail.
                         // The static cursor bg rect uses cursor_inverse info if available,
@@ -2675,11 +2742,21 @@ impl WgpuRenderer {
                                 } else {
                                     &inv.cursor_bg
                                 };
-                                self.add_rect(&mut cursor_bg_vertices,
-                                    inv.x, inv.y, inv.width, inv.height, inv_color);
+                                if wake_active {
+                                    let (sx, sy, sw, sh) = Self::scale_rect(inv.x, inv.y, inv.width, inv.height, wake);
+                                    self.add_rect(&mut cursor_bg_vertices, sx, sy, sw, sh, inv_color);
+                                } else {
+                                    self.add_rect(&mut cursor_bg_vertices,
+                                        inv.x, inv.y, inv.width, inv.height, inv_color);
+                                }
                             } else {
                                 // No inverse info — draw opaque cursor at static position
-                                self.add_rect(&mut cursor_bg_vertices, *x, *y, *width, *height, effective_color);
+                                if wake_active {
+                                    let (sx, sy, sw, sh) = Self::scale_rect(*x, *y, *width, *height, wake);
+                                    self.add_rect(&mut cursor_bg_vertices, sx, sy, sw, sh, effective_color);
+                                } else {
+                                    self.add_rect(&mut cursor_bg_vertices, *x, *y, *width, *height, effective_color);
+                                }
                             }
 
                             // Draw animated trail/rect behind text
@@ -2730,11 +2807,21 @@ impl WgpuRenderer {
                                 match style {
                                     1 => {
                                         // Bar (thin vertical line)
-                                        self.add_rect(&mut cursor_vertices, cx, cy, 2.0, ch, effective_color);
+                                        if wake_active {
+                                            let (sx, sy, sw, sh) = Self::scale_rect(cx, cy, 2.0, ch, wake);
+                                            self.add_rect(&mut cursor_vertices, sx, sy, sw, sh, effective_color);
+                                        } else {
+                                            self.add_rect(&mut cursor_vertices, cx, cy, 2.0, ch, effective_color);
+                                        }
                                     }
                                     2 => {
                                         // Underline (hbar at bottom)
-                                        self.add_rect(&mut cursor_vertices, cx, cy + ch - 2.0, cw, 2.0, effective_color);
+                                        if wake_active {
+                                            let (sx, sy, sw, sh) = Self::scale_rect(cx, cy + ch - 2.0, cw, 2.0, wake);
+                                            self.add_rect(&mut cursor_vertices, sx, sy, sw, sh, effective_color);
+                                        } else {
+                                            self.add_rect(&mut cursor_vertices, cx, cy + ch - 2.0, cw, 2.0, effective_color);
+                                        }
                                     }
                                     3 => {
                                         // Hollow box (4 border edges)

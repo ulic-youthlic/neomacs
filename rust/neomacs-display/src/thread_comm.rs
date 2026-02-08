@@ -570,6 +570,14 @@ pub enum RenderCommand {
         /// Transition duration in milliseconds
         duration_ms: u32,
     },
+    /// Configure cursor wake animation (pop/scale effect on blink-on)
+    SetCursorWake {
+        enabled: bool,
+        /// Duration of wake animation in milliseconds
+        duration_ms: u32,
+        /// Scale factor at start of animation (e.g. 1.5 = 150% size)
+        scale: f32,
+    },
     /// Configure text fade-in animation for new content
     SetTextFadeIn {
         enabled: bool,

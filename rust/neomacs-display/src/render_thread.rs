@@ -767,6 +767,10 @@ struct RenderApp {
     scroll_line_spacing_enabled: bool,
     scroll_line_spacing_max: f32,
     scroll_line_spacing_duration: std::time::Duration,
+    /// Cursor wake animation (pop/scale effect on blink-on)
+    cursor_wake_enabled: bool,
+    cursor_wake_duration_ms: u32,
+    cursor_wake_scale: f32,
     /// Selection region glow
     region_glow_enabled: bool,
     region_glow_face_id: u32,
@@ -1070,6 +1074,9 @@ impl RenderApp {
             scroll_line_spacing_enabled: false,
             scroll_line_spacing_max: 6.0,
             scroll_line_spacing_duration: std::time::Duration::from_millis(200),
+            cursor_wake_enabled: false,
+            cursor_wake_duration_ms: 120,
+            cursor_wake_scale: 1.3,
             region_glow_enabled: false,
             region_glow_face_id: 0,
             region_glow_radius: 6.0,
@@ -2114,6 +2121,15 @@ impl RenderApp {
                     }
                     self.frame_dirty = true;
                 }
+                RenderCommand::SetCursorWake { enabled, duration_ms, scale } => {
+                    self.cursor_wake_enabled = enabled;
+                    self.cursor_wake_duration_ms = duration_ms;
+                    self.cursor_wake_scale = scale;
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_cursor_wake(enabled, duration_ms, scale);
+                    }
+                    self.frame_dirty = true;
+                }
                 RenderCommand::SetRegionGlow { enabled, face_id, radius, opacity } => {
                     self.region_glow_enabled = enabled;
                     self.region_glow_face_id = face_id;
@@ -2543,8 +2559,15 @@ impl RenderApp {
         }
         let now = std::time::Instant::now();
         if now.duration_since(self.last_cursor_toggle) >= self.cursor_blink_interval {
+            let was_off = !self.cursor_blink_on;
             self.cursor_blink_on = !self.cursor_blink_on;
             self.last_cursor_toggle = now;
+            // Trigger wake animation when cursor becomes visible after blink-off
+            if was_off && self.cursor_blink_on && self.cursor_wake_enabled {
+                if let Some(renderer) = self.renderer.as_mut() {
+                    renderer.trigger_cursor_wake(now);
+                }
+            }
             true
         } else {
             false

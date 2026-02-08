@@ -1684,6 +1684,54 @@ apart and then settle back."
                     neomacs-scroll-line-spacing)
            (neomacs-set-scroll-line-spacing t nil val))))
 
+;; --- Cursor wake animation ---
+(declare-function neomacs-set-cursor-wake "neomacsterm.c"
+  (&optional enabled duration-ms scale-pct))
+
+(defcustom neomacs-cursor-wake nil
+  "Enable cursor wake animation.
+Non-nil makes the cursor briefly scale up (pop) when it becomes
+visible after blinking off."
+  :type 'boolean
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (fboundp 'neomacs-set-cursor-wake)
+           (neomacs-set-cursor-wake val
+            (if (boundp 'neomacs-cursor-wake-duration)
+                neomacs-cursor-wake-duration nil)
+            (if (boundp 'neomacs-cursor-wake-scale)
+                neomacs-cursor-wake-scale nil)))))
+
+(defcustom neomacs-cursor-wake-duration 120
+  "Cursor wake animation duration in milliseconds."
+  :type '(integer :tag "Duration (ms)")
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-wake)
+                    (boundp 'neomacs-cursor-wake)
+                    neomacs-cursor-wake)
+           (neomacs-set-cursor-wake t val
+            (if (boundp 'neomacs-cursor-wake-scale)
+                neomacs-cursor-wake-scale nil)))))
+
+(defcustom neomacs-cursor-wake-scale 130
+  "Initial scale percentage for cursor wake pop effect.
+130 means the cursor starts at 130% of its normal size and
+animates down to 100%."
+  :type '(integer :tag "Scale (%)")
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-wake)
+                    (boundp 'neomacs-cursor-wake)
+                    neomacs-cursor-wake)
+           (neomacs-set-cursor-wake t
+            (if (boundp 'neomacs-cursor-wake-duration)
+                neomacs-cursor-wake-duration nil)
+            val))))
+
 ;; --- Mode-line content transition ---
 (declare-function neomacs-set-mode-line-transition "neomacsterm.c"
   (&optional enabled duration-ms))
