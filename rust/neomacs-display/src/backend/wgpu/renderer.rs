@@ -4459,6 +4459,7 @@ impl WgpuRenderer {
         title: &str,
         titlebar_height: f32,
         hover: u32,
+        frame_bg: Option<(f32, f32, f32)>,
         glyph_atlas: &mut WgpuGlyphAtlas,
         surface_width: u32,
         surface_height: u32,
@@ -4477,16 +4478,44 @@ impl WgpuRenderer {
         let tb_h = titlebar_height;
         let btn_w = 46.0_f32;
 
-        // Colors (sRGB → linear for Bgra8UnormSrgb surface)
-        let bg_color = Color::new(0.12, 0.12, 0.14, 0.95).srgb_to_linear();
-        let border_color = Color::new(0.25, 0.25, 0.28, 1.0).srgb_to_linear();
+        // Derive colors from frame background (already in linear space) or fallback
+        let bg_color = if let Some((r, g, b)) = frame_bg {
+            // Slightly darken the frame bg for the title bar
+            Color::new(r * 0.85, g * 0.85, b * 0.85, 0.95)
+        } else {
+            Color::new(0.12, 0.12, 0.14, 0.95).srgb_to_linear()
+        };
+        // Determine if theme is light or dark based on luminance
+        let luminance = bg_color.r * 0.299 + bg_color.g * 0.587 + bg_color.b * 0.114;
+        let is_light = luminance > 0.3;
+
+        let border_color = if is_light {
+            Color::new(bg_color.r * 0.8, bg_color.g * 0.8, bg_color.b * 0.8, 1.0)
+        } else {
+            Color::new(
+                (bg_color.r + 0.05).min(1.0),
+                (bg_color.g + 0.05).min(1.0),
+                (bg_color.b + 0.05).min(1.0),
+                1.0,
+            )
+        };
         let close_hover_color = Color::new(0.9, 0.2, 0.2, 0.9).srgb_to_linear();
-        let btn_hover_color = Color::new(0.3, 0.3, 0.35, 0.7).srgb_to_linear();
-        let text_color = {
+        let btn_hover_color = if is_light {
+            Color::new(0.0, 0.0, 0.0, 0.1)
+        } else {
+            Color::new(1.0, 1.0, 1.0, 0.1)
+        };
+        let text_color = if is_light {
+            let c = Color::new(0.15, 0.15, 0.15, 1.0).srgb_to_linear();
+            [c.r, c.g, c.b, c.a]
+        } else {
             let c = Color::new(0.8, 0.8, 0.82, 1.0).srgb_to_linear();
             [c.r, c.g, c.b, c.a]
         };
-        let btn_icon_color = {
+        let btn_icon_color = if is_light {
+            let c = Color::new(0.3, 0.3, 0.3, 1.0).srgb_to_linear();
+            [c.r, c.g, c.b, c.a]
+        } else {
             let c = Color::new(0.7, 0.7, 0.72, 1.0).srgb_to_linear();
             [c.r, c.g, c.b, c.a]
         };

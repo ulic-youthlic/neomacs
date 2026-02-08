@@ -2551,11 +2551,14 @@ impl RenderApp {
             if let (Some(ref renderer), Some(ref mut glyph_atlas)) =
                 (&self.renderer, &mut self.glyph_atlas)
             {
+                let frame_bg = self.current_frame.as_ref()
+                    .map(|f| (f.background.r, f.background.g, f.background.b));
                 renderer.render_custom_titlebar(
                     &surface_view,
                     &self.window_title,
                     self.custom_titlebar_height,
                     self.titlebar_hover,
+                    frame_bg,
                     glyph_atlas,
                     self.width,
                     self.height,
