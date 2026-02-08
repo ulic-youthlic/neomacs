@@ -101,6 +101,10 @@ pub struct WgpuRenderer {
     focus_mode_enabled: bool,
     /// Focus mode dimming opacity
     focus_mode_opacity: f32,
+    /// Minimap enabled
+    minimap_enabled: bool,
+    /// Minimap column width in logical pixels
+    minimap_width: f32,
 }
 
 impl WgpuRenderer {
@@ -595,6 +599,8 @@ impl WgpuRenderer {
             cursor_pulse_start: std::time::Instant::now(),
             focus_mode_enabled: false,
             focus_mode_opacity: 0.4,
+            minimap_enabled: false,
+            minimap_width: 80.0,
         }
     }
 
@@ -630,6 +636,12 @@ impl WgpuRenderer {
     pub fn set_focus_mode(&mut self, enabled: bool, opacity: f32) {
         self.focus_mode_enabled = enabled;
         self.focus_mode_opacity = opacity;
+    }
+
+    /// Update minimap config
+    pub fn set_minimap(&mut self, enabled: bool, width: f32) {
+        self.minimap_enabled = enabled;
+        self.minimap_width = width;
     }
 
     /// Update visible whitespace config
@@ -3013,6 +3025,90 @@ impl WgpuRenderer {
                 // Signal that we need continuous redraws during transition
                 if any_transitioning {
                     self.needs_continuous_redraw = true;
+                }
+            }
+
+            // === Minimap: code overview column on right side of each window ===
+            if self.minimap_enabled {
+                let minimap_w = self.minimap_width;
+                let char_w = frame_glyphs.char_width.max(1.0);
+                let char_h = frame_glyphs.char_height.max(1.0);
+                // Scale factor: each source char maps to this many pixels in minimap
+                let scale_x = 2.0_f32;
+                let scale_y = 1.5_f32;
+
+                for info in &frame_glyphs.window_infos {
+                    if info.is_minibuffer { continue; }
+
+                    let b = &info.bounds;
+                    // Content area (excluding mode-line)
+                    let content_h = b.height - info.mode_line_height;
+                    if content_h < 10.0 { continue; }
+
+                    // Minimap positioned at right edge of window content
+                    let map_x = b.x + b.width - minimap_w;
+                    let map_y = b.y;
+                    let map_h = content_h;
+
+                    // Semi-transparent background
+                    let bg_color = Color::new(0.0, 0.0, 0.0, 0.15);
+                    let mut minimap_vertices: Vec<RectVertex> = Vec::new();
+                    self.add_rect(&mut minimap_vertices, map_x, map_y, minimap_w, map_h, &bg_color);
+
+                    // Collect glyphs belonging to this window's content area
+                    // and render each as a tiny colored rectangle
+                    for glyph in &frame_glyphs.glyphs {
+                        if let FrameGlyph::Char { x, y, width, height, fg, char: ch, is_overlay, .. } = glyph {
+                            if *is_overlay { continue; }
+                            if *ch == ' ' || *ch == '\t' || *ch == '\n' { continue; }
+                            // Check glyph is in this window's content area
+                            if *x < b.x || *x >= b.x + b.width - minimap_w { continue; }
+                            if *y < b.y || *y >= b.y + content_h { continue; }
+
+                            // Map glyph position to minimap coordinates
+                            let rel_x = (*x - b.x) / char_w;
+                            let rel_y = (*y - b.y) / char_h;
+                            let mini_x = map_x + 2.0 + rel_x * scale_x;
+                            let mini_y = map_y + rel_y * scale_y;
+
+                            // Skip if outside minimap bounds
+                            if mini_x >= map_x + minimap_w - 1.0 { continue; }
+                            if mini_y >= map_y + map_h - 1.0 { continue; }
+
+                            // Draw tiny colored block for each character
+                            let dot_w = ((*width / char_w) * scale_x).max(1.0).min(scale_x * 2.0);
+                            let dot_h = scale_y;
+                            let dot_color = Color::new(fg.r, fg.g, fg.b, 0.7);
+                            self.add_rect(&mut minimap_vertices, mini_x, mini_y, dot_w, dot_h, &dot_color);
+                        }
+                    }
+
+                    // Viewport indicator: show where the visible portion is relative to full buffer
+                    if info.buffer_size > 0 {
+                        let start_frac = info.window_start as f32 / info.buffer_size as f32;
+                        let end_frac = (info.window_end as f32 / info.buffer_size as f32).min(1.0);
+                        let vp_y = map_y + start_frac * map_h;
+                        let vp_h = ((end_frac - start_frac) * map_h).max(4.0);
+                        let vp_color = Color::new(1.0, 1.0, 1.0, 0.1);
+                        self.add_rect(&mut minimap_vertices, map_x, vp_y, minimap_w, vp_h, &vp_color);
+                        // Left edge highlight for viewport indicator
+                        let edge_color = Color::new(0.5, 0.7, 1.0, 0.4);
+                        self.add_rect(&mut minimap_vertices, map_x, vp_y, 2.0, vp_h, &edge_color);
+                    }
+
+                    if !minimap_vertices.is_empty() {
+                        let minimap_buffer = self.device.create_buffer_init(
+                            &wgpu::util::BufferInitDescriptor {
+                                label: Some("Minimap Buffer"),
+                                contents: bytemuck::cast_slice(&minimap_vertices),
+                                usage: wgpu::BufferUsages::VERTEX,
+                            },
+                        );
+                        render_pass.set_pipeline(&self.rect_pipeline);
+                        render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                        render_pass.set_vertex_buffer(0, minimap_buffer.slice(..));
+                        render_pass.draw(0..minimap_vertices.len() as u32, 0..1);
+                    }
                 }
             }
         }

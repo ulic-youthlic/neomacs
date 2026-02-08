@@ -8179,6 +8179,28 @@ OPACITY is an integer 0-100 for the dimming overlay opacity (default 40).  */)
   return on ? Qt : Qnil;
 }
 
+DEFUN ("neomacs-set-minimap",
+       Fneomacs_set_minimap,
+       Sneomacs_set_minimap, 0, 2, 0,
+       doc: /* Configure minimap code overview column.
+ENABLED non-nil shows a minimap on the right side of each window.
+WIDTH is the minimap column width in pixels (default 80).  */)
+  (Lisp_Object enabled, Lisp_Object width)
+{
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+
+  int on = !NILP (enabled);
+  int w = 80;
+  if (FIXNUMP (width))
+    w = XFIXNUM (width);
+
+  neomacs_display_set_minimap (
+    dpyinfo->display_handle, on, w);
+  return on ? Qt : Qnil;
+}
+
 DEFUN ("neomacs-set-indent-guides",
        Fneomacs_set_indent_guides,
        Sneomacs_set_indent_guides, 0, 2, 0,
@@ -9505,6 +9527,7 @@ syms_of_neomacsterm (void)
   defsubr (&Sneomacs_set_cursor_glow);
   defsubr (&Sneomacs_set_cursor_pulse);
   defsubr (&Sneomacs_set_focus_mode);
+  defsubr (&Sneomacs_set_minimap);
 
   /* Cursor blink */
   defsubr (&Sneomacs_set_cursor_blink);

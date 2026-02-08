@@ -2456,6 +2456,22 @@ pub unsafe extern "C" fn neomacs_display_set_focus_mode(
     }
 }
 
+/// Configure minimap (code overview column)
+#[no_mangle]
+pub unsafe extern "C" fn neomacs_display_set_minimap(
+    _handle: *mut NeomacsDisplay,
+    enabled: c_int,
+    width: c_int,
+) {
+    let cmd = RenderCommand::SetMinimap {
+        enabled: enabled != 0,
+        width: width as f32,
+    };
+    if let Some(ref state) = THREADED_STATE {
+        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+    }
+}
+
 /// Configure mode-line separator style (threaded mode)
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_set_mode_line_separator(

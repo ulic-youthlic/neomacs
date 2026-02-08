@@ -1234,6 +1234,11 @@ void neomacs_display_set_cursor_pulse(struct NeomacsDisplay *handle,
 void neomacs_display_set_focus_mode(struct NeomacsDisplay *handle, int enabled, int opacity);
 
 /**
+ * Configure minimap (code overview column)
+ */
+void neomacs_display_set_minimap(struct NeomacsDisplay *handle, int enabled, int width);
+
+/**
  * Configure mode-line separator style (threaded mode)
  */
 void neomacs_display_set_mode_line_separator(struct NeomacsDisplay *handle,

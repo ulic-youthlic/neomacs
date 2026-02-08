@@ -885,6 +885,37 @@ non-focused paragraphs."
                     neomacs-focus-mode)
            (neomacs-set-focus-mode t val))))
 
+;;; Minimap
+
+(declare-function neomacs-set-minimap "neomacsterm.c"
+  (&optional enabled width))
+
+(defcustom neomacs-minimap nil
+  "Enable minimap code overview column on the right side of windows.
+Non-nil renders a zoomed-out view of visible code using tiny colored
+blocks representing syntax-highlighted characters."
+  :type 'boolean
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (fboundp 'neomacs-set-minimap)
+           (neomacs-set-minimap
+            val
+            (if (boundp 'neomacs-minimap-width)
+                neomacs-minimap-width
+              nil)))))
+
+(defcustom neomacs-minimap-width 80
+  "Width of the minimap column in pixels."
+  :type '(integer :tag "Width")
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-minimap)
+                    (boundp 'neomacs-minimap)
+                    neomacs-minimap)
+           (neomacs-set-minimap t val))))
+
 ;; Provide the feature
 (provide 'neomacs-win)
 (provide 'term/neomacs-win)

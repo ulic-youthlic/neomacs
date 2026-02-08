@@ -345,6 +345,12 @@ pub enum RenderCommand {
         /// Dimming opacity for unfocused lines (0.0-1.0)
         opacity: f32,
     },
+    /// Configure minimap (code overview column)
+    SetMinimap {
+        enabled: bool,
+        /// Width of the minimap column in pixels
+        width: f32,
+    },
 }
 
 /// Wakeup pipe for signaling Emacs from render thread

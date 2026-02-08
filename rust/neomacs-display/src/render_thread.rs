@@ -670,6 +670,9 @@ struct RenderApp {
     /// Focus mode (dim outside current paragraph)
     focus_mode_enabled: bool,
     focus_mode_opacity: f32,
+    /// Minimap (code overview column)
+    minimap_enabled: bool,
+    minimap_width: f32,
 }
 
 /// State for a tooltip displayed as GPU overlay
@@ -855,6 +858,8 @@ impl RenderApp {
             cursor_pulse_min_opacity: 0.3,
             focus_mode_enabled: false,
             focus_mode_opacity: 0.4,
+            minimap_enabled: false,
+            minimap_width: 80.0,
         }
     }
 
@@ -1633,6 +1638,14 @@ impl RenderApp {
                     self.focus_mode_opacity = opacity;
                     if let Some(renderer) = self.renderer.as_mut() {
                         renderer.set_focus_mode(enabled, opacity);
+                    }
+                    self.frame_dirty = true;
+                }
+                RenderCommand::SetMinimap { enabled, width } => {
+                    self.minimap_enabled = enabled;
+                    self.minimap_width = width;
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_minimap(enabled, width);
                     }
                     self.frame_dirty = true;
                 }

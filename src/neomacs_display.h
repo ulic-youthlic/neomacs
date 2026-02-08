@@ -1324,6 +1324,11 @@ void neomacs_display_set_focus_mode(
     int enabled,
     int opacity);
 
+void neomacs_display_set_minimap(
+    struct NeomacsDisplay *handle,
+    int enabled,
+    int width);
+
 void neomacs_display_set_mode_line_separator(
     struct NeomacsDisplay *handle,
     int style,
