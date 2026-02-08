@@ -2625,6 +2625,26 @@ pub unsafe extern "C" fn neomacs_display_set_vignette(
     }
 }
 
+/// Configure scroll progress indicator bar
+#[no_mangle]
+pub unsafe extern "C" fn neomacs_display_set_scroll_progress(
+    _handle: *mut NeomacsDisplay,
+    enabled: c_int,
+    height: c_int,
+    r: c_int, g: c_int, b: c_int,
+    opacity: c_int,
+) {
+    let cmd = RenderCommand::SetScrollProgress {
+        enabled: enabled != 0,
+        height: height as f32,
+        color: (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0),
+        opacity: opacity as f32 / 100.0,
+    };
+    if let Some(ref state) = THREADED_STATE {
+        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+    }
+}
+
 /// Configure active window border glow
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_set_window_glow(

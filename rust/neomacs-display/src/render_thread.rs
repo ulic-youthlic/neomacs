@@ -718,6 +718,11 @@ struct RenderApp {
     window_glow_color: (f32, f32, f32),
     window_glow_radius: f32,
     window_glow_intensity: f32,
+    /// Scroll progress indicator bar
+    scroll_progress_enabled: bool,
+    scroll_progress_height: f32,
+    scroll_progress_color: (f32, f32, f32),
+    scroll_progress_opacity: f32,
 }
 
 /// State for a tooltip displayed as GPU overlay
@@ -939,6 +944,10 @@ impl RenderApp {
             window_glow_color: (0.4, 0.6, 1.0),
             window_glow_radius: 8.0,
             window_glow_intensity: 0.4,
+            scroll_progress_enabled: false,
+            scroll_progress_height: 2.0,
+            scroll_progress_color: (0.4, 0.6, 1.0),
+            scroll_progress_opacity: 0.8,
         }
     }
 
@@ -1806,6 +1815,16 @@ impl RenderApp {
                     self.window_switch_fade_intensity = intensity;
                     if let Some(renderer) = self.renderer.as_mut() {
                         renderer.set_window_switch_fade(enabled, duration_ms, intensity);
+                    }
+                    self.frame_dirty = true;
+                }
+                RenderCommand::SetScrollProgress { enabled, height, color, opacity } => {
+                    self.scroll_progress_enabled = enabled;
+                    self.scroll_progress_height = height;
+                    self.scroll_progress_color = color;
+                    self.scroll_progress_opacity = opacity;
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_scroll_progress(enabled, height, color, opacity);
                     }
                     self.frame_dirty = true;
                 }

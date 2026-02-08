@@ -1194,6 +1194,31 @@ spectrum, creating a colorful animated cursor effect."
                 neomacs-cursor-color-cycle-saturation nil)
             val))))
 
+;; --- Scroll progress indicator ---
+(declare-function neomacs-set-scroll-progress "neomacsterm.c"
+  (&optional enabled height r g b opacity))
+
+(defcustom neomacs-scroll-progress nil
+  "Enable scroll progress indicator bar at top of windows.
+Non-nil shows a thin colored bar indicating scroll position within the buffer."
+  :type 'boolean
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (fboundp 'neomacs-set-scroll-progress)
+           (neomacs-set-scroll-progress val))))
+
+(defcustom neomacs-scroll-progress-height 2
+  "Height of the scroll progress bar in pixels."
+  :type '(integer :tag "Height")
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-scroll-progress)
+                    (boundp 'neomacs-scroll-progress)
+                    neomacs-scroll-progress)
+           (neomacs-set-scroll-progress t val))))
+
 ;; --- Active window border glow ---
 (declare-function neomacs-set-window-glow "neomacsterm.c"
   (&optional enabled r g b radius intensity))

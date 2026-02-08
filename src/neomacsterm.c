@@ -8399,6 +8399,37 @@ RADIUS is the inset in pixels from each edge (default 80).  */)
   return on ? Qt : Qnil;
 }
 
+DEFUN ("neomacs-set-scroll-progress",
+       Fneomacs_set_scroll_progress,
+       Sneomacs_set_scroll_progress, 0, 6, 0,
+       doc: /* Configure scroll progress indicator bar.
+ENABLED non-nil shows a thin colored bar at the top of each window
+indicating scroll position within the buffer.
+HEIGHT is bar height in pixels (default 2).
+R, G, B are color components 0-255 (default 102 153 255).
+OPACITY is 0-100 (default 80).  */)
+  (Lisp_Object enabled, Lisp_Object height, Lisp_Object r, Lisp_Object g,
+   Lisp_Object b, Lisp_Object opacity)
+{
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+
+  int on = !NILP (enabled);
+  int h = 2;
+  int cr = 102, cg = 153, cb = 255;
+  int op = 80;
+  if (FIXNUMP (height)) h = XFIXNUM (height);
+  if (FIXNUMP (r)) cr = XFIXNUM (r);
+  if (FIXNUMP (g)) cg = XFIXNUM (g);
+  if (FIXNUMP (b)) cb = XFIXNUM (b);
+  if (FIXNUMP (opacity)) op = XFIXNUM (opacity);
+
+  neomacs_display_set_scroll_progress (
+    dpyinfo->display_handle, on, h, cr, cg, cb, op);
+  return on ? Qt : Qnil;
+}
+
 DEFUN ("neomacs-set-window-glow",
        Fneomacs_set_window_glow,
        Sneomacs_set_window_glow, 0, 6, 0,
@@ -9857,6 +9888,7 @@ syms_of_neomacsterm (void)
   defsubr (&Sneomacs_set_window_switch_fade);
   defsubr (&Sneomacs_set_breadcrumb);
   defsubr (&Sneomacs_set_window_glow);
+  defsubr (&Sneomacs_set_scroll_progress);
 
   /* Cursor blink */
   defsubr (&Sneomacs_set_cursor_blink);

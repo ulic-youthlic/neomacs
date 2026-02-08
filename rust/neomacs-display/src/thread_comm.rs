@@ -384,6 +384,16 @@ pub enum RenderCommand {
         duration_ms: u32,
         intensity: f32,
     },
+    /// Configure scroll progress indicator bar
+    SetScrollProgress {
+        enabled: bool,
+        /// Bar height in pixels
+        height: f32,
+        /// Bar color (sRGB 0.0-1.0)
+        color: (f32, f32, f32),
+        /// Bar opacity (0.0-1.0)
+        opacity: f32,
+    },
     /// Configure active window border glow
     SetWindowGlow {
         enabled: bool,

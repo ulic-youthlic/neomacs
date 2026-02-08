@@ -163,6 +163,11 @@ pub struct WgpuRenderer {
     window_glow_color: (f32, f32, f32),
     window_glow_radius: f32,
     window_glow_intensity: f32,
+    /// Scroll progress indicator bar
+    scroll_progress_enabled: bool,
+    scroll_progress_height: f32,
+    scroll_progress_color: (f32, f32, f32),
+    scroll_progress_opacity: f32,
 }
 
 /// Entry for an active window switch highlight fade
@@ -720,6 +725,10 @@ impl WgpuRenderer {
             window_glow_color: (0.4, 0.6, 1.0),
             window_glow_radius: 8.0,
             window_glow_intensity: 0.4,
+            scroll_progress_enabled: false,
+            scroll_progress_height: 2.0,
+            scroll_progress_color: (0.4, 0.6, 1.0),
+            scroll_progress_opacity: 0.8,
         }
     }
 
@@ -846,6 +855,14 @@ impl WgpuRenderer {
         self.window_switch_fade_enabled = enabled;
         self.window_switch_fade_duration_ms = duration_ms;
         self.window_switch_fade_intensity = intensity;
+    }
+
+    /// Update scroll progress indicator config
+    pub fn set_scroll_progress(&mut self, enabled: bool, height: f32, color: (f32, f32, f32), opacity: f32) {
+        self.scroll_progress_enabled = enabled;
+        self.scroll_progress_height = height;
+        self.scroll_progress_color = color;
+        self.scroll_progress_opacity = opacity;
     }
 
     /// Update active window border glow config
@@ -3815,6 +3832,49 @@ impl WgpuRenderer {
                     render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
                     render_pass.set_vertex_buffer(0, glow_buffer.slice(..));
                     render_pass.draw(0..glow_vertices.len() as u32, 0..1);
+                }
+            }
+
+            // === Scroll progress indicator bar ===
+            if self.scroll_progress_enabled {
+                let bar_h = self.scroll_progress_height.max(1.0);
+                let (cr, cg, cb) = self.scroll_progress_color;
+                let opacity = self.scroll_progress_opacity.clamp(0.0, 1.0);
+                let mut progress_vertices: Vec<RectVertex> = Vec::new();
+
+                for info in &frame_glyphs.window_infos {
+                    if info.is_minibuffer { continue; }
+                    let b = &info.bounds;
+                    let buf_size = info.buffer_size.max(1) as f32;
+
+                    // Compute scroll fraction (0.0 = top, 1.0 = bottom)
+                    let frac = (info.window_start as f32 / buf_size).clamp(0.0, 1.0);
+
+                    // Compute visible fraction (how much of buffer is visible)
+                    let visible = ((info.window_end - info.window_start).max(1) as f32 / buf_size)
+                        .clamp(0.0, 1.0);
+
+                    // Track background (subtle)
+                    let track_color = Color::new(cr, cg, cb, opacity * 0.15);
+                    self.add_rect(&mut progress_vertices, b.x, b.y, b.width, bar_h, &track_color);
+
+                    // Progress thumb
+                    let thumb_w = (visible * b.width).max(4.0);
+                    let thumb_x = b.x + frac * (b.width - thumb_w);
+                    let thumb_color = Color::new(cr, cg, cb, opacity);
+                    self.add_rect(&mut progress_vertices, thumb_x, b.y, thumb_w, bar_h, &thumb_color);
+                }
+
+                if !progress_vertices.is_empty() {
+                    let progress_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Scroll Progress Buffer"),
+                        contents: bytemuck::cast_slice(&progress_vertices),
+                        usage: wgpu::BufferUsages::VERTEX,
+                    });
+                    render_pass.set_pipeline(&self.rect_pipeline);
+                    render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                    render_pass.set_vertex_buffer(0, progress_buffer.slice(..));
+                    render_pass.draw(0..progress_vertices.len() as u32, 0..1);
                 }
             }
 

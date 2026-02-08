@@ -1378,6 +1378,13 @@ void neomacs_display_set_vignette(
     int intensity,
     int radius);
 
+void neomacs_display_set_scroll_progress(
+    struct NeomacsDisplay *handle,
+    int enabled,
+    int height,
+    int r, int g, int b,
+    int opacity);
+
 void neomacs_display_set_window_glow(
     struct NeomacsDisplay *handle,
     int enabled,
