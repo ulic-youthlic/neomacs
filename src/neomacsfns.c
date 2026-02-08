@@ -1983,6 +1983,14 @@ If the parameters specify a display, that display is used.  */)
   FRAME_NEOMACS_OUTPUT (f)->hourglass_cursor = (Emacs_Cursor) 7;
   FRAME_NEOMACS_OUTPUT (f)->horizontal_drag_cursor = (Emacs_Cursor) 5;
   FRAME_NEOMACS_OUTPUT (f)->vertical_drag_cursor = (Emacs_Cursor) 6;
+  FRAME_NEOMACS_OUTPUT (f)->left_edge_cursor = (Emacs_Cursor) 5;
+  FRAME_NEOMACS_OUTPUT (f)->right_edge_cursor = (Emacs_Cursor) 5;
+  FRAME_NEOMACS_OUTPUT (f)->top_edge_cursor = (Emacs_Cursor) 6;
+  FRAME_NEOMACS_OUTPUT (f)->bottom_edge_cursor = (Emacs_Cursor) 6;
+  FRAME_NEOMACS_OUTPUT (f)->top_left_corner_cursor = (Emacs_Cursor) 8;
+  FRAME_NEOMACS_OUTPUT (f)->top_right_corner_cursor = (Emacs_Cursor) 9;
+  FRAME_NEOMACS_OUTPUT (f)->bottom_left_corner_cursor = (Emacs_Cursor) 10;
+  FRAME_NEOMACS_OUTPUT (f)->bottom_right_corner_cursor = (Emacs_Cursor) 11;
 
   tem = gui_display_get_arg (dpyinfo, parms, Qunsplittable, 0, 0,
 			     RES_TYPE_BOOLEAN);

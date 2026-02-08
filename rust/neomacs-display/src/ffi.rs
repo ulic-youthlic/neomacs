@@ -1963,8 +1963,9 @@ pub unsafe extern "C" fn neomacs_display_reset_cursor_blink(handle: *mut Neomacs
 }
 
 /// Set mouse pointer cursor shape.
-/// Types: 1=default/arrow, 2=text/ibeam, 3=hand/pointer,
-///        4=crosshair, 5=h-resize, 6=v-resize, 7=hourglass
+/// Types: 0=hidden, 1=default/arrow, 2=text/ibeam, 3=hand/pointer,
+///        4=crosshair, 5=h-resize, 6=v-resize, 7=hourglass,
+///        8=nwse-resize, 9=nesw-resize, 10=nesw-resize, 11=nwse-resize
 #[no_mangle]
 pub unsafe extern "C" fn neomacs_display_set_mouse_cursor(
     _handle: *mut NeomacsDisplay,

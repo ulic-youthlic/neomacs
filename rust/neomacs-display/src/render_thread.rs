@@ -888,12 +888,16 @@ impl RenderApp {
                             use winit::window::CursorIcon;
                             window.set_cursor_visible(true);
                             let icon = match cursor_type {
-                                2 => CursorIcon::Text,      // I-beam
+                                2 => CursorIcon::Text,       // I-beam
                                 3 => CursorIcon::Pointer,    // Hand/pointer
                                 4 => CursorIcon::Crosshair,
                                 5 => CursorIcon::EwResize,   // Horizontal resize
                                 6 => CursorIcon::NsResize,   // Vertical resize
                                 7 => CursorIcon::Wait,       // Hourglass
+                                8 => CursorIcon::NwseResize, // NW-SE (top-left/bottom-right)
+                                9 => CursorIcon::NeswResize, // NE-SW (top-right/bottom-left)
+                                10 => CursorIcon::NeswResize,
+                                11 => CursorIcon::NwseResize,
                                 _ => CursorIcon::Default,    // Arrow
                             };
                             window.set_cursor(icon);
