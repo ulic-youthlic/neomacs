@@ -156,6 +156,7 @@ impl LayoutEngine {
                 params.is_minibuffer,
                 params.char_height,
                 buffer_file_name,
+                wp.modified != 0,
             );
 
             // Layout this window's content

@@ -733,7 +733,8 @@ void neomacs_display_add_window_info(struct NeomacsDisplay *handle,
                                       int selected,
                                       int is_minibuffer,
                                       float char_height,
-                                      const char *buffer_file_name);
+                                      const char *buffer_file_name,
+                                      int modified);
 
 /**
  * Check if animations are active
@@ -1524,6 +1525,15 @@ void neomacs_display_set_cursor_crosshair(
     int r,
     int g,
     int b,
+    int opacity);
+
+void neomacs_display_set_modified_indicator(
+    struct NeomacsDisplay *handle,
+    int enabled,
+    int r,
+    int g,
+    int b,
+    int width,
     int opacity);
 
 void neomacs_display_set_wrap_indicator(

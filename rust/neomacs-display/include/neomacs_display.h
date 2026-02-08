@@ -403,6 +403,10 @@ typedef struct WindowParamsFFI {
    * Buffer file name (NULL if no file)
    */
   const char *bufferFileName;
+  /**
+   * Whether the buffer has unsaved modifications
+   */
+  int modified;
 } WindowParamsFFI;
 
 /**
@@ -674,7 +678,8 @@ void neomacs_display_add_window_info(struct NeomacsDisplay *handle,
                                      int selected,
                                      int isMinibuffer,
                                      float charHeight,
-                                     const char *bufferFileName);
+                                     const char *bufferFileName,
+                                     int modified);
 
 /**
  * Set cursor for a specific window
@@ -1485,6 +1490,17 @@ void neomacs_display_set_cursor_crosshair(struct NeomacsDisplay *handle,
                                           int g,
                                           int b,
                                           int opacity);
+
+/**
+ * Configure buffer modified border indicator
+ */
+void neomacs_display_set_modified_indicator(struct NeomacsDisplay *handle,
+                                            int enabled,
+                                            int r,
+                                            int g,
+                                            int b,
+                                            int width,
+                                            int opacity);
 
 /**
  * Configure cursor click halo effect

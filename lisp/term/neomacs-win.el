@@ -2172,6 +2172,74 @@ from the cursor position across the selected window."
                 neomacs-cursor-crosshair-color nil)
             val))))
 
+;; --- Buffer modified border indicator ---
+(declare-function neomacs-set-modified-indicator "neomacsterm.c"
+  (&optional enabled color width opacity))
+
+(defcustom neomacs-modified-indicator nil
+  "Enable buffer modified border indicator.
+Non-nil draws a colored strip along the left edge of windows
+whose buffers have unsaved modifications."
+  :type 'boolean
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (fboundp 'neomacs-set-modified-indicator)
+           (neomacs-set-modified-indicator val
+            (if (boundp 'neomacs-modified-indicator-color)
+                neomacs-modified-indicator-color nil)
+            (if (boundp 'neomacs-modified-indicator-width)
+                neomacs-modified-indicator-width nil)
+            (if (boundp 'neomacs-modified-indicator-opacity)
+                neomacs-modified-indicator-opacity nil)))))
+
+(defcustom neomacs-modified-indicator-color "#FF9933"
+  "Modified indicator strip color as hex RGB string."
+  :type '(string :tag "Color (#RRGGBB)")
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-modified-indicator)
+                    (boundp 'neomacs-modified-indicator)
+                    neomacs-modified-indicator)
+           (neomacs-set-modified-indicator t val
+            (if (boundp 'neomacs-modified-indicator-width)
+                neomacs-modified-indicator-width nil)
+            (if (boundp 'neomacs-modified-indicator-opacity)
+                neomacs-modified-indicator-opacity nil)))))
+
+(defcustom neomacs-modified-indicator-width 3
+  "Modified indicator strip width in pixels."
+  :type '(integer :tag "Width (px)")
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-modified-indicator)
+                    (boundp 'neomacs-modified-indicator)
+                    neomacs-modified-indicator)
+           (neomacs-set-modified-indicator t
+            (if (boundp 'neomacs-modified-indicator-color)
+                neomacs-modified-indicator-color nil)
+            val
+            (if (boundp 'neomacs-modified-indicator-opacity)
+                neomacs-modified-indicator-opacity nil)))))
+
+(defcustom neomacs-modified-indicator-opacity 80
+  "Modified indicator strip opacity (0-100)."
+  :type '(integer :tag "Opacity (%)")
+  :group 'frames
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-modified-indicator)
+                    (boundp 'neomacs-modified-indicator)
+                    neomacs-modified-indicator)
+           (neomacs-set-modified-indicator t
+            (if (boundp 'neomacs-modified-indicator-color)
+                neomacs-modified-indicator-color nil)
+            (if (boundp 'neomacs-modified-indicator-width)
+                neomacs-modified-indicator-width nil)
+            val))))
+
 ;; --- Window edge snap indicator ---
 (declare-function neomacs-set-edge-snap "neomacsterm.c"
   (&optional enabled color duration-ms))

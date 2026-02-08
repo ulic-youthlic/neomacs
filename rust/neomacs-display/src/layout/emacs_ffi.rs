@@ -503,6 +503,8 @@ pub struct WindowParamsFFI {
     pub right_margin_width: f32,
     /// Buffer file name (NULL if no file)
     pub buffer_file_name: *const std::ffi::c_char,
+    /// Whether the buffer has unsaved modifications
+    pub modified: c_int,
 }
 
 impl Default for WindowParamsFFI {

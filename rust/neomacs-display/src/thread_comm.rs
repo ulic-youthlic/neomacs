@@ -620,6 +620,18 @@ pub enum RenderCommand {
         /// Line opacity (0.0-1.0)
         opacity: f32,
     },
+    /// Configure buffer modified border indicator
+    SetModifiedIndicator {
+        enabled: bool,
+        /// Border color for modified buffers (sRGB floats)
+        r: f32,
+        g: f32,
+        b: f32,
+        /// Border width in pixels
+        width: f32,
+        /// Opacity (0.0-1.0)
+        opacity: f32,
+    },
     /// Configure cursor click halo effect
     SetClickHalo {
         enabled: bool,

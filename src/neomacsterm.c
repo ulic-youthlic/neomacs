@@ -1043,12 +1043,14 @@ neomacs_extract_window_glyphs (struct window *w, void *user_data)
         }
     }
     const char *buf_fname = NULL;
+    int buf_modified = 0;
     if (BUFFERP (w->contents))
       {
         struct buffer *b = XBUFFER (w->contents);
         Lisp_Object fn = BVAR (b, filename);
         if (STRINGP (fn))
           buf_fname = SSDATA (fn);
+        buf_modified = (BUF_SAVE_MODIFF (b) < BUF_MODIFF (b)) ? 1 : 0;
       }
     neomacs_display_add_window_info (
         handle,
@@ -1061,7 +1063,7 @@ neomacs_extract_window_glyphs (struct window *w, void *user_data)
         (float) win_w, (float) win_h,
         (float) WINDOW_MODE_LINE_HEIGHT (w),
         selected, is_mini, w_char_height,
-        buf_fname);
+        buf_fname, buf_modified);
   }
 
   /* Check mouse-face highlight for this window */
@@ -1734,6 +1736,8 @@ struct neomacs_window_params_ffi {
   float right_margin_width;
   /* Buffer file name (NULL if no file) */
   const char *buffer_file_name;
+  /* Whether the buffer has unsaved modifications */
+  int modified;
 };
 
 /* Get window parameters for the Nth leaf window.
@@ -1809,6 +1813,7 @@ neomacs_layout_get_window_params (void *frame_ptr, int window_index,
       params->word_wrap = !NILP (BVAR (buf, word_wrap));
       Lisp_Object fn = BVAR (buf, filename);
       params->buffer_file_name = STRINGP (fn) ? SSDATA (fn) : NULL;
+      params->modified = (BUF_SAVE_MODIFF (buf) < BUF_MODIFF (buf)) ? 1 : 0;
     }
   else
     {
@@ -1821,6 +1826,7 @@ neomacs_layout_get_window_params (void *frame_ptr, int window_index,
       params->truncate_lines = 0;
       params->word_wrap = 0;
       params->buffer_file_name = NULL;
+      params->modified = 0;
     }
 
   params->x = (float) WINDOW_LEFT_EDGE_X (w);
@@ -9102,6 +9108,44 @@ OPACITY is a percentage 0-100 (default 15).  */)
   return on ? Qt : Qnil;
 }
 
+DEFUN ("neomacs-set-modified-indicator",
+       Fneomacs_set_modified_indicator,
+       Sneomacs_set_modified_indicator, 0, 4, 0,
+       doc: /* Configure buffer modified border indicator.
+ENABLED non-nil draws a colored strip along the left edge of windows
+whose buffers have unsaved modifications.
+COLOR is an RGB hex string (default "#FF9933").
+WIDTH is the strip width in pixels (default 3).
+OPACITY is a percentage 0-100 (default 80).  */)
+  (Lisp_Object enabled, Lisp_Object color, Lisp_Object width, Lisp_Object opacity)
+{
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+
+  int on = !NILP (enabled);
+  int r = 255, g = 153, b = 51;
+  int w = 3;
+  int op = 80;
+  if (STRINGP (color))
+    {
+      const char *s = SSDATA (color);
+      if (s[0] == '#' && strlen (s) == 7)
+        {
+          unsigned int hex;
+          sscanf (s + 1, "%06x", &hex);
+          r = (hex >> 16) & 0xFF;
+          g = (hex >> 8) & 0xFF;
+          b = hex & 0xFF;
+        }
+    }
+  if (FIXNUMP (width)) w = XFIXNUM (width);
+  if (FIXNUMP (opacity)) op = XFIXNUM (opacity);
+
+  neomacs_display_set_modified_indicator (dpyinfo->display_handle, on, r, g, b, w, op);
+  return on ? Qt : Qnil;
+}
+
 DEFUN ("neomacs-set-edge-snap",
        Fneomacs_set_edge_snap,
        Sneomacs_set_edge_snap, 0, 3, 0,
@@ -10732,6 +10776,7 @@ syms_of_neomacsterm (void)
   defsubr (&Sneomacs_set_click_halo);
   defsubr (&Sneomacs_set_edge_snap);
   defsubr (&Sneomacs_set_cursor_crosshair);
+  defsubr (&Sneomacs_set_modified_indicator);
   defsubr (&Sneomacs_set_region_glow);
   defsubr (&Sneomacs_set_window_glow);
   defsubr (&Sneomacs_set_scroll_progress);

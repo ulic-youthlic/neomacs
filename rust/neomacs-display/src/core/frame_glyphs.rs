@@ -200,6 +200,8 @@ pub struct WindowInfo {
     pub char_height: f32,
     /// Buffer file name (empty string if no file)
     pub buffer_file_name: String,
+    /// Whether the buffer has unsaved modifications
+    pub modified: bool,
 }
 
 /// Buffer collecting glyphs for current frame.
@@ -486,7 +488,7 @@ impl FrameGlyphBuffer {
                            x: f32, y: f32, width: f32, height: f32,
                            mode_line_height: f32, selected: bool,
                            is_minibuffer: bool, char_height: f32,
-                           buffer_file_name: String) {
+                           buffer_file_name: String, modified: bool) {
         self.window_infos.push(WindowInfo {
             window_id,
             buffer_id,
@@ -499,6 +501,7 @@ impl FrameGlyphBuffer {
             is_minibuffer,
             char_height,
             buffer_file_name,
+            modified,
         });
     }
 

@@ -279,6 +279,11 @@ pub struct WgpuRenderer {
     cursor_crosshair_enabled: bool,
     cursor_crosshair_color: (f32, f32, f32),
     cursor_crosshair_opacity: f32,
+    /// Buffer modified border indicator
+    modified_indicator_enabled: bool,
+    modified_indicator_color: (f32, f32, f32),
+    modified_indicator_width: f32,
+    modified_indicator_opacity: f32,
     /// Scroll velocity fade overlay
     scroll_velocity_fade_enabled: bool,
     scroll_velocity_fade_max_opacity: f32,
@@ -1026,6 +1031,10 @@ impl WgpuRenderer {
             cursor_crosshair_enabled: false,
             cursor_crosshair_color: (0.5, 0.5, 0.5),
             cursor_crosshair_opacity: 0.15,
+            modified_indicator_enabled: false,
+            modified_indicator_color: (1.0, 0.6, 0.2),
+            modified_indicator_width: 3.0,
+            modified_indicator_opacity: 0.8,
             scroll_velocity_fade_enabled: false,
             scroll_velocity_fade_max_opacity: 0.15,
             scroll_velocity_fade_ms: 300,
@@ -1323,6 +1332,14 @@ impl WgpuRenderer {
         self.cursor_crosshair_enabled = enabled;
         self.cursor_crosshair_color = color;
         self.cursor_crosshair_opacity = opacity;
+    }
+
+    /// Update buffer modified border indicator config
+    pub fn set_modified_indicator(&mut self, enabled: bool, color: (f32, f32, f32), width: f32, opacity: f32) {
+        self.modified_indicator_enabled = enabled;
+        self.modified_indicator_color = color;
+        self.modified_indicator_width = width;
+        self.modified_indicator_opacity = opacity;
     }
 
     /// Update click halo config
@@ -3446,6 +3463,39 @@ impl WgpuRenderer {
                             render_pass.draw(0..cross_verts.len() as u32, 0..1);
                         }
                     }
+                }
+            }
+
+            // === Step 1e: Draw buffer modified border indicator ===
+            if self.modified_indicator_enabled {
+                let (mr, mg, mb) = self.modified_indicator_color;
+                let malpha = self.modified_indicator_opacity;
+                let mc = Color::new(mr, mg, mb, malpha);
+                let mw = self.modified_indicator_width;
+                let mut mod_verts: Vec<RectVertex> = Vec::new();
+                for win_info in &frame_glyphs.window_infos {
+                    if win_info.modified && !win_info.is_minibuffer {
+                        let wb = &win_info.bounds;
+                        // Draw a colored strip along the left edge of the window
+                        let mode_line_h = win_info.mode_line_height;
+                        let content_h = wb.height - mode_line_h;
+                        if content_h > 0.0 {
+                            self.add_rect(&mut mod_verts, wb.x, wb.y, mw, content_h, &mc);
+                        }
+                    }
+                }
+                if !mod_verts.is_empty() {
+                    let mod_buf = self.device.create_buffer_init(
+                        &wgpu::util::BufferInitDescriptor {
+                            label: Some("Modified Indicator Buffer"),
+                            contents: bytemuck::cast_slice(&mod_verts),
+                            usage: wgpu::BufferUsages::VERTEX,
+                        },
+                    );
+                    render_pass.set_pipeline(&self.rect_pipeline);
+                    render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                    render_pass.set_vertex_buffer(0, mod_buf.slice(..));
+                    render_pass.draw(0..mod_verts.len() as u32, 0..1);
                 }
             }
 
