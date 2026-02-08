@@ -423,6 +423,28 @@ neomacs/
 
 ---
 
+## Roadmap: Rust Display Engine Rewrite
+
+We are rewriting the Emacs display engine entirely in Rust. The current system extracts glyphs from Emacs's C glyph matrices and sends them to the GPU — the next step is replacing the C layout engine (`xdisp.c`, `dispnew.c`, ~40k LOC) with a Rust layout engine that reads buffer data directly and produces GPU-ready glyph batches. One layout engine, two renderers: **wgpu (GPU)** and **TUI (terminal)**.
+
+See [docs/rust-display-engine.md](docs/rust-display-engine.md) for the full design document.
+
+| Phase | Scope | Difficulty | Enables |
+|-------|-------|------------|---------|
+| 0: Snapshot infra | ~500 C, ~300 Rust | Medium | Foundation |
+| 1: Monospace ASCII layout | ~1500 Rust | Medium | Basic editing |
+| 1.5: TUI renderer | ~1200 Rust | Medium | Terminal Emacs |
+| 2: Face resolution | ~800 Rust | Medium | Syntax highlighting |
+| 3: Display properties | ~2000 Rust | Hard | Packages (company, which-key) |
+| 4: Mode-line & header-line | ~500 Rust | Medium | Status display |
+| 5: Variable-width & compositions | ~800 Rust | Medium | Proportional fonts, ligatures |
+| 6: Bidi | ~1500 Rust | Very hard | International text |
+| 7: Images & media | ~400 Rust | Easy | Already working |
+
+**Total: ~8-10k LOC Rust replacing ~30k LOC C** — fewer lines because we skip terminal/X11/GTK backend code, skip incremental matrix diffing (GPU redraws everything), and leverage modern Rust crates (cosmic-text, unicode-bidi) for the hard Unicode/shaping problems.
+
+---
+
 ## Contributing
 
 Contributions welcome! Areas where help is needed:
