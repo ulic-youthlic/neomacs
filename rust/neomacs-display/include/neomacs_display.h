@@ -189,6 +189,19 @@ typedef void (*MouseScrollCallbackFn)(void *user_data,
                                       unsigned int time);
 
 /**
+ * Monitor info struct for C FFI
+ */
+typedef struct NeomacsMonitorInfo {
+  int x;
+  int y;
+  int width;
+  int height;
+  double scale;
+  int widthMm;
+  int heightMm;
+} NeomacsMonitorInfo;
+
+/**
  * Input event structure passed to C.
  */
 typedef struct NeomacsInputEvent {
@@ -2293,19 +2306,6 @@ int neomacs_display_has_transition_snapshot(struct NeomacsDisplay *handle);
 int neomacs_display_init_threaded(uint32_t width, uint32_t height, const char *title);
 
 /**
- * Monitor info struct returned by neomacs_display_get_monitor_info.
- */
-struct NeomacsMonitorInfo {
-  int x;
-  int y;
-  int width;
-  int height;
-  double scale;
-  int width_mm;
-  int height_mm;
-};
-
-/**
  * Wait for monitor info to be available (with timeout).
  * Call after neomacs_display_init_threaded().
  * Returns number of monitors, or 0 on timeout.
@@ -2314,6 +2314,7 @@ int neomacs_display_wait_for_monitors(void);
 
 /**
  * Get the number of monitors available.
+ * Must be called after neomacs_display_init_threaded().
  */
 int neomacs_display_get_monitor_count(void);
 
@@ -2325,7 +2326,7 @@ int neomacs_display_get_monitor_info(int index, struct NeomacsMonitorInfo *info)
 
 /**
  * Get the name of a monitor by index.
- * Returns a pointer to a string (valid until next call), or NULL.
+ * Returns a pointer to a static string (valid until next call), or NULL.
  */
 const char *neomacs_display_get_monitor_name(int index);
 

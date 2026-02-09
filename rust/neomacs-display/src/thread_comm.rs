@@ -1467,6 +1467,38 @@ pub enum RenderCommand {
         radius: f32,
         opacity: f32,
     },
+    /// Configure tessellation overlay effect
+    SetTessellation {
+        enabled: bool,
+        r: f32, g: f32, b: f32,
+        tile_size: f32,
+        rotation: f32,
+        opacity: f32,
+    },
+    /// Configure cursor water drop effect
+    SetCursorWaterDrop {
+        enabled: bool,
+        r: f32, g: f32, b: f32,
+        ripple_count: u32,
+        expand_speed: f32,
+        opacity: f32,
+    },
+    /// Configure guilloche overlay effect
+    SetGuilloche {
+        enabled: bool,
+        r: f32, g: f32, b: f32,
+        curve_count: u32,
+        wave_freq: f32,
+        opacity: f32,
+    },
+    /// Configure cursor pixel dust effect
+    SetCursorPixelDust {
+        enabled: bool,
+        r: f32, g: f32, b: f32,
+        dust_count: u32,
+        scatter_speed: f32,
+        opacity: f32,
+    },
     /// Configure celtic knot overlay effect
     SetCelticKnot {
         enabled: bool,

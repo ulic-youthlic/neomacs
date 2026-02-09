@@ -729,6 +729,30 @@ pub struct WgpuRenderer {
     cursor_crystal_facet_count: u32,
     cursor_crystal_radius: f32,
     cursor_crystal_opacity: f32,
+    /// Tessellation overlay
+    tessellation_enabled: bool,
+    tessellation_color: (f32, f32, f32),
+    tessellation_tile_size: f32,
+    tessellation_rotation: f32,
+    tessellation_opacity: f32,
+    /// Cursor water drop effect
+    cursor_water_drop_enabled: bool,
+    cursor_water_drop_color: (f32, f32, f32),
+    cursor_water_drop_ripple_count: u32,
+    cursor_water_drop_expand_speed: f32,
+    cursor_water_drop_opacity: f32,
+    /// Guilloche overlay
+    guilloche_enabled: bool,
+    guilloche_color: (f32, f32, f32),
+    guilloche_curve_count: u32,
+    guilloche_wave_freq: f32,
+    guilloche_opacity: f32,
+    /// Cursor pixel dust effect
+    cursor_pixel_dust_enabled: bool,
+    cursor_pixel_dust_color: (f32, f32, f32),
+    cursor_pixel_dust_count: u32,
+    cursor_pixel_dust_scatter_speed: f32,
+    cursor_pixel_dust_opacity: f32,
     /// Celtic knot overlay
     celtic_knot_enabled: bool,
     celtic_knot_color: (f32, f32, f32),
@@ -2081,6 +2105,26 @@ impl WgpuRenderer {
             cursor_crystal_facet_count: 6,
             cursor_crystal_radius: 25.0,
             cursor_crystal_opacity: 0.3,
+            tessellation_enabled: false,
+            tessellation_color: (0.5, 0.5, 0.7),
+            tessellation_tile_size: 40.0,
+            tessellation_rotation: 0.0,
+            tessellation_opacity: 0.04,
+            cursor_water_drop_enabled: false,
+            cursor_water_drop_color: (0.3, 0.6, 0.9),
+            cursor_water_drop_ripple_count: 4,
+            cursor_water_drop_expand_speed: 1.0,
+            cursor_water_drop_opacity: 0.15,
+            guilloche_enabled: false,
+            guilloche_color: (0.6, 0.4, 0.7),
+            guilloche_curve_count: 8,
+            guilloche_wave_freq: 1.0,
+            guilloche_opacity: 0.05,
+            cursor_pixel_dust_enabled: false,
+            cursor_pixel_dust_color: (0.8, 0.8, 0.6),
+            cursor_pixel_dust_count: 15,
+            cursor_pixel_dust_scatter_speed: 1.0,
+            cursor_pixel_dust_opacity: 0.2,
             celtic_knot_enabled: false,
             celtic_knot_color: (0.0, 0.6, 0.3),
             celtic_knot_scale: 60.0,
@@ -3253,6 +3297,42 @@ impl WgpuRenderer {
         self.cursor_crystal_facet_count = facet_count;
         self.cursor_crystal_radius = radius;
         self.cursor_crystal_opacity = opacity;
+    }
+
+    /// Update tessellation config
+    pub fn set_tessellation(&mut self, enabled: bool, color: (f32, f32, f32), tile_size: f32, rotation: f32, opacity: f32) {
+        self.tessellation_enabled = enabled;
+        self.tessellation_color = color;
+        self.tessellation_tile_size = tile_size;
+        self.tessellation_rotation = rotation;
+        self.tessellation_opacity = opacity;
+    }
+
+    /// Update cursor water drop config
+    pub fn set_cursor_water_drop(&mut self, enabled: bool, color: (f32, f32, f32), ripple_count: u32, expand_speed: f32, opacity: f32) {
+        self.cursor_water_drop_enabled = enabled;
+        self.cursor_water_drop_color = color;
+        self.cursor_water_drop_ripple_count = ripple_count;
+        self.cursor_water_drop_expand_speed = expand_speed;
+        self.cursor_water_drop_opacity = opacity;
+    }
+
+    /// Update guilloche config
+    pub fn set_guilloche(&mut self, enabled: bool, color: (f32, f32, f32), curve_count: u32, wave_freq: f32, opacity: f32) {
+        self.guilloche_enabled = enabled;
+        self.guilloche_color = color;
+        self.guilloche_curve_count = curve_count;
+        self.guilloche_wave_freq = wave_freq;
+        self.guilloche_opacity = opacity;
+    }
+
+    /// Update cursor pixel dust config
+    pub fn set_cursor_pixel_dust(&mut self, enabled: bool, color: (f32, f32, f32), dust_count: u32, scatter_speed: f32, opacity: f32) {
+        self.cursor_pixel_dust_enabled = enabled;
+        self.cursor_pixel_dust_color = color;
+        self.cursor_pixel_dust_count = dust_count;
+        self.cursor_pixel_dust_scatter_speed = scatter_speed;
+        self.cursor_pixel_dust_opacity = opacity;
     }
 
     /// Update celtic knot config
@@ -8514,6 +8594,214 @@ impl WgpuRenderer {
                         render_pass.draw(0..ct_verts.len() as u32, 0..1);
                     }
                     self.needs_continuous_redraw = true;
+                }
+            }
+
+            // === Tessellation overlay effect ===
+            if self.tessellation_enabled {
+                let width = self.width() as f32;
+                let height = self.height() as f32;
+                let (tr, tg, tb) = self.tessellation_color;
+                let size = self.tessellation_tile_size;
+                let rot = self.tessellation_rotation;
+                let alpha = self.tessellation_opacity;
+                let mut overlay_verts = Vec::new();
+
+                let cols = (width / size) as i32 + 2;
+                let rows = (height / (size * 0.866)) as i32 + 2;
+                let line_w = 1.0;
+
+                for row in 0..rows {
+                    let y = row as f32 * size * 0.866;
+                    let x_off = if row % 2 == 1 { size * 0.5 } else { 0.0 };
+
+                    for col in 0..cols {
+                        let cx = col as f32 * size + x_off;
+                        let cy = y;
+
+                        // Draw triangle edges (alternating up/down)
+                        let up = (row + col) % 2 == 0;
+                        let h = size * 0.866;
+
+                        if up {
+                            // Upward triangle: base at bottom
+                            for s in 0..10 {
+                                let t = s as f32 / 10.0;
+                                // Left edge
+                                let px = cx + t * size * 0.5;
+                                let py = cy + h - t * h;
+                                let c = Color::new(tr, tg, tb, alpha);
+                                self.add_rect(&mut overlay_verts, px + rot.sin(), py + rot.cos(), line_w, line_w, &c);
+                                // Right edge
+                                let px2 = cx + size - t * size * 0.5;
+                                self.add_rect(&mut overlay_verts, px2 + rot.sin(), py + rot.cos(), line_w, line_w, &c);
+                            }
+                            // Base
+                            let c = Color::new(tr, tg, tb, alpha);
+                            self.add_rect(&mut overlay_verts, cx, cy + h, size, line_w, &c);
+                        } else {
+                            // Downward triangle
+                            for s in 0..10 {
+                                let t = s as f32 / 10.0;
+                                let px = cx + t * size * 0.5;
+                                let py = cy + t * h;
+                                let c = Color::new(tr, tg, tb, alpha);
+                                self.add_rect(&mut overlay_verts, px + rot.sin(), py + rot.cos(), line_w, line_w, &c);
+                                let px2 = cx + size - t * size * 0.5;
+                                self.add_rect(&mut overlay_verts, px2 + rot.sin(), py + rot.cos(), line_w, line_w, &c);
+                            }
+                            let c = Color::new(tr, tg, tb, alpha);
+                            self.add_rect(&mut overlay_verts, cx, cy, size, line_w, &c);
+                        }
+                    }
+                }
+
+                if !overlay_verts.is_empty() {
+                    let buf = self.device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("tessellation_verts"),
+                        contents: bytemuck::cast_slice(&overlay_verts),
+                        usage: wgpu::BufferUsages::VERTEX,
+                    });
+                    render_pass.set_pipeline(&self.rect_pipeline);
+                    render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                    render_pass.set_vertex_buffer(0, buf.slice(..));
+                    render_pass.draw(0..overlay_verts.len() as u32, 0..1);
+                }
+            }
+
+            // === Cursor water drop effect ===
+            if self.cursor_water_drop_enabled && cursor_visible {
+                if let Some(ref anim) = animated_cursor {
+                    let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
+                    let (wr, wg, wb) = self.cursor_water_drop_color;
+                    let ripple_count = self.cursor_water_drop_ripple_count;
+                    let speed = self.cursor_water_drop_expand_speed;
+                    let alpha = self.cursor_water_drop_opacity;
+                    let mut overlay_verts = Vec::new();
+
+                    let cx = anim.x + anim.width / 2.0;
+                    let cy = anim.y + anim.height / 2.0;
+
+                    for i in 0..ripple_count {
+                        let phase = (now * speed + i as f32 * 0.5) % 2.0;
+                        let r = phase * 30.0;
+                        let fade = (1.0 - phase / 2.0).max(0.0);
+                        let segments = 24;
+
+                        for s in 0..segments {
+                            let angle = (s as f32 / segments as f32) * std::f32::consts::TAU;
+                            let px = cx + angle.cos() * r;
+                            let py = cy + angle.sin() * r;
+                            let c = Color::new(wr, wg, wb, alpha * fade);
+                            self.add_rect(&mut overlay_verts, px - 1.0, py - 1.0, 2.0, 2.0, &c);
+                        }
+                    }
+
+                    if !overlay_verts.is_empty() {
+                        let buf = self.device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("cursor_water_drop_verts"),
+                            contents: bytemuck::cast_slice(&overlay_verts),
+                            usage: wgpu::BufferUsages::VERTEX,
+                        });
+                        render_pass.set_pipeline(&self.rect_pipeline);
+                        render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                        render_pass.set_vertex_buffer(0, buf.slice(..));
+                        render_pass.draw(0..overlay_verts.len() as u32, 0..1);
+                        self.needs_continuous_redraw = true;
+                    }
+                }
+            }
+
+            // === Guilloche overlay effect ===
+            if self.guilloche_enabled {
+                let width = self.width() as f32;
+                let height = self.height() as f32;
+                let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
+                let (gr, gg, gb) = self.guilloche_color;
+                let curves = self.guilloche_curve_count;
+                let freq = self.guilloche_wave_freq;
+                let alpha = self.guilloche_opacity;
+                let mut overlay_verts = Vec::new();
+
+                let cx = width / 2.0;
+                let cy = height / 2.0;
+
+                for curve in 0..curves {
+                    let phase = curve as f32 * std::f32::consts::TAU / curves as f32;
+                    let segments = 200;
+
+                    for s in 0..segments {
+                        let t = s as f32 / segments as f32 * std::f32::consts::TAU;
+                        let r1 = 50.0 + curve as f32 * 20.0;
+                        let r2 = 30.0;
+                        let k = 3.0 + curve as f32 * 0.5;
+
+                        let px = cx + (r1 - r2) * (t + phase).cos() + r2 * ((r1 / r2 - 1.0) * t + now * freq).cos();
+                        let py = cy + (r1 - r2) * (t + phase).sin() - r2 * ((r1 / r2 - 1.0) * t + now * freq).sin();
+
+                        let brightness = ((t * k + now * freq).sin() * 0.3 + 0.7).max(0.0);
+                        let c = Color::new(gr, gg, gb, alpha * brightness);
+                        self.add_rect(&mut overlay_verts, px - 0.5, py - 0.5, 1.0, 1.0, &c);
+                    }
+                }
+
+                if !overlay_verts.is_empty() {
+                    let buf = self.device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("guilloche_verts"),
+                        contents: bytemuck::cast_slice(&overlay_verts),
+                        usage: wgpu::BufferUsages::VERTEX,
+                    });
+                    render_pass.set_pipeline(&self.rect_pipeline);
+                    render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                    render_pass.set_vertex_buffer(0, buf.slice(..));
+                    render_pass.draw(0..overlay_verts.len() as u32, 0..1);
+                    self.needs_continuous_redraw = true;
+                }
+            }
+
+            // === Cursor pixel dust effect ===
+            if self.cursor_pixel_dust_enabled && cursor_visible {
+                if let Some(ref anim) = animated_cursor {
+                    let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
+                    let (pr, pg, pb) = self.cursor_pixel_dust_color;
+                    let dust_count = self.cursor_pixel_dust_count;
+                    let scatter = self.cursor_pixel_dust_scatter_speed;
+                    let alpha = self.cursor_pixel_dust_opacity;
+                    let mut overlay_verts = Vec::new();
+
+                    let cx = anim.x + anim.width / 2.0;
+                    let cy = anim.y + anim.height / 2.0;
+
+                    for i in 0..dust_count {
+                        let seed = i as f32 * 7.31;
+                        let life = (now * scatter + seed) % 2.0;
+                        let angle = seed * 2.39996; // Golden angle
+                        let speed_mult = 0.5 + (seed % 1.0) * 1.5;
+
+                        let dx = angle.cos() * life * 20.0 * speed_mult;
+                        let dy = angle.sin() * life * 20.0 * speed_mult - life * 5.0; // Slight upward drift
+                        let px = cx + dx;
+                        let py = cy + dy;
+
+                        let fade = (1.0 - life / 2.0).max(0.0);
+                        let pixel_size = 3.0 * fade + 1.0;
+
+                        let c = Color::new(pr, pg, pb, alpha * fade);
+                        self.add_rect(&mut overlay_verts, px - pixel_size / 2.0, py - pixel_size / 2.0, pixel_size, pixel_size, &c);
+                    }
+
+                    if !overlay_verts.is_empty() {
+                        let buf = self.device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("cursor_pixel_dust_verts"),
+                            contents: bytemuck::cast_slice(&overlay_verts),
+                            usage: wgpu::BufferUsages::VERTEX,
+                        });
+                        render_pass.set_pipeline(&self.rect_pipeline);
+                        render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                        render_pass.set_vertex_buffer(0, buf.slice(..));
+                        render_pass.draw(0..overlay_verts.len() as u32, 0..1);
+                        self.needs_continuous_redraw = true;
+                    }
                 }
             }
 
