@@ -98,17 +98,9 @@
 
 #define DRM_FORMAT_ARGB8888 875713089
 
-#define DRM_FORMAT_ARGB8888 875713089
-
-#define DRM_FORMAT_XRGB8888 875713112
-
 #define DRM_FORMAT_XRGB8888 875713112
 
 #define DRM_FORMAT_ABGR8888 875708993
-
-#define DRM_FORMAT_ABGR8888 875708993
-
-#define DRM_FORMAT_XBGR8888 875709016
 
 #define DRM_FORMAT_XBGR8888 875709016
 
@@ -626,24 +618,6 @@ typedef struct DisplayPropFFI {
 
 #define VA_INVALID_SURFACE 4294967295
 
-extern GMainContext *g_main_context_get_thread_default(void);
-
-extern GMainContext *g_main_context_new(void);
-
-extern GMainContext *g_main_context_ref(GMainContext *context);
-
-extern void g_main_context_unref(GMainContext *context);
-
-extern void g_main_context_push_thread_default(GMainContext *context);
-
-extern void g_main_context_pop_thread_default(GMainContext *context);
-
-extern int32_t g_main_context_acquire(GMainContext *context);
-
-extern void g_main_context_release(GMainContext *context);
-
-extern GObject *g_object_new(GType objectType, const char *firstPropertyName, ...);
-
 /**
  * Shutdown the display engine
  *
@@ -1143,9 +1117,6 @@ void neomacs_display_set_extra_spacing(struct NeomacsDisplay *handle,
                                        int lineSpacing,
                                        int letterSpacing);
 
-/**
- * Set background gradient (top and bottom colors, sRGB 0-255)
- */
 void neomacs_display_set_background_gradient(struct NeomacsDisplay *handle,
                                              int enabled,
                                              int topR,
@@ -1155,9 +1126,6 @@ void neomacs_display_set_background_gradient(struct NeomacsDisplay *handle,
                                              int bottomG,
                                              int bottomB);
 
-/**
- * Configure scroll bar appearance
- */
 void neomacs_display_set_scroll_bar_config(struct NeomacsDisplay *handle,
                                            int width,
                                            int thumbRadius,
@@ -1227,14 +1195,8 @@ void neomacs_display_set_show_whitespace(struct NeomacsDisplay *handle,
                                          int b,
                                          int opacity);
 
-/**
- * Configure inactive window dimming (threaded mode)
- */
 void neomacs_display_set_inactive_dim(struct NeomacsDisplay *handle, int enabled, int opacity);
 
-/**
- * Configure cursor glow effect (threaded mode)
- */
 void neomacs_display_set_cursor_glow(struct NeomacsDisplay *handle,
                                      int enabled,
                                      int r,
@@ -1243,48 +1205,27 @@ void neomacs_display_set_cursor_glow(struct NeomacsDisplay *handle,
                                      int radius,
                                      int opacity);
 
-/**
- * Configure cursor pulse animation (sinusoidal glow modulation)
- */
 void neomacs_display_set_cursor_pulse(struct NeomacsDisplay *handle,
                                       int enabled,
                                       int speed,
                                       int minOpacity);
 
-/**
- * Configure focus mode (dim outside current paragraph)
- */
 void neomacs_display_set_focus_mode(struct NeomacsDisplay *handle, int enabled, int opacity);
 
-/**
- * Configure minimap (code overview column)
- */
 void neomacs_display_set_minimap(struct NeomacsDisplay *handle, int enabled, int width);
 
-/**
- * Configure typing ripple effect
- */
 void neomacs_display_set_typing_ripple(struct NeomacsDisplay *handle,
                                        int enabled,
                                        int maxRadius,
                                        int durationMs);
 
-/**
- * Configure search highlight pulse
- */
 void neomacs_display_set_search_pulse(struct NeomacsDisplay *handle, int enabled, int faceId);
 
-/**
- * Configure zen mode (centered distraction-free)
- */
 void neomacs_display_set_zen_mode(struct NeomacsDisplay *handle,
                                   int enabled,
                                   int contentWidthPct,
                                   int marginOpacity);
 
-/**
- * Configure background pattern
- */
 void neomacs_display_set_background_pattern(struct NeomacsDisplay *handle,
                                             int style,
                                             int spacing,
@@ -1293,39 +1234,24 @@ void neomacs_display_set_background_pattern(struct NeomacsDisplay *handle,
                                             int b,
                                             int opacity);
 
-/**
- * Configure cursor color cycling (rainbow hue rotation)
- */
 void neomacs_display_set_cursor_color_cycle(struct NeomacsDisplay *handle,
                                             int enabled,
                                             int speed,
                                             int saturation,
                                             int lightness);
 
-/**
- * Configure header/mode-line shadow depth effect
- */
 void neomacs_display_set_header_shadow(struct NeomacsDisplay *handle,
                                        int enabled,
                                        int intensity,
                                        int size);
 
-/**
- * Configure line insertion/deletion animation
- */
 void neomacs_display_set_line_animation(struct NeomacsDisplay *handle, int enabled, int durationMs);
 
-/**
- * Configure vignette effect (edge darkening)
- */
 void neomacs_display_set_vignette(struct NeomacsDisplay *handle,
                                   int enabled,
                                   int intensity,
                                   int radius);
 
-/**
- * Configure inactive window color tint
- */
 void neomacs_display_set_inactive_tint(struct NeomacsDisplay *handle,
                                        int enabled,
                                        int r,
@@ -1333,9 +1259,6 @@ void neomacs_display_set_inactive_tint(struct NeomacsDisplay *handle,
                                        int b,
                                        int opacity);
 
-/**
- * Configure scroll progress indicator bar
- */
 void neomacs_display_set_scroll_progress(struct NeomacsDisplay *handle,
                                          int enabled,
                                          int height,
@@ -1344,9 +1267,6 @@ void neomacs_display_set_scroll_progress(struct NeomacsDisplay *handle,
                                          int b,
                                          int opacity);
 
-/**
- * Configure active window border glow
- */
 void neomacs_display_set_window_glow(struct NeomacsDisplay *handle,
                                      int enabled,
                                      int r,
@@ -1355,14 +1275,8 @@ void neomacs_display_set_window_glow(struct NeomacsDisplay *handle,
                                      int radius,
                                      int intensity);
 
-/**
- * Configure breadcrumb/path bar overlay
- */
 void neomacs_display_set_breadcrumb(struct NeomacsDisplay *handle, int enabled, int opacity);
 
-/**
- * Configure smooth border color transition on focus
- */
 void neomacs_display_set_border_transition(struct NeomacsDisplay *handle,
                                            int enabled,
                                            int r,
@@ -1370,50 +1284,29 @@ void neomacs_display_set_border_transition(struct NeomacsDisplay *handle,
                                            int b,
                                            int durationMs);
 
-/**
- * Configure buffer-local accent color strip
- */
 void neomacs_display_set_accent_strip(struct NeomacsDisplay *handle, int enabled, int width);
 
-/**
- * Configure frosted glass effect on mode-lines
- */
 void neomacs_display_set_frosted_glass(struct NeomacsDisplay *handle,
                                        int enabled,
                                        int opacity,
                                        int blur);
 
-/**
- * Configure typing speed indicator overlay
- */
 void neomacs_display_set_typing_speed(struct NeomacsDisplay *handle, int enabled);
 
-/**
- * Configure breadcrumb title fade animation
- */
 void neomacs_display_set_title_fade(struct NeomacsDisplay *handle, int enabled, int durationMs);
 
-/**
- * Configure selection region glow highlight
- */
 void neomacs_display_set_region_glow(struct NeomacsDisplay *handle,
                                      int enabled,
                                      int faceId,
                                      int radius,
                                      int opacity);
 
-/**
- * Configure cursor drop shadow
- */
 void neomacs_display_set_cursor_shadow(struct NeomacsDisplay *handle,
                                        int enabled,
                                        int offsetX,
                                        int offsetY,
                                        int opacity);
 
-/**
- * Configure animated focus ring around selected window
- */
 void neomacs_display_set_focus_ring(struct NeomacsDisplay *handle,
                                     int enabled,
                                     int r,
@@ -1423,14 +1316,8 @@ void neomacs_display_set_focus_ring(struct NeomacsDisplay *handle,
                                     int dashLength,
                                     int speed);
 
-/**
- * Configure window background tint based on file type
- */
 void neomacs_display_set_window_mode_tint(struct NeomacsDisplay *handle, int enabled, int opacity);
 
-/**
- * Configure window watermark for empty/small buffers
- */
 void neomacs_display_set_window_watermark(struct NeomacsDisplay *handle,
                                           int enabled,
                                           int opacity,
@@ -1453,40 +1340,25 @@ void neomacs_display_set_idle_dim(struct NeomacsDisplay *handle,
                                   int opacity,
                                   int fadeMs);
 
-/**
- * Configure noise/film grain texture overlay
- */
 void neomacs_display_set_noise_grain(struct NeomacsDisplay *handle,
                                      int enabled,
                                      int intensity,
                                      int size);
 
-/**
- * Configure smooth mode-line content transition
- */
 void neomacs_display_set_mode_line_transition(struct NeomacsDisplay *handle,
                                               int enabled,
                                               int durationMs);
 
-/**
- * Configure cursor wake animation (pop/scale effect on blink-on)
- */
 void neomacs_display_set_cursor_wake(struct NeomacsDisplay *handle,
                                      int enabled,
                                      int durationMs,
                                      int scalePct);
 
-/**
- * Configure window content shadow/depth between split panes
- */
 void neomacs_display_set_window_content_shadow(struct NeomacsDisplay *handle,
                                                int enabled,
                                                int size,
                                                int opacity);
 
-/**
- * Configure window edge snap indicator
- */
 void neomacs_display_set_edge_snap(struct NeomacsDisplay *handle,
                                    int enabled,
                                    int r,
@@ -1494,9 +1366,6 @@ void neomacs_display_set_edge_snap(struct NeomacsDisplay *handle,
                                    int b,
                                    int durationMs);
 
-/**
- * Configure cursor crosshair guide lines
- */
 void neomacs_display_set_cursor_crosshair(struct NeomacsDisplay *handle,
                                           int enabled,
                                           int r,
@@ -1504,9 +1373,6 @@ void neomacs_display_set_cursor_crosshair(struct NeomacsDisplay *handle,
                                           int b,
                                           int opacity);
 
-/**
- * Configure buffer modified border indicator
- */
 void neomacs_display_set_modified_indicator(struct NeomacsDisplay *handle,
                                             int enabled,
                                             int r,
@@ -1515,17 +1381,11 @@ void neomacs_display_set_modified_indicator(struct NeomacsDisplay *handle,
                                             int width,
                                             int opacity);
 
-/**
- * Configure inactive window stained glass effect
- */
 void neomacs_display_set_stained_glass(struct NeomacsDisplay *handle,
                                        int enabled,
                                        int opacity,
                                        int saturation);
 
-/**
- * Configure focused window gradient border
- */
 void neomacs_display_set_focus_gradient_border(struct NeomacsDisplay *handle,
                                                int enabled,
                                                int topR,
@@ -1537,9 +1397,6 @@ void neomacs_display_set_focus_gradient_border(struct NeomacsDisplay *handle,
                                                int width,
                                                int opacity);
 
-/**
- * Configure cursor magnetism effect
- */
 void neomacs_display_set_cursor_magnetism(struct NeomacsDisplay *handle,
                                           int enabled,
                                           int r,
@@ -1549,9 +1406,6 @@ void neomacs_display_set_cursor_magnetism(struct NeomacsDisplay *handle,
                                           int durationMs,
                                           int opacity);
 
-/**
- * Configure window depth shadow layers
- */
 void neomacs_display_set_depth_shadow(struct NeomacsDisplay *handle,
                                       int enabled,
                                       int layers,
@@ -1561,9 +1415,6 @@ void neomacs_display_set_depth_shadow(struct NeomacsDisplay *handle,
                                       int b,
                                       int opacity);
 
-/**
- * Configure mode-line gradient background
- */
 void neomacs_display_set_mode_line_gradient(struct NeomacsDisplay *handle,
                                             int enabled,
                                             int leftR,
@@ -1574,9 +1425,6 @@ void neomacs_display_set_mode_line_gradient(struct NeomacsDisplay *handle,
                                             int rightB,
                                             int opacity);
 
-/**
- * Configure window corner fold effect
- */
 void neomacs_display_set_corner_fold(struct NeomacsDisplay *handle,
                                      int enabled,
                                      int size,
@@ -1585,9 +1433,6 @@ void neomacs_display_set_corner_fold(struct NeomacsDisplay *handle,
                                      int b,
                                      int opacity);
 
-/**
- * Configure frosted window border effect
- */
 void neomacs_display_set_frosted_border(struct NeomacsDisplay *handle,
                                         int enabled,
                                         int width,
@@ -1596,9 +1441,6 @@ void neomacs_display_set_frosted_border(struct NeomacsDisplay *handle,
                                         int g,
                                         int b);
 
-/**
- * Configure line number pulse on cursor line
- */
 void neomacs_display_set_line_number_pulse(struct NeomacsDisplay *handle,
                                            int enabled,
                                            int r,
@@ -1607,9 +1449,6 @@ void neomacs_display_set_line_number_pulse(struct NeomacsDisplay *handle,
                                            int intensity,
                                            int cycleMs);
 
-/**
- * Configure window breathing border animation
- */
 void neomacs_display_set_breathing_border(struct NeomacsDisplay *handle,
                                           int enabled,
                                           int r,
@@ -1619,9 +1458,6 @@ void neomacs_display_set_breathing_border(struct NeomacsDisplay *handle,
                                           int maxOpacity,
                                           int cycleMs);
 
-/**
- * Configure window scanline (CRT) effect
- */
 void neomacs_display_set_scanlines(struct NeomacsDisplay *handle,
                                    int enabled,
                                    int spacing,
@@ -1630,9 +1466,6 @@ void neomacs_display_set_scanlines(struct NeomacsDisplay *handle,
                                    int g,
                                    int b);
 
-/**
- * Configure cursor comet tail effect
- */
 void neomacs_display_set_cursor_comet(struct NeomacsDisplay *handle,
                                       int enabled,
                                       int trailLength,
@@ -1642,9 +1475,6 @@ void neomacs_display_set_cursor_comet(struct NeomacsDisplay *handle,
                                       int b,
                                       int opacity);
 
-/**
- * Configure cursor spotlight/radial gradient effect
- */
 void neomacs_display_set_cursor_spotlight(struct NeomacsDisplay *handle,
                                           int enabled,
                                           int radius,
@@ -1653,9 +1483,6 @@ void neomacs_display_set_cursor_spotlight(struct NeomacsDisplay *handle,
                                           int g,
                                           int b);
 
-/**
- * Configure cursor particle trail effect
- */
 void neomacs_display_set_cursor_particles(struct NeomacsDisplay *handle,
                                           int enabled,
                                           int r,
@@ -1665,9 +1492,6 @@ void neomacs_display_set_cursor_particles(struct NeomacsDisplay *handle,
                                           int lifetimeMs,
                                           int gravity);
 
-/**
- * Configure per-window rounded border
- */
 void neomacs_display_set_window_border_radius(struct NeomacsDisplay *handle,
                                               int enabled,
                                               int radius,
@@ -1677,9 +1501,6 @@ void neomacs_display_set_window_border_radius(struct NeomacsDisplay *handle,
                                               int b,
                                               int opacity);
 
-/**
- * Configure typing heat map overlay
- */
 void neomacs_display_set_typing_heatmap(struct NeomacsDisplay *handle,
                                         int enabled,
                                         int r,
@@ -1695,9 +1516,6 @@ void neomacs_display_set_theme_transition(struct NeomacsDisplay *handle,
                                           int enabled,
                                           int durationMs);
 
-/**
- * Configure cursor click halo effect
- */
 void neomacs_display_set_click_halo(struct NeomacsDisplay *handle,
                                     int enabled,
                                     int r,
@@ -1706,17 +1524,11 @@ void neomacs_display_set_click_halo(struct NeomacsDisplay *handle,
                                     int durationMs,
                                     int maxRadius);
 
-/**
- * Configure scroll velocity fade overlay
- */
 void neomacs_display_set_scroll_velocity_fade(struct NeomacsDisplay *handle,
                                               int enabled,
                                               int maxOpacity,
                                               int fadeMs);
 
-/**
- * Configure mini-buffer completion highlight glow
- */
 void neomacs_display_set_minibuffer_highlight(struct NeomacsDisplay *handle,
                                               int enabled,
                                               int r,
@@ -1724,17 +1536,11 @@ void neomacs_display_set_minibuffer_highlight(struct NeomacsDisplay *handle,
                                               int b,
                                               int opacity);
 
-/**
- * Configure smooth window padding transition on resize
- */
 void neomacs_display_set_resize_padding(struct NeomacsDisplay *handle,
                                         int enabled,
                                         int durationMs,
                                         int maxPadding);
 
-/**
- * Configure cursor error pulse (brief color flash on bell)
- */
 void neomacs_display_set_cursor_error_pulse(struct NeomacsDisplay *handle,
                                             int enabled,
                                             int r,
@@ -1742,9 +1548,6 @@ void neomacs_display_set_cursor_error_pulse(struct NeomacsDisplay *handle,
                                             int b,
                                             int durationMs);
 
-/**
- * Configure line wrap indicator overlay
- */
 void neomacs_display_set_wrap_indicator(struct NeomacsDisplay *handle,
                                         int enabled,
                                         int r,
@@ -1752,30 +1555,18 @@ void neomacs_display_set_wrap_indicator(struct NeomacsDisplay *handle,
                                         int b,
                                         int opacity);
 
-/**
- * Configure per-window scroll momentum indicator
- */
 void neomacs_display_set_scroll_momentum(struct NeomacsDisplay *handle,
                                          int enabled,
                                          int fadeMs,
                                          int width);
 
-/**
- * Configure text fade-in animation for new content
- */
 void neomacs_display_set_text_fade_in(struct NeomacsDisplay *handle, int enabled, int durationMs);
 
-/**
- * Configure scroll line spacing animation (accordion effect on scroll)
- */
 void neomacs_display_set_scroll_line_spacing(struct NeomacsDisplay *handle,
                                              int enabled,
                                              int maxSpacing,
                                              int durationMs);
 
-/**
- * Configure window padding gradient (inner edge shading for depth)
- */
 void neomacs_display_set_padding_gradient(struct NeomacsDisplay *handle,
                                           int enabled,
                                           int r,
@@ -1791,17 +1582,11 @@ void neomacs_display_set_cursor_size_transition(struct NeomacsDisplay *handle,
                                                 int enabled,
                                                 int durationMs);
 
-/**
- * Configure window switch highlight fade
- */
 void neomacs_display_set_window_switch_fade(struct NeomacsDisplay *handle,
                                             int enabled,
                                             int durationMs,
                                             int intensity);
 
-/**
- * Configure mode-line separator style (threaded mode)
- */
 void neomacs_display_set_mode_line_separator(struct NeomacsDisplay *handle,
                                              int style,
                                              int r,
@@ -2371,9 +2156,6 @@ void neomacs_display_send_command(int cmdType,
                                   uint32_t param2,
                                   const char *strParam);
 
-/**
- * Configure matrix/digital rain effect
- */
 void neomacs_display_set_matrix_rain(struct NeomacsDisplay *handle,
                                      int enabled,
                                      int r,
@@ -2383,17 +2165,11 @@ void neomacs_display_set_matrix_rain(struct NeomacsDisplay *handle,
                                      int speed,
                                      int opacity);
 
-/**
- * Configure cursor elastic snap animation
- */
 void neomacs_display_set_cursor_elastic_snap(struct NeomacsDisplay *handle,
                                              int enabled,
                                              int overshoot,
                                              int durationMs);
 
-/**
- * Configure window frost/ice border effect
- */
 void neomacs_display_set_frost_border_effect(struct NeomacsDisplay *handle,
                                              int enabled,
                                              int r,
@@ -2402,9 +2178,6 @@ void neomacs_display_set_frost_border_effect(struct NeomacsDisplay *handle,
                                              int width,
                                              int opacity);
 
-/**
- * Configure cursor afterimage ghost effect
- */
 void neomacs_display_set_cursor_ghost(struct NeomacsDisplay *handle,
                                       int enabled,
                                       int r,
@@ -2415,9 +2188,6 @@ void neomacs_display_set_cursor_ghost(struct NeomacsDisplay *handle,
                                       int drift,
                                       int opacity);
 
-/**
- * Configure window edge glow on scroll boundaries
- */
 void neomacs_display_set_edge_glow(struct NeomacsDisplay *handle,
                                    int enabled,
                                    int r,
@@ -2427,9 +2197,6 @@ void neomacs_display_set_edge_glow(struct NeomacsDisplay *handle,
                                    int opacity,
                                    int fadeMs);
 
-/**
- * Configure window rain/drip ambient effect
- */
 void neomacs_display_set_rain_effect(struct NeomacsDisplay *handle,
                                      int enabled,
                                      int r,
@@ -2439,9 +2206,6 @@ void neomacs_display_set_rain_effect(struct NeomacsDisplay *handle,
                                      int speed,
                                      int opacity);
 
-/**
- * Configure cursor ripple wave effect on keystroke
- */
 void neomacs_display_set_cursor_ripple_wave(struct NeomacsDisplay *handle,
                                             int enabled,
                                             int r,
@@ -2452,9 +2216,6 @@ void neomacs_display_set_cursor_ripple_wave(struct NeomacsDisplay *handle,
                                             int durationMs,
                                             int opacity);
 
-/**
- * Configure window aurora/northern lights effect
- */
 void neomacs_display_set_aurora(struct NeomacsDisplay *handle,
                                 int enabled,
                                 int r1,
@@ -2467,9 +2228,6 @@ void neomacs_display_set_aurora(struct NeomacsDisplay *handle,
                                 int speed,
                                 int opacity);
 
-/**
- * Configure heat distortion effect
- */
 void neomacs_display_set_heat_distortion(struct NeomacsDisplay *handle,
                                          int enabled,
                                          int intensity,
@@ -2477,9 +2235,6 @@ void neomacs_display_set_heat_distortion(struct NeomacsDisplay *handle,
                                          int edgeWidth,
                                          int opacity);
 
-/**
- * Configure cursor lighthouse beam effect
- */
 void neomacs_display_set_cursor_lighthouse(struct NeomacsDisplay *handle,
                                            int enabled,
                                            int r,
@@ -2490,9 +2245,6 @@ void neomacs_display_set_cursor_lighthouse(struct NeomacsDisplay *handle,
                                            int beamLength,
                                            int opacity);
 
-/**
- * Configure neon border effect
- */
 void neomacs_display_set_neon_border(struct NeomacsDisplay *handle,
                                      int enabled,
                                      int r,
@@ -2503,9 +2255,6 @@ void neomacs_display_set_neon_border(struct NeomacsDisplay *handle,
                                      int thickness,
                                      int opacity);
 
-/**
- * Configure cursor sonar ping effect
- */
 void neomacs_display_set_cursor_sonar_ping(struct NeomacsDisplay *handle,
                                            int enabled,
                                            int r,
@@ -2516,9 +2265,6 @@ void neomacs_display_set_cursor_sonar_ping(struct NeomacsDisplay *handle,
                                            int durationMs,
                                            int opacity);
 
-/**
- * Configure lightning bolt effect
- */
 void neomacs_display_set_lightning_bolt(struct NeomacsDisplay *handle,
                                         int enabled,
                                         int r,
@@ -2528,9 +2274,6 @@ void neomacs_display_set_lightning_bolt(struct NeomacsDisplay *handle,
                                         int intensity,
                                         int opacity);
 
-/**
- * Configure cursor orbit particles effect
- */
 void neomacs_display_set_cursor_orbit_particles(struct NeomacsDisplay *handle,
                                                 int enabled,
                                                 int r,
@@ -2541,9 +2284,6 @@ void neomacs_display_set_cursor_orbit_particles(struct NeomacsDisplay *handle,
                                                 int speed,
                                                 int opacity);
 
-/**
- * Configure plasma border effect
- */
 void neomacs_display_set_plasma_border(struct NeomacsDisplay *handle,
                                        int enabled,
                                        int r1,
@@ -2556,9 +2296,6 @@ void neomacs_display_set_plasma_border(struct NeomacsDisplay *handle,
                                        int speed,
                                        int opacity);
 
-/**
- * Configure cursor heartbeat pulse effect
- */
 void neomacs_display_set_cursor_heartbeat(struct NeomacsDisplay *handle,
                                           int enabled,
                                           int r,
@@ -2568,9 +2305,6 @@ void neomacs_display_set_cursor_heartbeat(struct NeomacsDisplay *handle,
                                           int maxRadius,
                                           int opacity);
 
-/**
- * Configure topographic contour effect
- */
 void neomacs_display_set_topo_contour(struct NeomacsDisplay *handle,
                                       int enabled,
                                       int r,
@@ -2580,9 +2314,6 @@ void neomacs_display_set_topo_contour(struct NeomacsDisplay *handle,
                                       int speed,
                                       int opacity);
 
-/**
- * Configure cursor metronome tick effect
- */
 void neomacs_display_set_cursor_metronome(struct NeomacsDisplay *handle,
                                           int enabled,
                                           int r,
@@ -2592,9 +2323,6 @@ void neomacs_display_set_cursor_metronome(struct NeomacsDisplay *handle,
                                           int fadeMs,
                                           int opacity);
 
-/**
- * Configure constellation overlay effect
- */
 void neomacs_display_set_constellation(struct NeomacsDisplay *handle,
                                        int enabled,
                                        int r,
@@ -2605,9 +2333,6 @@ void neomacs_display_set_constellation(struct NeomacsDisplay *handle,
                                        int twinkleSpeed,
                                        int opacity);
 
-/**
- * Configure cursor radar sweep effect
- */
 void neomacs_display_set_cursor_radar(struct NeomacsDisplay *handle,
                                       int enabled,
                                       int r,
@@ -2617,9 +2342,6 @@ void neomacs_display_set_cursor_radar(struct NeomacsDisplay *handle,
                                       int speed,
                                       int opacity);
 
-/**
- * Configure hex grid overlay effect
- */
 void neomacs_display_set_hex_grid(struct NeomacsDisplay *handle,
                                   int enabled,
                                   int r,
@@ -2629,9 +2351,6 @@ void neomacs_display_set_hex_grid(struct NeomacsDisplay *handle,
                                   int pulseSpeed,
                                   int opacity);
 
-/**
- * Configure cursor sparkle burst effect
- */
 void neomacs_display_set_cursor_sparkle_burst(struct NeomacsDisplay *handle,
                                               int enabled,
                                               int r,
@@ -2641,9 +2360,6 @@ void neomacs_display_set_cursor_sparkle_burst(struct NeomacsDisplay *handle,
                                               int burstRadius,
                                               int opacity);
 
-/**
- * Configure circuit board trace effect
- */
 void neomacs_display_set_circuit_trace(struct NeomacsDisplay *handle,
                                        int enabled,
                                        int r,
@@ -2653,9 +2369,6 @@ void neomacs_display_set_circuit_trace(struct NeomacsDisplay *handle,
                                        int speed,
                                        int opacity);
 
-/**
- * Configure cursor compass rose effect
- */
 void neomacs_display_set_cursor_compass(struct NeomacsDisplay *handle,
                                         int enabled,
                                         int r,
@@ -2665,9 +2378,6 @@ void neomacs_display_set_cursor_compass(struct NeomacsDisplay *handle,
                                         int speed,
                                         int opacity);
 
-/**
- * Configure warp/distortion grid effect
- */
 void neomacs_display_set_warp_grid(struct NeomacsDisplay *handle,
                                    int enabled,
                                    int r,
@@ -2678,9 +2388,6 @@ void neomacs_display_set_warp_grid(struct NeomacsDisplay *handle,
                                    int speed,
                                    int opacity);
 
-/**
- * Configure cursor DNA helix trail effect
- */
 void neomacs_display_set_cursor_dna_helix(struct NeomacsDisplay *handle,
                                           int enabled,
                                           int r1,
@@ -2693,9 +2400,6 @@ void neomacs_display_set_cursor_dna_helix(struct NeomacsDisplay *handle,
                                           int speed,
                                           int opacity);
 
-/**
- * Configure prism/rainbow edge effect
- */
 void neomacs_display_set_prism_edge(struct NeomacsDisplay *handle,
                                     int enabled,
                                     int width,
@@ -2703,9 +2407,6 @@ void neomacs_display_set_prism_edge(struct NeomacsDisplay *handle,
                                     int saturation,
                                     int opacity);
 
-/**
- * Configure cursor pendulum swing effect
- */
 void neomacs_display_set_cursor_pendulum(struct NeomacsDisplay *handle,
                                          int enabled,
                                          int r,
@@ -2715,9 +2416,6 @@ void neomacs_display_set_cursor_pendulum(struct NeomacsDisplay *handle,
                                          int damping,
                                          int opacity);
 
-/**
- * Configure kaleidoscope overlay effect
- */
 void neomacs_display_set_kaleidoscope(struct NeomacsDisplay *handle,
                                       int enabled,
                                       int r,
@@ -2727,9 +2425,6 @@ void neomacs_display_set_kaleidoscope(struct NeomacsDisplay *handle,
                                       int speed,
                                       int opacity);
 
-/**
- * Configure cursor ripple ring effect
- */
 void neomacs_display_set_cursor_ripple_ring(struct NeomacsDisplay *handle,
                                             int enabled,
                                             int r,
@@ -2740,9 +2435,6 @@ void neomacs_display_set_cursor_ripple_ring(struct NeomacsDisplay *handle,
                                             int speed,
                                             int opacity);
 
-/**
- * Configure noise field overlay effect
- */
 void neomacs_display_set_noise_field(struct NeomacsDisplay *handle,
                                      int enabled,
                                      int r,
@@ -2752,9 +2444,6 @@ void neomacs_display_set_noise_field(struct NeomacsDisplay *handle,
                                      int speed,
                                      int opacity);
 
-/**
- * Configure cursor scope effect
- */
 void neomacs_display_set_cursor_scope(struct NeomacsDisplay *handle,
                                       int enabled,
                                       int r,
@@ -2764,9 +2453,6 @@ void neomacs_display_set_cursor_scope(struct NeomacsDisplay *handle,
                                       int gap,
                                       int opacity);
 
-/**
- * Configure spiral vortex overlay effect
- */
 void neomacs_display_set_spiral_vortex(struct NeomacsDisplay *handle,
                                        int enabled,
                                        int r,
@@ -2776,9 +2462,6 @@ void neomacs_display_set_spiral_vortex(struct NeomacsDisplay *handle,
                                        int speed,
                                        int opacity);
 
-/**
- * Configure cursor shockwave effect
- */
 void neomacs_display_set_cursor_shockwave(struct NeomacsDisplay *handle,
                                           int enabled,
                                           int r,
@@ -2788,9 +2471,6 @@ void neomacs_display_set_cursor_shockwave(struct NeomacsDisplay *handle,
                                           int decay,
                                           int opacity);
 
-/**
- * Configure diamond lattice overlay effect
- */
 void neomacs_display_set_diamond_lattice(struct NeomacsDisplay *handle,
                                          int enabled,
                                          int r,
@@ -2800,9 +2480,6 @@ void neomacs_display_set_diamond_lattice(struct NeomacsDisplay *handle,
                                          int shimmerSpeed,
                                          int opacity);
 
-/**
- * Configure cursor gravity well effect
- */
 void neomacs_display_set_cursor_gravity_well(struct NeomacsDisplay *handle,
                                              int enabled,
                                              int r,
@@ -2812,9 +2489,6 @@ void neomacs_display_set_cursor_gravity_well(struct NeomacsDisplay *handle,
                                              int lineCount,
                                              int opacity);
 
-/**
- * Configure tessellation overlay effect
- */
 void neomacs_display_set_tessellation(struct NeomacsDisplay *handle,
                                       int enabled,
                                       int r,
@@ -2824,9 +2498,6 @@ void neomacs_display_set_tessellation(struct NeomacsDisplay *handle,
                                       int rotation,
                                       int opacity);
 
-/**
- * Configure cursor water drop effect
- */
 void neomacs_display_set_cursor_water_drop(struct NeomacsDisplay *handle,
                                            int enabled,
                                            int r,
@@ -2836,9 +2507,6 @@ void neomacs_display_set_cursor_water_drop(struct NeomacsDisplay *handle,
                                            int expandSpeed,
                                            int opacity);
 
-/**
- * Configure guilloche overlay effect
- */
 void neomacs_display_set_guilloche(struct NeomacsDisplay *handle,
                                    int enabled,
                                    int r,
@@ -2848,9 +2516,6 @@ void neomacs_display_set_guilloche(struct NeomacsDisplay *handle,
                                    int waveFreq,
                                    int opacity);
 
-/**
- * Configure cursor pixel dust effect
- */
 void neomacs_display_set_cursor_pixel_dust(struct NeomacsDisplay *handle,
                                            int enabled,
                                            int r,
@@ -2860,9 +2525,6 @@ void neomacs_display_set_cursor_pixel_dust(struct NeomacsDisplay *handle,
                                            int scatterSpeed,
                                            int opacity);
 
-/**
- * Configure celtic knot overlay effect
- */
 void neomacs_display_set_celtic_knot(struct NeomacsDisplay *handle,
                                      int enabled,
                                      int r,
@@ -2872,9 +2534,6 @@ void neomacs_display_set_celtic_knot(struct NeomacsDisplay *handle,
                                      int weaveSpeed,
                                      int opacity);
 
-/**
- * Configure cursor candle flame effect
- */
 void neomacs_display_set_cursor_candle_flame(struct NeomacsDisplay *handle,
                                              int enabled,
                                              int r,
@@ -2884,9 +2543,6 @@ void neomacs_display_set_cursor_candle_flame(struct NeomacsDisplay *handle,
                                              int flickerSpeed,
                                              int opacity);
 
-/**
- * Configure argyle pattern overlay effect
- */
 void neomacs_display_set_argyle_pattern(struct NeomacsDisplay *handle,
                                         int enabled,
                                         int r,
@@ -2896,9 +2552,6 @@ void neomacs_display_set_argyle_pattern(struct NeomacsDisplay *handle,
                                         int lineWidth,
                                         int opacity);
 
-/**
- * Configure cursor moth flame effect
- */
 void neomacs_display_set_cursor_moth_flame(struct NeomacsDisplay *handle,
                                            int enabled,
                                            int r,
@@ -2908,9 +2561,6 @@ void neomacs_display_set_cursor_moth_flame(struct NeomacsDisplay *handle,
                                            int orbitSpeed,
                                            int opacity);
 
-/**
- * Configure basket weave overlay effect
- */
 void neomacs_display_set_basket_weave(struct NeomacsDisplay *handle,
                                       int enabled,
                                       int r,
@@ -2920,9 +2570,6 @@ void neomacs_display_set_basket_weave(struct NeomacsDisplay *handle,
                                       int stripSpacing,
                                       int opacity);
 
-/**
- * Configure cursor sparkler effect
- */
 void neomacs_display_set_cursor_sparkler(struct NeomacsDisplay *handle,
                                          int enabled,
                                          int r,
@@ -2932,9 +2579,6 @@ void neomacs_display_set_cursor_sparkler(struct NeomacsDisplay *handle,
                                          int burnSpeed,
                                          int opacity);
 
-/**
- * Configure fish scale overlay effect
- */
 void neomacs_display_set_fish_scale(struct NeomacsDisplay *handle,
                                     int enabled,
                                     int r,
@@ -2944,9 +2588,6 @@ void neomacs_display_set_fish_scale(struct NeomacsDisplay *handle,
                                     int rowOffset,
                                     int opacity);
 
-/**
- * Configure cursor plasma ball effect
- */
 void neomacs_display_set_cursor_plasma_ball(struct NeomacsDisplay *handle,
                                             int enabled,
                                             int r,
@@ -2956,9 +2597,6 @@ void neomacs_display_set_cursor_plasma_ball(struct NeomacsDisplay *handle,
                                             int arcSpeed,
                                             int opacity);
 
-/**
- * Configure trefoil knot overlay effect
- */
 void neomacs_display_set_trefoil_knot(struct NeomacsDisplay *handle,
                                       int enabled,
                                       int r,
@@ -2968,9 +2606,6 @@ void neomacs_display_set_trefoil_knot(struct NeomacsDisplay *handle,
                                       int rotationSpeed,
                                       int opacity);
 
-/**
- * Configure cursor quill pen effect
- */
 void neomacs_display_set_cursor_quill_pen(struct NeomacsDisplay *handle,
                                           int enabled,
                                           int r,
@@ -2980,9 +2615,6 @@ void neomacs_display_set_cursor_quill_pen(struct NeomacsDisplay *handle,
                                           int inkSpeed,
                                           int opacity);
 
-/**
- * Configure herringbone pattern overlay effect
- */
 void neomacs_display_set_herringbone_pattern(struct NeomacsDisplay *handle,
                                              int enabled,
                                              int r,
@@ -2992,9 +2624,6 @@ void neomacs_display_set_herringbone_pattern(struct NeomacsDisplay *handle,
                                              int tileHeight,
                                              int opacity);
 
-/**
- * Configure cursor aurora borealis effect
- */
 void neomacs_display_set_cursor_aurora_borealis(struct NeomacsDisplay *handle,
                                                 int enabled,
                                                 int r,
@@ -3004,9 +2633,6 @@ void neomacs_display_set_cursor_aurora_borealis(struct NeomacsDisplay *handle,
                                                 int shimmerSpeed,
                                                 int opacity);
 
-/**
- * Configure target reticle overlay effect
- */
 void neomacs_display_set_target_reticle(struct NeomacsDisplay *handle,
                                         int enabled,
                                         int r,
@@ -3016,9 +2642,6 @@ void neomacs_display_set_target_reticle(struct NeomacsDisplay *handle,
                                         int pulseSpeed,
                                         int opacity);
 
-/**
- * Configure cursor feather effect
- */
 void neomacs_display_set_cursor_feather(struct NeomacsDisplay *handle,
                                         int enabled,
                                         int r,
@@ -3028,9 +2651,6 @@ void neomacs_display_set_cursor_feather(struct NeomacsDisplay *handle,
                                         int driftSpeed,
                                         int opacity);
 
-/**
- * Configure plaid pattern overlay effect
- */
 void neomacs_display_set_plaid_pattern(struct NeomacsDisplay *handle,
                                        int enabled,
                                        int r,
@@ -3040,9 +2660,6 @@ void neomacs_display_set_plaid_pattern(struct NeomacsDisplay *handle,
                                        int bandSpacing,
                                        int opacity);
 
-/**
- * Configure cursor stardust effect
- */
 void neomacs_display_set_cursor_stardust(struct NeomacsDisplay *handle,
                                          int enabled,
                                          int r,
@@ -3052,9 +2669,6 @@ void neomacs_display_set_cursor_stardust(struct NeomacsDisplay *handle,
                                          int fallSpeed,
                                          int opacity);
 
-/**
- * Configure brick wall overlay effect
- */
 void neomacs_display_set_brick_wall(struct NeomacsDisplay *handle,
                                     int enabled,
                                     int r,
@@ -3064,9 +2678,6 @@ void neomacs_display_set_brick_wall(struct NeomacsDisplay *handle,
                                     int brickHeight,
                                     int opacity);
 
-/**
- * Configure cursor compass needle effect
- */
 void neomacs_display_set_cursor_compass_needle(struct NeomacsDisplay *handle,
                                                int enabled,
                                                int r,
@@ -3076,9 +2687,6 @@ void neomacs_display_set_cursor_compass_needle(struct NeomacsDisplay *handle,
                                                int spinSpeed,
                                                int opacity);
 
-/**
- * Configure sine wave overlay effect
- */
 void neomacs_display_set_sine_wave(struct NeomacsDisplay *handle,
                                    int enabled,
                                    int r,
@@ -3089,9 +2697,6 @@ void neomacs_display_set_sine_wave(struct NeomacsDisplay *handle,
                                    int speed,
                                    int opacity);
 
-/**
- * Configure cursor galaxy effect
- */
 void neomacs_display_set_cursor_galaxy(struct NeomacsDisplay *handle,
                                        int enabled,
                                        int r,
@@ -3101,9 +2706,6 @@ void neomacs_display_set_cursor_galaxy(struct NeomacsDisplay *handle,
                                        int radius,
                                        int opacity);
 
-/**
- * Configure rotating gear overlay effect
- */
 void neomacs_display_set_rotating_gear(struct NeomacsDisplay *handle,
                                        int enabled,
                                        int r,
@@ -3113,9 +2715,6 @@ void neomacs_display_set_rotating_gear(struct NeomacsDisplay *handle,
                                        int rotationSpeed,
                                        int opacity);
 
-/**
- * Configure cursor prism effect
- */
 void neomacs_display_set_cursor_prism(struct NeomacsDisplay *handle,
                                       int enabled,
                                       int r,
@@ -3125,9 +2724,6 @@ void neomacs_display_set_cursor_prism(struct NeomacsDisplay *handle,
                                       int spread,
                                       int opacity);
 
-/**
- * Configure crosshatch pattern overlay effect
- */
 void neomacs_display_set_crosshatch_pattern(struct NeomacsDisplay *handle,
                                             int enabled,
                                             int r,
@@ -3138,9 +2734,6 @@ void neomacs_display_set_crosshatch_pattern(struct NeomacsDisplay *handle,
                                             int speed,
                                             int opacity);
 
-/**
- * Configure cursor moth effect
- */
 void neomacs_display_set_cursor_moth(struct NeomacsDisplay *handle,
                                      int enabled,
                                      int r,
@@ -3150,9 +2743,6 @@ void neomacs_display_set_cursor_moth(struct NeomacsDisplay *handle,
                                      int wingSize,
                                      int opacity);
 
-/**
- * Configure concentric rings overlay effect
- */
 void neomacs_display_set_concentric_rings(struct NeomacsDisplay *handle,
                                           int enabled,
                                           int r,
@@ -3162,9 +2752,6 @@ void neomacs_display_set_concentric_rings(struct NeomacsDisplay *handle,
                                           int expansionSpeed,
                                           int opacity);
 
-/**
- * Configure cursor flame effect
- */
 void neomacs_display_set_cursor_flame(struct NeomacsDisplay *handle,
                                       int enabled,
                                       int r,
@@ -3174,9 +2761,6 @@ void neomacs_display_set_cursor_flame(struct NeomacsDisplay *handle,
                                       int height,
                                       int opacity);
 
-/**
- * Configure zigzag pattern overlay effect
- */
 void neomacs_display_set_zigzag_pattern(struct NeomacsDisplay *handle,
                                         int enabled,
                                         int r,
@@ -3187,9 +2771,6 @@ void neomacs_display_set_zigzag_pattern(struct NeomacsDisplay *handle,
                                         int speed,
                                         int opacity);
 
-/**
- * Configure cursor crystal effect
- */
 void neomacs_display_set_cursor_crystal(struct NeomacsDisplay *handle,
                                         int enabled,
                                         int r,
@@ -3199,9 +2780,6 @@ void neomacs_display_set_cursor_crystal(struct NeomacsDisplay *handle,
                                         int radius,
                                         int opacity);
 
-/**
- * Configure moiré pattern overlay effect
- */
 void neomacs_display_set_moire_pattern(struct NeomacsDisplay *handle,
                                        int enabled,
                                        int r,
@@ -3212,9 +2790,6 @@ void neomacs_display_set_moire_pattern(struct NeomacsDisplay *handle,
                                        int speed,
                                        int opacity);
 
-/**
- * Configure cursor lightning effect
- */
 void neomacs_display_set_cursor_lightning(struct NeomacsDisplay *handle,
                                           int enabled,
                                           int r,
@@ -3224,9 +2799,6 @@ void neomacs_display_set_cursor_lightning(struct NeomacsDisplay *handle,
                                           int maxLength,
                                           int opacity);
 
-/**
- * Configure dot matrix overlay effect
- */
 void neomacs_display_set_dot_matrix(struct NeomacsDisplay *handle,
                                     int enabled,
                                     int r,
@@ -3236,9 +2808,6 @@ void neomacs_display_set_dot_matrix(struct NeomacsDisplay *handle,
                                     int pulseSpeed,
                                     int opacity);
 
-/**
- * Configure cursor snowflake effect
- */
 void neomacs_display_set_cursor_snowflake(struct NeomacsDisplay *handle,
                                           int enabled,
                                           int r,
@@ -3248,9 +2817,6 @@ void neomacs_display_set_cursor_snowflake(struct NeomacsDisplay *handle,
                                           int fallSpeed,
                                           int opacity);
 
-/**
- * Configure sunburst pattern overlay effect
- */
 void neomacs_display_set_sunburst_pattern(struct NeomacsDisplay *handle,
                                           int enabled,
                                           int r,
@@ -3260,9 +2826,6 @@ void neomacs_display_set_sunburst_pattern(struct NeomacsDisplay *handle,
                                           int speed,
                                           int opacity);
 
-/**
- * Configure cursor firework effect
- */
 void neomacs_display_set_cursor_firework(struct NeomacsDisplay *handle,
                                          int enabled,
                                          int r,
@@ -3272,9 +2835,6 @@ void neomacs_display_set_cursor_firework(struct NeomacsDisplay *handle,
                                          int burstRadius,
                                          int opacity);
 
-/**
- * Configure honeycomb dissolve overlay effect
- */
 void neomacs_display_set_honeycomb_dissolve(struct NeomacsDisplay *handle,
                                             int enabled,
                                             int r,
@@ -3284,9 +2844,6 @@ void neomacs_display_set_honeycomb_dissolve(struct NeomacsDisplay *handle,
                                             int dissolveSpeed,
                                             int opacity);
 
-/**
- * Configure cursor tornado effect
- */
 void neomacs_display_set_cursor_tornado(struct NeomacsDisplay *handle,
                                         int enabled,
                                         int r,
@@ -3296,9 +2853,6 @@ void neomacs_display_set_cursor_tornado(struct NeomacsDisplay *handle,
                                         int particleCount,
                                         int opacity);
 
-/**
- * Configure wave interference overlay effect
- */
 void neomacs_display_set_wave_interference(struct NeomacsDisplay *handle,
                                            int enabled,
                                            int r,
@@ -3309,9 +2863,6 @@ void neomacs_display_set_wave_interference(struct NeomacsDisplay *handle,
                                            int speed,
                                            int opacity);
 
-/**
- * Configure cursor portal effect
- */
 void neomacs_display_set_cursor_portal(struct NeomacsDisplay *handle,
                                        int enabled,
                                        int r,
@@ -3321,9 +2872,6 @@ void neomacs_display_set_cursor_portal(struct NeomacsDisplay *handle,
                                        int speed,
                                        int opacity);
 
-/**
- * Configure chevron pattern overlay effect
- */
 void neomacs_display_set_chevron_pattern(struct NeomacsDisplay *handle,
                                          int enabled,
                                          int r,
@@ -3333,9 +2881,6 @@ void neomacs_display_set_chevron_pattern(struct NeomacsDisplay *handle,
                                          int speed,
                                          int opacity);
 
-/**
- * Configure cursor bubble effect
- */
 void neomacs_display_set_cursor_bubble(struct NeomacsDisplay *handle,
                                        int enabled,
                                        int r,

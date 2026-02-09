@@ -44,8 +44,8 @@
         # WPE WebKit from nix-wpe-webkit flake (with Cachix binary cache)
         wpewebkit = nix-wpe-webkit.packages.${final.system}.wpewebkit;
 
-        # Rust toolchain with components needed for neomacs-display
-        rust-neomacs = final.rust-bin.stable.latest.default.override {
+        # Rust nightly toolchain (needed for cbindgen [parse.expand] macro expansion)
+        rust-neomacs = final.rust-bin.nightly.latest.default.override {
           extensions = [ "rust-src" "rust-analyzer" ];
         };
       };
