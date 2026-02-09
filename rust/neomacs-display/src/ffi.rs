@@ -2267,18 +2267,14 @@ pub unsafe extern "C" fn neomacs_display_set_background_gradient(
     top_r: c_int, top_g: c_int, top_b: c_int,
     bottom_r: c_int, bottom_g: c_int, bottom_b: c_int,
 ) {
-    let cmd = RenderCommand::SetBackgroundGradient {
-        enabled: enabled != 0,
-        top_r: top_r as f32 / 255.0,
-        top_g: top_g as f32 / 255.0,
-        top_b: top_b as f32 / 255.0,
-        bottom_r: bottom_r as f32 / 255.0,
-        bottom_g: bottom_g as f32 / 255.0,
-        bottom_b: bottom_b as f32 / 255.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.bg_gradient.enabled = enabled != 0;
+            effects.bg_gradient.top = (top_r as f32 / 255.0, top_g as f32 / 255.0, top_b as f32 / 255.0);
+            effects.bg_gradient.bottom = (bottom_r as f32 / 255.0, bottom_g as f32 / 255.0, bottom_b as f32 / 255.0);
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure scroll bar appearance
@@ -2290,15 +2286,15 @@ pub unsafe extern "C" fn neomacs_display_set_scroll_bar_config(
     track_opacity: c_int,
     hover_brightness: c_int,
 ) {
-    let cmd = RenderCommand::SetScrollBarConfig {
-        width: width as i32,
-        thumb_radius: thumb_radius as f32 / 100.0,
-        track_opacity: track_opacity as f32 / 100.0,
-        hover_brightness: hover_brightness as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.scroll_bar.width = width as i32;
+            effects.scroll_bar.thumb_radius = thumb_radius as f32 / 100.0;
+            effects.scroll_bar.track_opacity = track_opacity as f32 / 100.0;
+            effects.scroll_bar.hover_brightness = hover_brightness as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure indent guide rendering
@@ -2309,16 +2305,14 @@ pub unsafe extern "C" fn neomacs_display_set_indent_guides(
     r: c_int, g: c_int, b: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetIndentGuideConfig {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let c = crate::core::types::Color::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, opacity as f32 / 100.0).srgb_to_linear();
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.indent_guides.enabled = enabled != 0;
+            effects.indent_guides.color = (c.r, c.g, c.b, c.a);
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure rainbow indent guide colors (up to 6 cycling colors by depth)
@@ -2361,16 +2355,14 @@ pub unsafe extern "C" fn neomacs_display_set_line_highlight(
     r: c_int, g: c_int, b: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetLineHighlight {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let c = crate::core::types::Color::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, opacity as f32 / 100.0).srgb_to_linear();
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.line_highlight.enabled = enabled != 0;
+            effects.line_highlight.color = (c.r, c.g, c.b, c.a);
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure visible whitespace rendering
@@ -2381,16 +2373,14 @@ pub unsafe extern "C" fn neomacs_display_set_show_whitespace(
     r: c_int, g: c_int, b: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetShowWhitespace {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let c = crate::core::types::Color::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, opacity as f32 / 100.0).srgb_to_linear();
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.show_whitespace.enabled = enabled != 0;
+            effects.show_whitespace.color = (c.r, c.g, c.b, c.a);
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure inactive window dimming (threaded mode)
@@ -2400,13 +2390,13 @@ pub unsafe extern "C" fn neomacs_display_set_inactive_dim(
     enabled: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetInactiveDim {
-        enabled: enabled != 0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.inactive_dim.enabled = enabled != 0;
+            effects.inactive_dim.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor glow effect (threaded mode)
@@ -2418,17 +2408,15 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_glow(
     radius: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorGlow {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        radius: radius as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_glow.enabled = enabled != 0;
+            effects.cursor_glow.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_glow.radius = radius as f32;
+            effects.cursor_glow.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor pulse animation (sinusoidal glow modulation)
@@ -2439,14 +2427,14 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_pulse(
     speed: c_int,
     min_opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorPulse {
-        enabled: enabled != 0,
-        speed: speed as f32 / 100.0,  // 100 = 1.0 Hz
-        min_opacity: min_opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_pulse.enabled = enabled != 0;
+            effects.cursor_pulse.speed = speed as f32 / 100.0;
+            effects.cursor_pulse.min_opacity = min_opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure focus mode (dim outside current paragraph)
@@ -2456,13 +2444,13 @@ pub unsafe extern "C" fn neomacs_display_set_focus_mode(
     enabled: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetFocusMode {
-        enabled: enabled != 0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.focus_mode.enabled = enabled != 0;
+            effects.focus_mode.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure minimap (code overview column)
@@ -2472,13 +2460,13 @@ pub unsafe extern "C" fn neomacs_display_set_minimap(
     enabled: c_int,
     width: c_int,
 ) {
-    let cmd = RenderCommand::SetMinimap {
-        enabled: enabled != 0,
-        width: width as f32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.minimap.enabled = enabled != 0;
+            effects.minimap.width = width as f32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure typing ripple effect
@@ -2489,14 +2477,14 @@ pub unsafe extern "C" fn neomacs_display_set_typing_ripple(
     max_radius: c_int,
     duration_ms: c_int,
 ) {
-    let cmd = RenderCommand::SetTypingRipple {
-        enabled: enabled != 0,
-        max_radius: max_radius as f32,
-        duration_ms: duration_ms as u32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.typing_ripple.enabled = enabled != 0;
+            effects.typing_ripple.max_radius = max_radius as f32;
+            effects.typing_ripple.duration_ms = duration_ms as u32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure search highlight pulse
@@ -2506,13 +2494,13 @@ pub unsafe extern "C" fn neomacs_display_set_search_pulse(
     enabled: c_int,
     face_id: c_int,
 ) {
-    let cmd = RenderCommand::SetSearchPulse {
-        enabled: enabled != 0,
-        face_id: face_id as u32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.search_pulse.enabled = enabled != 0;
+            effects.search_pulse.face_id = face_id as u32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure zen mode (centered distraction-free)
@@ -2523,14 +2511,14 @@ pub unsafe extern "C" fn neomacs_display_set_zen_mode(
     content_width_pct: c_int,
     margin_opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetZenMode {
-        enabled: enabled != 0,
-        content_width_pct: content_width_pct as f32,
-        margin_opacity: margin_opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.zen_mode.enabled = enabled != 0;
+            effects.zen_mode.content_width_pct = content_width_pct as f32;
+            effects.zen_mode.margin_opacity = margin_opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure background pattern
@@ -2542,17 +2530,15 @@ pub unsafe extern "C" fn neomacs_display_set_background_pattern(
     r: c_int, g: c_int, b: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetBackgroundPattern {
-        style: style as u32,
-        spacing: spacing as f32,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.bg_pattern.style = style as u32;
+            effects.bg_pattern.spacing = spacing as f32;
+            effects.bg_pattern.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.bg_pattern.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor color cycling (rainbow hue rotation)
@@ -2564,15 +2550,15 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_color_cycle(
     saturation: c_int,
     lightness: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorColorCycle {
-        enabled: enabled != 0,
-        speed: speed as f32 / 100.0,
-        saturation: saturation as f32 / 100.0,
-        lightness: lightness as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_color_cycle.enabled = enabled != 0;
+            effects.cursor_color_cycle.speed = speed as f32 / 100.0;
+            effects.cursor_color_cycle.saturation = saturation as f32 / 100.0;
+            effects.cursor_color_cycle.lightness = lightness as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure header/mode-line shadow depth effect
@@ -2583,14 +2569,14 @@ pub unsafe extern "C" fn neomacs_display_set_header_shadow(
     intensity: c_int,
     size: c_int,
 ) {
-    let cmd = RenderCommand::SetHeaderShadow {
-        enabled: enabled != 0,
-        intensity: intensity as f32 / 100.0,
-        size: size as f32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.header_shadow.enabled = enabled != 0;
+            effects.header_shadow.intensity = intensity as f32 / 100.0;
+            effects.header_shadow.size = size as f32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure line insertion/deletion animation
@@ -2600,13 +2586,13 @@ pub unsafe extern "C" fn neomacs_display_set_line_animation(
     enabled: c_int,
     duration_ms: c_int,
 ) {
-    let cmd = RenderCommand::SetLineAnimation {
-        enabled: enabled != 0,
-        duration_ms: duration_ms as u32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.line_animation.enabled = enabled != 0;
+            effects.line_animation.duration_ms = duration_ms as u32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure vignette effect (edge darkening)
@@ -2617,14 +2603,14 @@ pub unsafe extern "C" fn neomacs_display_set_vignette(
     intensity: c_int,
     radius: c_int,
 ) {
-    let cmd = RenderCommand::SetVignette {
-        enabled: enabled != 0,
-        intensity: intensity as f32 / 100.0,
-        radius: radius as f32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.vignette.enabled = enabled != 0;
+            effects.vignette.intensity = intensity as f32 / 100.0;
+            effects.vignette.radius = radius as f32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure inactive window color tint
@@ -2635,14 +2621,14 @@ pub unsafe extern "C" fn neomacs_display_set_inactive_tint(
     r: c_int, g: c_int, b: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetInactiveTint {
-        enabled: enabled != 0,
-        color: (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0),
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.inactive_tint.enabled = enabled != 0;
+            effects.inactive_tint.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.inactive_tint.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure scroll progress indicator bar
@@ -2654,15 +2640,15 @@ pub unsafe extern "C" fn neomacs_display_set_scroll_progress(
     r: c_int, g: c_int, b: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetScrollProgress {
-        enabled: enabled != 0,
-        height: height as f32,
-        color: (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0),
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.scroll_progress.enabled = enabled != 0;
+            effects.scroll_progress.height = height as f32;
+            effects.scroll_progress.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.scroll_progress.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure active window border glow
@@ -2674,15 +2660,15 @@ pub unsafe extern "C" fn neomacs_display_set_window_glow(
     radius: c_int,
     intensity: c_int,
 ) {
-    let cmd = RenderCommand::SetWindowGlow {
-        enabled: enabled != 0,
-        color: (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0),
-        radius: radius as f32,
-        intensity: intensity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.window_glow.enabled = enabled != 0;
+            effects.window_glow.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.window_glow.radius = radius as f32;
+            effects.window_glow.intensity = intensity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure breadcrumb/path bar overlay
@@ -2692,13 +2678,13 @@ pub unsafe extern "C" fn neomacs_display_set_breadcrumb(
     enabled: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetBreadcrumb {
-        enabled: enabled != 0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.breadcrumb.enabled = enabled != 0;
+            effects.breadcrumb.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure smooth border color transition on focus
@@ -2709,14 +2695,14 @@ pub unsafe extern "C" fn neomacs_display_set_border_transition(
     r: c_int, g: c_int, b: c_int,
     duration_ms: c_int,
 ) {
-    let cmd = RenderCommand::SetBorderTransition {
-        enabled: enabled != 0,
-        active_color: (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0),
-        duration_ms: duration_ms as u32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.border_transition.enabled = enabled != 0;
+            effects.border_transition.active_color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.border_transition.duration_ms = duration_ms as u32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure buffer-local accent color strip
@@ -2726,13 +2712,13 @@ pub unsafe extern "C" fn neomacs_display_set_accent_strip(
     enabled: c_int,
     width: c_int,
 ) {
-    let cmd = RenderCommand::SetAccentStrip {
-        enabled: enabled != 0,
-        width: width as f32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.accent_strip.enabled = enabled != 0;
+            effects.accent_strip.width = width as f32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure frosted glass effect on mode-lines
@@ -2743,14 +2729,14 @@ pub unsafe extern "C" fn neomacs_display_set_frosted_glass(
     opacity: c_int,
     blur: c_int,
 ) {
-    let cmd = RenderCommand::SetFrostedGlass {
-        enabled: enabled != 0,
-        opacity: opacity as f32 / 100.0,
-        blur: blur as f32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.frosted_glass.enabled = enabled != 0;
+            effects.frosted_glass.opacity = opacity as f32 / 100.0;
+            effects.frosted_glass.blur = blur as f32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure typing speed indicator overlay
@@ -2759,12 +2745,12 @@ pub unsafe extern "C" fn neomacs_display_set_typing_speed(
     _handle: *mut NeomacsDisplay,
     enabled: c_int,
 ) {
-    let cmd = RenderCommand::SetTypingSpeed {
-        enabled: enabled != 0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.typing_speed.enabled = enabled != 0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure breadcrumb title fade animation
@@ -2774,13 +2760,13 @@ pub unsafe extern "C" fn neomacs_display_set_title_fade(
     enabled: c_int,
     duration_ms: c_int,
 ) {
-    let cmd = RenderCommand::SetTitleFade {
-        enabled: enabled != 0,
-        duration_ms: duration_ms as u32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.title_fade.enabled = enabled != 0;
+            effects.title_fade.duration_ms = duration_ms as u32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure selection region glow highlight
@@ -2792,15 +2778,15 @@ pub unsafe extern "C" fn neomacs_display_set_region_glow(
     radius: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetRegionGlow {
-        enabled: enabled != 0,
-        face_id: face_id as u32,
-        radius: radius as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.region_glow.enabled = enabled != 0;
+            effects.region_glow.face_id = face_id as u32;
+            effects.region_glow.radius = radius as f32;
+            effects.region_glow.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor drop shadow
@@ -2812,15 +2798,15 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_shadow(
     offset_y: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorShadow {
-        enabled: enabled != 0,
-        offset_x: offset_x as f32,
-        offset_y: offset_y as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_shadow.enabled = enabled != 0;
+            effects.cursor_shadow.offset_x = offset_x as f32;
+            effects.cursor_shadow.offset_y = offset_y as f32;
+            effects.cursor_shadow.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure animated focus ring around selected window
@@ -2833,16 +2819,16 @@ pub unsafe extern "C" fn neomacs_display_set_focus_ring(
     dash_length: c_int,
     speed: c_int,
 ) {
-    let cmd = RenderCommand::SetFocusRing {
-        enabled: enabled != 0,
-        color: (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0),
-        opacity: opacity as f32 / 100.0,
-        dash_length: dash_length as f32,
-        speed: speed as f32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.focus_ring.enabled = enabled != 0;
+            effects.focus_ring.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.focus_ring.opacity = opacity as f32 / 100.0;
+            effects.focus_ring.dash_length = dash_length as f32;
+            effects.focus_ring.speed = speed as f32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure window background tint based on file type
@@ -2852,13 +2838,13 @@ pub unsafe extern "C" fn neomacs_display_set_window_mode_tint(
     enabled: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetWindowModeTint {
-        enabled: enabled != 0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.window_mode_tint.enabled = enabled != 0;
+            effects.window_mode_tint.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure window watermark for empty/small buffers
@@ -2869,14 +2855,14 @@ pub unsafe extern "C" fn neomacs_display_set_window_watermark(
     opacity: c_int,
     threshold: c_int,
 ) {
-    let cmd = RenderCommand::SetWindowWatermark {
-        enabled: enabled != 0,
-        opacity: opacity as f32 / 100.0,
-        threshold: threshold as u32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.window_watermark.enabled = enabled != 0;
+            effects.window_watermark.opacity = opacity as f32 / 100.0;
+            effects.window_watermark.threshold = threshold as u32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor trail fade effect
@@ -2887,14 +2873,14 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_trail_fade(
     length: c_int,
     fade_ms: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorTrailFade {
-        enabled: enabled != 0,
-        length: length as u32,
-        fade_ms: fade_ms as u32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_trail_fade.enabled = enabled != 0;
+            effects.cursor_trail_fade.length = length as u32 as usize;
+            effects.cursor_trail_fade.ms = fade_ms as u32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure idle screen dimming after inactivity
@@ -2906,15 +2892,15 @@ pub unsafe extern "C" fn neomacs_display_set_idle_dim(
     opacity: c_int,
     fade_ms: c_int,
 ) {
-    let cmd = RenderCommand::SetIdleDim {
-        enabled: enabled != 0,
-        delay_secs: delay_secs as f32,
-        opacity: opacity as f32 / 100.0,
-        fade_ms: fade_ms as u32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.idle_dim.enabled = enabled != 0;
+            effects.idle_dim.delay = std::time::Duration::from_secs_f32(delay_secs as f32);
+            effects.idle_dim.opacity = opacity as f32 / 100.0;
+            effects.idle_dim.fade_duration = std::time::Duration::from_millis(fade_ms as u32 as u64);
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure noise/film grain texture overlay
@@ -2925,14 +2911,14 @@ pub unsafe extern "C" fn neomacs_display_set_noise_grain(
     intensity: c_int,
     size: c_int,
 ) {
-    let cmd = RenderCommand::SetNoiseGrain {
-        enabled: enabled != 0,
-        intensity: intensity as f32 / 100.0,
-        size: size as f32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.noise_grain.enabled = enabled != 0;
+            effects.noise_grain.intensity = intensity as f32 / 100.0;
+            effects.noise_grain.size = size as f32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure smooth mode-line content transition
@@ -2942,13 +2928,13 @@ pub unsafe extern "C" fn neomacs_display_set_mode_line_transition(
     enabled: c_int,
     duration_ms: c_int,
 ) {
-    let cmd = RenderCommand::SetModeLineTransition {
-        enabled: enabled != 0,
-        duration_ms: duration_ms as u32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.mode_line_transition.enabled = enabled != 0;
+            effects.mode_line_transition.duration_ms = duration_ms as u32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor wake animation (pop/scale effect on blink-on)
@@ -2959,14 +2945,14 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_wake(
     duration_ms: c_int,
     scale_pct: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorWake {
-        enabled: enabled != 0,
-        duration_ms: duration_ms as u32,
-        scale: scale_pct as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_wake.enabled = enabled != 0;
+            effects.cursor_wake.duration_ms = duration_ms as u32;
+            effects.cursor_wake.scale = scale_pct as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure window content shadow/depth between split panes
@@ -2977,14 +2963,14 @@ pub unsafe extern "C" fn neomacs_display_set_window_content_shadow(
     size: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetWindowContentShadow {
-        enabled: enabled != 0,
-        size: size as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.window_content_shadow.enabled = enabled != 0;
+            effects.window_content_shadow.size = size as f32;
+            effects.window_content_shadow.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure window edge snap indicator
@@ -2997,16 +2983,14 @@ pub unsafe extern "C" fn neomacs_display_set_edge_snap(
     b: c_int,
     duration_ms: c_int,
 ) {
-    let cmd = RenderCommand::SetEdgeSnap {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        duration_ms: duration_ms as u32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.edge_snap.enabled = enabled != 0;
+            effects.edge_snap.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.edge_snap.duration_ms = duration_ms as u32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor crosshair guide lines
@@ -3019,16 +3003,14 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_crosshair(
     b: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorCrosshair {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_crosshair.enabled = enabled != 0;
+            effects.cursor_crosshair.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_crosshair.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure buffer modified border indicator
@@ -3042,17 +3024,15 @@ pub unsafe extern "C" fn neomacs_display_set_modified_indicator(
     width: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetModifiedIndicator {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        width: width as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.modified_indicator.enabled = enabled != 0;
+            effects.modified_indicator.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.modified_indicator.width = width as f32;
+            effects.modified_indicator.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure inactive window stained glass effect
@@ -3063,14 +3043,14 @@ pub unsafe extern "C" fn neomacs_display_set_stained_glass(
     opacity: c_int,
     saturation: c_int,
 ) {
-    let cmd = RenderCommand::SetStainedGlass {
-        enabled: enabled != 0,
-        opacity: opacity as f32 / 100.0,
-        saturation: saturation as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.stained_glass.enabled = enabled != 0;
+            effects.stained_glass.opacity = opacity as f32 / 100.0;
+            effects.stained_glass.saturation = saturation as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure focused window gradient border
@@ -3083,16 +3063,16 @@ pub unsafe extern "C" fn neomacs_display_set_focus_gradient_border(
     width: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetFocusGradientBorder {
-        enabled: enabled != 0,
-        top_r: top_r as f32 / 255.0, top_g: top_g as f32 / 255.0, top_b: top_b as f32 / 255.0,
-        bot_r: bot_r as f32 / 255.0, bot_g: bot_g as f32 / 255.0, bot_b: bot_b as f32 / 255.0,
-        width: width as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.focus_gradient_border.enabled = enabled != 0;
+            effects.focus_gradient_border.top_color = (top_r as f32 / 255.0, top_g as f32 / 255.0, top_b as f32 / 255.0);
+            effects.focus_gradient_border.bot_color = (bot_r as f32 / 255.0, bot_g as f32 / 255.0, bot_b as f32 / 255.0);
+            effects.focus_gradient_border.width = width as f32;
+            effects.focus_gradient_border.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor magnetism effect
@@ -3105,16 +3085,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_magnetism(
     duration_ms: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorMagnetism {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0,
-        ring_count: ring_count as u32,
-        duration_ms: duration_ms as u32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_magnetism.enabled = enabled != 0;
+            effects.cursor_magnetism.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_magnetism.ring_count = ring_count as u32;
+            effects.cursor_magnetism.duration_ms = duration_ms as u32;
+            effects.cursor_magnetism.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure window depth shadow layers
@@ -3127,16 +3107,16 @@ pub unsafe extern "C" fn neomacs_display_set_depth_shadow(
     r: c_int, g: c_int, b: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetDepthShadow {
-        enabled: enabled != 0,
-        layers: layers as u32,
-        offset: offset as f32,
-        r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.depth_shadow.enabled = enabled != 0;
+            effects.depth_shadow.layers = layers as u32;
+            effects.depth_shadow.offset = offset as f32;
+            effects.depth_shadow.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.depth_shadow.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure mode-line gradient background
@@ -3148,15 +3128,15 @@ pub unsafe extern "C" fn neomacs_display_set_mode_line_gradient(
     right_r: c_int, right_g: c_int, right_b: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetModeLineGradient {
-        enabled: enabled != 0,
-        left_r: left_r as f32 / 255.0, left_g: left_g as f32 / 255.0, left_b: left_b as f32 / 255.0,
-        right_r: right_r as f32 / 255.0, right_g: right_g as f32 / 255.0, right_b: right_b as f32 / 255.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.mode_line_gradient.enabled = enabled != 0;
+            effects.mode_line_gradient.left_color = (left_r as f32 / 255.0, left_g as f32 / 255.0, left_b as f32 / 255.0);
+            effects.mode_line_gradient.right_color = (right_r as f32 / 255.0, right_g as f32 / 255.0, right_b as f32 / 255.0);
+            effects.mode_line_gradient.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure window corner fold effect
@@ -3170,17 +3150,15 @@ pub unsafe extern "C" fn neomacs_display_set_corner_fold(
     b: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCornerFold {
-        enabled: enabled != 0,
-        size: size as f32,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.corner_fold.enabled = enabled != 0;
+            effects.corner_fold.size = size as f32;
+            effects.corner_fold.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.corner_fold.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure frosted window border effect
@@ -3194,17 +3172,15 @@ pub unsafe extern "C" fn neomacs_display_set_frosted_border(
     g: c_int,
     b: c_int,
 ) {
-    let cmd = RenderCommand::SetFrostedBorder {
-        enabled: enabled != 0,
-        width: width as f32,
-        opacity: opacity as f32 / 100.0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.frosted_border.enabled = enabled != 0;
+            effects.frosted_border.width = width as f32;
+            effects.frosted_border.opacity = opacity as f32 / 100.0;
+            effects.frosted_border.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure line number pulse on cursor line
@@ -3218,17 +3194,15 @@ pub unsafe extern "C" fn neomacs_display_set_line_number_pulse(
     intensity: c_int,
     cycle_ms: c_int,
 ) {
-    let cmd = RenderCommand::SetLineNumberPulse {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        intensity: intensity as f32 / 100.0,
-        cycle_ms: cycle_ms as u32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.line_number_pulse.enabled = enabled != 0;
+            effects.line_number_pulse.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.line_number_pulse.intensity = intensity as f32 / 100.0;
+            effects.line_number_pulse.cycle_ms = cycle_ms as u32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure window breathing border animation
@@ -3243,18 +3217,16 @@ pub unsafe extern "C" fn neomacs_display_set_breathing_border(
     max_opacity: c_int,
     cycle_ms: c_int,
 ) {
-    let cmd = RenderCommand::SetBreathingBorder {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        min_opacity: min_opacity as f32 / 100.0,
-        max_opacity: max_opacity as f32 / 100.0,
-        cycle_ms: cycle_ms as u32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.breathing_border.enabled = enabled != 0;
+            effects.breathing_border.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.breathing_border.min_opacity = min_opacity as f32 / 100.0;
+            effects.breathing_border.max_opacity = max_opacity as f32 / 100.0;
+            effects.breathing_border.cycle_ms = cycle_ms as u32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure window scanline (CRT) effect
@@ -3268,17 +3240,15 @@ pub unsafe extern "C" fn neomacs_display_set_scanlines(
     g: c_int,
     b: c_int,
 ) {
-    let cmd = RenderCommand::SetScanlines {
-        enabled: enabled != 0,
-        spacing: spacing as u32,
-        opacity: opacity as f32 / 100.0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.scanlines.enabled = enabled != 0;
+            effects.scanlines.spacing = spacing as u32;
+            effects.scanlines.opacity = opacity as f32 / 100.0;
+            effects.scanlines.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor comet tail effect
@@ -3293,18 +3263,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_comet(
     b: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorComet {
-        enabled: enabled != 0,
-        trail_length: trail_length as u32,
-        fade_ms: fade_ms as u32,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_comet.enabled = enabled != 0;
+            effects.cursor_comet.trail_length = trail_length as u32;
+            effects.cursor_comet.fade_ms = fade_ms as u32;
+            effects.cursor_comet.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_comet.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor spotlight/radial gradient effect
@@ -3318,17 +3286,15 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_spotlight(
     g: c_int,
     b: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorSpotlight {
-        enabled: enabled != 0,
-        radius: radius as f32,
-        intensity: intensity as f32 / 100.0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_spotlight.enabled = enabled != 0;
+            effects.cursor_spotlight.radius = radius as f32;
+            effects.cursor_spotlight.intensity = intensity as f32 / 100.0;
+            effects.cursor_spotlight.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor particle trail effect
@@ -3343,18 +3309,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_particles(
     lifetime_ms: c_int,
     gravity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorParticles {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        count: count as u32,
-        lifetime_ms: lifetime_ms as u32,
-        gravity: gravity as f32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_particles.enabled = enabled != 0;
+            effects.cursor_particles.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_particles.count = count as u32;
+            effects.cursor_particles.lifetime_ms = lifetime_ms as u32;
+            effects.cursor_particles.gravity = gravity as f32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure per-window rounded border
@@ -3369,18 +3333,16 @@ pub unsafe extern "C" fn neomacs_display_set_window_border_radius(
     b: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetWindowBorderRadius {
-        enabled: enabled != 0,
-        radius: radius as f32,
-        border_width: border_width as f32,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.window_border_radius.enabled = enabled != 0;
+            effects.window_border_radius.radius = radius as f32;
+            effects.window_border_radius.width = border_width as f32;
+            effects.window_border_radius.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.window_border_radius.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure typing heat map overlay
@@ -3394,17 +3356,15 @@ pub unsafe extern "C" fn neomacs_display_set_typing_heatmap(
     fade_ms: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetTypingHeatMap {
-        enabled: enabled != 0,
-        hot_r: r as f32 / 255.0,
-        hot_g: g as f32 / 255.0,
-        hot_b: b as f32 / 255.0,
-        fade_ms: fade_ms as u32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.typing_heatmap.enabled = enabled != 0;
+            effects.typing_heatmap.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.typing_heatmap.fade_ms = fade_ms as u32;
+            effects.typing_heatmap.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure smooth theme transition (crossfade on background color change)
@@ -3414,13 +3374,13 @@ pub unsafe extern "C" fn neomacs_display_set_theme_transition(
     enabled: c_int,
     duration_ms: c_int,
 ) {
-    let cmd = RenderCommand::SetThemeTransition {
-        enabled: enabled != 0,
-        duration_ms: duration_ms as u32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.theme_transition.enabled = enabled != 0;
+            effects.theme_transition.duration = std::time::Duration::from_millis(duration_ms as u32 as u64);
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor click halo effect
@@ -3434,17 +3394,15 @@ pub unsafe extern "C" fn neomacs_display_set_click_halo(
     duration_ms: c_int,
     max_radius: c_int,
 ) {
-    let cmd = RenderCommand::SetClickHalo {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        duration_ms: duration_ms as u32,
-        max_radius: max_radius as f32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.click_halo.enabled = enabled != 0;
+            effects.click_halo.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.click_halo.duration_ms = duration_ms as u32;
+            effects.click_halo.max_radius = max_radius as f32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure scroll velocity fade overlay
@@ -3455,14 +3413,14 @@ pub unsafe extern "C" fn neomacs_display_set_scroll_velocity_fade(
     max_opacity: c_int,
     fade_ms: c_int,
 ) {
-    let cmd = RenderCommand::SetScrollVelocityFade {
-        enabled: enabled != 0,
-        max_opacity: max_opacity as f32 / 100.0,
-        fade_ms: fade_ms as u32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.scroll_velocity_fade.enabled = enabled != 0;
+            effects.scroll_velocity_fade.max_opacity = max_opacity as f32 / 100.0;
+            effects.scroll_velocity_fade.ms = fade_ms as u32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure mini-buffer completion highlight glow
@@ -3475,16 +3433,14 @@ pub unsafe extern "C" fn neomacs_display_set_minibuffer_highlight(
     b: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetMinibufferHighlight {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.minibuffer_highlight.enabled = enabled != 0;
+            effects.minibuffer_highlight.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.minibuffer_highlight.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure smooth window padding transition on resize
@@ -3495,14 +3451,14 @@ pub unsafe extern "C" fn neomacs_display_set_resize_padding(
     duration_ms: c_int,
     max_padding: c_int,
 ) {
-    let cmd = RenderCommand::SetResizePadding {
-        enabled: enabled != 0,
-        duration_ms: duration_ms as u32,
-        max_padding: max_padding as f32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.resize_padding.enabled = enabled != 0;
+            effects.resize_padding.duration_ms = duration_ms as u32;
+            effects.resize_padding.max = max_padding as f32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor error pulse (brief color flash on bell)
@@ -3515,16 +3471,14 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_error_pulse(
     b: c_int,
     duration_ms: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorErrorPulse {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        duration_ms: duration_ms as u32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_error_pulse.enabled = enabled != 0;
+            effects.cursor_error_pulse.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_error_pulse.duration_ms = duration_ms as u32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure line wrap indicator overlay
@@ -3537,16 +3491,14 @@ pub unsafe extern "C" fn neomacs_display_set_wrap_indicator(
     b: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetWrapIndicator {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.wrap_indicator.enabled = enabled != 0;
+            effects.wrap_indicator.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.wrap_indicator.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure per-window scroll momentum indicator
@@ -3557,14 +3509,14 @@ pub unsafe extern "C" fn neomacs_display_set_scroll_momentum(
     fade_ms: c_int,
     width: c_int,
 ) {
-    let cmd = RenderCommand::SetScrollMomentum {
-        enabled: enabled != 0,
-        fade_ms: fade_ms as u32,
-        width: width as f32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.scroll_momentum.enabled = enabled != 0;
+            effects.scroll_momentum.fade_ms = fade_ms as u32;
+            effects.scroll_momentum.width = width as f32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure text fade-in animation for new content
@@ -3574,13 +3526,13 @@ pub unsafe extern "C" fn neomacs_display_set_text_fade_in(
     enabled: c_int,
     duration_ms: c_int,
 ) {
-    let cmd = RenderCommand::SetTextFadeIn {
-        enabled: enabled != 0,
-        duration_ms: duration_ms as u32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.text_fade_in.enabled = enabled != 0;
+            effects.text_fade_in.duration_ms = duration_ms as u32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure scroll line spacing animation (accordion effect on scroll)
@@ -3591,14 +3543,14 @@ pub unsafe extern "C" fn neomacs_display_set_scroll_line_spacing(
     max_spacing: c_int,
     duration_ms: c_int,
 ) {
-    let cmd = RenderCommand::SetScrollLineSpacing {
-        enabled: enabled != 0,
-        max_spacing: max_spacing as f32,
-        duration_ms: duration_ms as u32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.scroll_line_spacing.enabled = enabled != 0;
+            effects.scroll_line_spacing.max = max_spacing as f32;
+            effects.scroll_line_spacing.duration_ms = duration_ms as u32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure window padding gradient (inner edge shading for depth)
@@ -3610,15 +3562,15 @@ pub unsafe extern "C" fn neomacs_display_set_padding_gradient(
     opacity: c_int,
     width: c_int,
 ) {
-    let cmd = RenderCommand::SetPaddingGradient {
-        enabled: enabled != 0,
-        color: (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0),
-        opacity: opacity as f32 / 100.0,
-        width: width as f32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.padding_gradient.enabled = enabled != 0;
+            effects.padding_gradient.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.padding_gradient.opacity = opacity as f32 / 100.0;
+            effects.padding_gradient.width = width as f32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure smooth cursor size transition on text-scale-adjust
@@ -3645,14 +3597,14 @@ pub unsafe extern "C" fn neomacs_display_set_window_switch_fade(
     duration_ms: c_int,
     intensity: c_int,
 ) {
-    let cmd = RenderCommand::SetWindowSwitchFade {
-        enabled: enabled != 0,
-        duration_ms: duration_ms as u32,
-        intensity: intensity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.window_switch_fade.enabled = enabled != 0;
+            effects.window_switch_fade.duration_ms = duration_ms as u32;
+            effects.window_switch_fade.intensity = intensity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure mode-line separator style (threaded mode)
@@ -3663,16 +3615,14 @@ pub unsafe extern "C" fn neomacs_display_set_mode_line_separator(
     r: c_int, g: c_int, b: c_int,
     height: c_int,
 ) {
-    let cmd = RenderCommand::SetModeLineSeparator {
-        style: style as u32,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        height: height as f32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.mode_line_separator.style = style as u32;
+            effects.mode_line_separator.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.mode_line_separator.height = height as f32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Set the window title (threaded mode)
@@ -5370,7 +5320,7 @@ pub unsafe extern "C" fn neomacs_display_has_transition_snapshot(
 // ============================================================================
 
 #[cfg(feature = "winit-backend")]
-use crate::thread_comm::{EmacsComms, InputEvent, PopupMenuItem, RenderCommand, ThreadComms};
+use crate::thread_comm::{EmacsComms, EffectUpdater, InputEvent, PopupMenuItem, RenderCommand, ThreadComms};
 #[cfg(feature = "winit-backend")]
 use crate::render_thread::{RenderThread, SharedImageDimensions, SharedMonitorInfo};
 
@@ -5917,14 +5867,14 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_elastic_snap(
     overshoot: c_int,
     duration_ms: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorElasticSnap {
-        enabled: enabled != 0,
-        overshoot: overshoot as f32 / 100.0,
-        duration_ms: duration_ms as u32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_elastic_snap.enabled = enabled != 0;
+            effects.cursor_elastic_snap.overshoot = overshoot as f32 / 100.0;
+            effects.cursor_elastic_snap.duration_ms = duration_ms as u32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure window frost/ice border effect
@@ -5936,15 +5886,15 @@ pub unsafe extern "C" fn neomacs_display_set_frost_border_effect(
     width: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetFrostBorder {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0,
-        width: width as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.frost_border.enabled = enabled != 0;
+            effects.frost_border.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.frost_border.width = width as f32;
+            effects.frost_border.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor afterimage ghost effect
@@ -5958,17 +5908,17 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_ghost(
     drift: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorGhost {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0,
-        count: count as u32,
-        fade_ms: fade_ms as u32,
-        drift: drift as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_ghost.enabled = enabled != 0;
+            effects.cursor_ghost.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_ghost.count = count as u32;
+            effects.cursor_ghost.fade_ms = fade_ms as u32;
+            effects.cursor_ghost.drift = drift as f32;
+            effects.cursor_ghost.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure window edge glow on scroll boundaries
@@ -5981,16 +5931,16 @@ pub unsafe extern "C" fn neomacs_display_set_edge_glow(
     opacity: c_int,
     fade_ms: c_int,
 ) {
-    let cmd = RenderCommand::SetEdgeGlow {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0,
-        height: height as f32,
-        opacity: opacity as f32 / 100.0,
-        fade_ms: fade_ms as u32,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.edge_glow.enabled = enabled != 0;
+            effects.edge_glow.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.edge_glow.height = height as f32;
+            effects.edge_glow.opacity = opacity as f32 / 100.0;
+            effects.edge_glow.fade_ms = fade_ms as u32;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure window rain/drip ambient effect
@@ -6003,16 +5953,16 @@ pub unsafe extern "C" fn neomacs_display_set_rain_effect(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetRainEffect {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0,
-        drop_count: drop_count as u32,
-        speed: speed as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.rain_effect.enabled = enabled != 0;
+            effects.rain_effect.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.rain_effect.drop_count = drop_count as u32;
+            effects.rain_effect.speed = speed as f32;
+            effects.rain_effect.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor ripple wave effect on keystroke
@@ -6026,17 +5976,17 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_ripple_wave(
     duration_ms: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorRippleWave {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0,
-        ring_count: ring_count as u32,
-        max_radius: max_radius as f32,
-        duration_ms: duration_ms as u32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_ripple_wave.enabled = enabled != 0;
+            effects.cursor_ripple_wave.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_ripple_wave.ring_count = ring_count as u32;
+            effects.cursor_ripple_wave.max_radius = max_radius as f32;
+            effects.cursor_ripple_wave.duration_ms = duration_ms as u32;
+            effects.cursor_ripple_wave.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure window aurora/northern lights effect
@@ -6050,17 +6000,17 @@ pub unsafe extern "C" fn neomacs_display_set_aurora(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetAurora {
-        enabled: enabled != 0,
-        r1: r1 as f32 / 255.0, g1: g1 as f32 / 255.0, b1: b1 as f32 / 255.0,
-        r2: r2 as f32 / 255.0, g2: g2 as f32 / 255.0, b2: b2 as f32 / 255.0,
-        height: height as f32,
-        speed: speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.aurora.enabled = enabled != 0;
+            effects.aurora.color1 = (r1 as f32 / 255.0, g1 as f32 / 255.0, b1 as f32 / 255.0);
+            effects.aurora.color2 = (r2 as f32 / 255.0, g2 as f32 / 255.0, b2 as f32 / 255.0);
+            effects.aurora.height = height as f32;
+            effects.aurora.speed = speed as f32 / 100.0;
+            effects.aurora.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure heat distortion effect
@@ -6074,16 +6024,16 @@ pub unsafe extern "C" fn neomacs_display_set_heat_distortion(
     edge_width: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetHeatDistortion {
-        enabled: enabled != 0,
-        intensity: intensity as f32 / 100.0,
-        speed: speed as f32 / 100.0,
-        edge_width: edge_width as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.heat_distortion.enabled = enabled != 0;
+            effects.heat_distortion.intensity = intensity as f32 / 100.0;
+            effects.heat_distortion.speed = speed as f32 / 100.0;
+            effects.heat_distortion.edge_width = edge_width as f32;
+            effects.heat_distortion.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor lighthouse beam effect
@@ -6098,19 +6048,17 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_lighthouse(
     beam_length: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorLighthouse {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        beam_width: beam_width as f32,
-        rotation_speed: rotation_speed as f32 / 100.0,
-        beam_length: beam_length as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_lighthouse.enabled = enabled != 0;
+            effects.cursor_lighthouse.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_lighthouse.beam_width = beam_width as f32;
+            effects.cursor_lighthouse.rotation_speed = rotation_speed as f32 / 100.0;
+            effects.cursor_lighthouse.beam_length = beam_length as f32;
+            effects.cursor_lighthouse.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure neon border effect
@@ -6125,19 +6073,17 @@ pub unsafe extern "C" fn neomacs_display_set_neon_border(
     thickness: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetNeonBorder {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        intensity: intensity as f32 / 100.0,
-        flicker: flicker as f32 / 100.0,
-        thickness: thickness as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.neon_border.enabled = enabled != 0;
+            effects.neon_border.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.neon_border.intensity = intensity as f32 / 100.0;
+            effects.neon_border.flicker = flicker as f32 / 100.0;
+            effects.neon_border.thickness = thickness as f32;
+            effects.neon_border.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor sonar ping effect
@@ -6152,19 +6098,17 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_sonar_ping(
     duration_ms: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorSonarPing {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        ring_count: ring_count as u32,
-        max_radius: max_radius as f32,
-        duration_ms: duration_ms as u32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_sonar_ping.enabled = enabled != 0;
+            effects.cursor_sonar_ping.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_sonar_ping.ring_count = ring_count as u32;
+            effects.cursor_sonar_ping.max_radius = max_radius as f32;
+            effects.cursor_sonar_ping.duration_ms = duration_ms as u32;
+            effects.cursor_sonar_ping.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure lightning bolt effect
@@ -6178,18 +6122,16 @@ pub unsafe extern "C" fn neomacs_display_set_lightning_bolt(
     intensity: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetLightningBolt {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        frequency: frequency as f32 / 100.0,
-        intensity: intensity as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.lightning_bolt.enabled = enabled != 0;
+            effects.lightning_bolt.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.lightning_bolt.frequency = frequency as f32 / 100.0;
+            effects.lightning_bolt.intensity = intensity as f32 / 100.0;
+            effects.lightning_bolt.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor orbit particles effect
@@ -6204,19 +6146,17 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_orbit_particles(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorOrbitParticles {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        particle_count: particle_count as u32,
-        orbit_radius: orbit_radius as f32,
-        speed: speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_orbit_particles.enabled = enabled != 0;
+            effects.cursor_orbit_particles.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_orbit_particles.count = particle_count as u32;
+            effects.cursor_orbit_particles.radius = orbit_radius as f32;
+            effects.cursor_orbit_particles.speed = speed as f32 / 100.0;
+            effects.cursor_orbit_particles.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure plasma border effect
@@ -6231,21 +6171,17 @@ pub unsafe extern "C" fn neomacs_display_set_plasma_border(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetPlasmaBorder {
-        enabled: enabled != 0,
-        r1: r1 as f32 / 255.0,
-        g1: g1 as f32 / 255.0,
-        b1: b1 as f32 / 255.0,
-        r2: r2 as f32 / 255.0,
-        g2: g2 as f32 / 255.0,
-        b2: b2 as f32 / 255.0,
-        width: width as f32,
-        speed: speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.plasma_border.enabled = enabled != 0;
+            effects.plasma_border.color1 = (r1 as f32 / 255.0, g1 as f32 / 255.0, b1 as f32 / 255.0);
+            effects.plasma_border.color2 = (r2 as f32 / 255.0, g2 as f32 / 255.0, b2 as f32 / 255.0);
+            effects.plasma_border.width = width as f32;
+            effects.plasma_border.speed = speed as f32 / 100.0;
+            effects.plasma_border.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor heartbeat pulse effect
@@ -6259,18 +6195,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_heartbeat(
     max_radius: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorHeartbeat {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        bpm: bpm as f32,
-        max_radius: max_radius as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_heartbeat.enabled = enabled != 0;
+            effects.cursor_heartbeat.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_heartbeat.bpm = bpm as f32;
+            effects.cursor_heartbeat.max_radius = max_radius as f32;
+            effects.cursor_heartbeat.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure topographic contour effect
@@ -6284,18 +6218,16 @@ pub unsafe extern "C" fn neomacs_display_set_topo_contour(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetTopoContour {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        spacing: spacing as f32,
-        speed: speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.topo_contour.enabled = enabled != 0;
+            effects.topo_contour.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.topo_contour.spacing = spacing as f32;
+            effects.topo_contour.speed = speed as f32 / 100.0;
+            effects.topo_contour.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor metronome tick effect
@@ -6309,18 +6241,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_metronome(
     fade_ms: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorMetronome {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        tick_height: tick_height as f32,
-        fade_ms: fade_ms as u32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_metronome.enabled = enabled != 0;
+            effects.cursor_metronome.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_metronome.tick_height = tick_height as f32;
+            effects.cursor_metronome.fade_ms = fade_ms as u32;
+            effects.cursor_metronome.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure constellation overlay effect
@@ -6335,19 +6265,17 @@ pub unsafe extern "C" fn neomacs_display_set_constellation(
     twinkle_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetConstellation {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        star_count: star_count as u32,
-        connect_dist: connect_dist as f32,
-        twinkle_speed: twinkle_speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.constellation.enabled = enabled != 0;
+            effects.constellation.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.constellation.star_count = star_count as u32;
+            effects.constellation.connect_dist = connect_dist as f32;
+            effects.constellation.twinkle_speed = twinkle_speed as f32 / 100.0;
+            effects.constellation.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor radar sweep effect
@@ -6361,18 +6289,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_radar(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorRadar {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        radius: radius as f32,
-        speed: speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_radar.enabled = enabled != 0;
+            effects.cursor_radar.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_radar.radius = radius as f32;
+            effects.cursor_radar.speed = speed as f32 / 100.0;
+            effects.cursor_radar.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure hex grid overlay effect
@@ -6386,18 +6312,16 @@ pub unsafe extern "C" fn neomacs_display_set_hex_grid(
     pulse_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetHexGrid {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        cell_size: cell_size as f32,
-        pulse_speed: pulse_speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.hex_grid.enabled = enabled != 0;
+            effects.hex_grid.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.hex_grid.cell_size = cell_size as f32;
+            effects.hex_grid.pulse_speed = pulse_speed as f32 / 100.0;
+            effects.hex_grid.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor sparkle burst effect
@@ -6411,18 +6335,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_sparkle_burst(
     burst_radius: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorSparkleBurst {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        particle_count: particle_count as u32,
-        burst_radius: burst_radius as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_sparkle_burst.enabled = enabled != 0;
+            effects.cursor_sparkle_burst.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_sparkle_burst.count = particle_count as u32;
+            effects.cursor_sparkle_burst.radius = burst_radius as f32;
+            effects.cursor_sparkle_burst.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure circuit board trace effect
@@ -6436,18 +6358,16 @@ pub unsafe extern "C" fn neomacs_display_set_circuit_trace(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCircuitTrace {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        trace_width: trace_width as f32,
-        speed: speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.circuit_trace.enabled = enabled != 0;
+            effects.circuit_trace.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.circuit_trace.width = trace_width as f32;
+            effects.circuit_trace.speed = speed as f32 / 100.0;
+            effects.circuit_trace.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor compass rose effect
@@ -6461,18 +6381,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_compass(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorCompass {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        size: size as f32,
-        speed: speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_compass.enabled = enabled != 0;
+            effects.cursor_compass.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_compass.size = size as f32;
+            effects.cursor_compass.speed = speed as f32 / 100.0;
+            effects.cursor_compass.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure warp/distortion grid effect
@@ -6487,19 +6405,17 @@ pub unsafe extern "C" fn neomacs_display_set_warp_grid(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetWarpGrid {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        density: density as u32,
-        amplitude: amplitude as f32,
-        speed: speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.warp_grid.enabled = enabled != 0;
+            effects.warp_grid.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.warp_grid.density = density as u32;
+            effects.warp_grid.amplitude = amplitude as f32;
+            effects.warp_grid.speed = speed as f32 / 100.0;
+            effects.warp_grid.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor DNA helix trail effect
@@ -6514,21 +6430,17 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_dna_helix(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorDnaHelix {
-        enabled: enabled != 0,
-        r1: r1 as f32 / 255.0,
-        g1: g1 as f32 / 255.0,
-        b1: b1 as f32 / 255.0,
-        r2: r2 as f32 / 255.0,
-        g2: g2 as f32 / 255.0,
-        b2: b2 as f32 / 255.0,
-        radius: radius as f32,
-        speed: speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_dna_helix.enabled = enabled != 0;
+            effects.cursor_dna_helix.color1 = (r1 as f32 / 255.0, g1 as f32 / 255.0, b1 as f32 / 255.0);
+            effects.cursor_dna_helix.color2 = (r2 as f32 / 255.0, g2 as f32 / 255.0, b2 as f32 / 255.0);
+            effects.cursor_dna_helix.radius = radius as f32;
+            effects.cursor_dna_helix.speed = speed as f32 / 100.0;
+            effects.cursor_dna_helix.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure prism/rainbow edge effect
@@ -6542,16 +6454,16 @@ pub unsafe extern "C" fn neomacs_display_set_prism_edge(
     saturation: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetPrismEdge {
-        enabled: enabled != 0,
-        width: width as f32,
-        speed: speed as f32 / 100.0,
-        saturation: saturation as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.prism_edge.enabled = enabled != 0;
+            effects.prism_edge.width = width as f32;
+            effects.prism_edge.speed = speed as f32 / 100.0;
+            effects.prism_edge.saturation = saturation as f32 / 100.0;
+            effects.prism_edge.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor pendulum swing effect
@@ -6565,18 +6477,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_pendulum(
     damping: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorPendulum {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        arc_length: arc_length as f32,
-        damping: damping as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_pendulum.enabled = enabled != 0;
+            effects.cursor_pendulum.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_pendulum.arc_length = arc_length as f32;
+            effects.cursor_pendulum.damping = damping as f32 / 100.0;
+            effects.cursor_pendulum.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure kaleidoscope overlay effect
@@ -6590,18 +6500,16 @@ pub unsafe extern "C" fn neomacs_display_set_kaleidoscope(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetKaleidoscope {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        segments: segments as u32,
-        speed: speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.kaleidoscope.enabled = enabled != 0;
+            effects.kaleidoscope.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.kaleidoscope.segments = segments as u32;
+            effects.kaleidoscope.speed = speed as f32 / 100.0;
+            effects.kaleidoscope.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor ripple ring effect
@@ -6616,19 +6524,17 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_ripple_ring(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorRippleRing {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        max_radius: max_radius as f32,
-        ring_count: ring_count as u32,
-        speed: speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_ripple_ring.enabled = enabled != 0;
+            effects.cursor_ripple_ring.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_ripple_ring.max_radius = max_radius as f32;
+            effects.cursor_ripple_ring.count = ring_count as u32;
+            effects.cursor_ripple_ring.speed = speed as f32 / 100.0;
+            effects.cursor_ripple_ring.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure noise field overlay effect
@@ -6642,18 +6548,16 @@ pub unsafe extern "C" fn neomacs_display_set_noise_field(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetNoiseField {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        scale: scale as f32,
-        speed: speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.noise_field.enabled = enabled != 0;
+            effects.noise_field.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.noise_field.scale = scale as f32;
+            effects.noise_field.speed = speed as f32 / 100.0;
+            effects.noise_field.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor scope effect
@@ -6667,18 +6571,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_scope(
     gap: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorScope {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        thickness: thickness as f32,
-        gap: gap as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_scope.enabled = enabled != 0;
+            effects.cursor_scope.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_scope.thickness = thickness as f32;
+            effects.cursor_scope.gap = gap as f32;
+            effects.cursor_scope.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure spiral vortex overlay effect
@@ -6692,18 +6594,16 @@ pub unsafe extern "C" fn neomacs_display_set_spiral_vortex(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetSpiralVortex {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        arms: arms as u32,
-        speed: speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.spiral_vortex.enabled = enabled != 0;
+            effects.spiral_vortex.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.spiral_vortex.arms = arms as u32;
+            effects.spiral_vortex.speed = speed as f32 / 100.0;
+            effects.spiral_vortex.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor shockwave effect
@@ -6717,18 +6617,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_shockwave(
     decay: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorShockwave {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        radius: radius as f32,
-        decay: decay as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_shockwave.enabled = enabled != 0;
+            effects.cursor_shockwave.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_shockwave.radius = radius as f32;
+            effects.cursor_shockwave.decay = decay as f32 / 100.0;
+            effects.cursor_shockwave.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure diamond lattice overlay effect
@@ -6742,18 +6640,16 @@ pub unsafe extern "C" fn neomacs_display_set_diamond_lattice(
     shimmer_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetDiamondLattice {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        cell_size: cell_size as f32,
-        shimmer_speed: shimmer_speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.diamond_lattice.enabled = enabled != 0;
+            effects.diamond_lattice.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.diamond_lattice.cell_size = cell_size as f32;
+            effects.diamond_lattice.shimmer_speed = shimmer_speed as f32 / 100.0;
+            effects.diamond_lattice.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor gravity well effect
@@ -6767,18 +6663,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_gravity_well(
     line_count: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorGravityWell {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        field_radius: field_radius as f32,
-        line_count: line_count as u32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_gravity_well.enabled = enabled != 0;
+            effects.cursor_gravity_well.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_gravity_well.field_radius = field_radius as f32;
+            effects.cursor_gravity_well.line_count = line_count as u32;
+            effects.cursor_gravity_well.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure tessellation overlay effect
@@ -6792,18 +6686,16 @@ pub unsafe extern "C" fn neomacs_display_set_tessellation(
     rotation: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetTessellation {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        tile_size: tile_size as f32,
-        rotation: rotation as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.tessellation.enabled = enabled != 0;
+            effects.tessellation.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.tessellation.tile_size = tile_size as f32;
+            effects.tessellation.rotation = rotation as f32 / 100.0;
+            effects.tessellation.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor water drop effect
@@ -6817,18 +6709,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_water_drop(
     expand_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorWaterDrop {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        ripple_count: ripple_count as u32,
-        expand_speed: expand_speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_water_drop.enabled = enabled != 0;
+            effects.cursor_water_drop.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_water_drop.ripple_count = ripple_count as u32;
+            effects.cursor_water_drop.expand_speed = expand_speed as f32 / 100.0;
+            effects.cursor_water_drop.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure guilloche overlay effect
@@ -6842,18 +6732,16 @@ pub unsafe extern "C" fn neomacs_display_set_guilloche(
     wave_freq: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetGuilloche {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        curve_count: curve_count as u32,
-        wave_freq: wave_freq as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.guilloche.enabled = enabled != 0;
+            effects.guilloche.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.guilloche.curve_count = curve_count as u32;
+            effects.guilloche.wave_freq = wave_freq as f32 / 100.0;
+            effects.guilloche.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor pixel dust effect
@@ -6867,18 +6755,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_pixel_dust(
     scatter_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorPixelDust {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        dust_count: dust_count as u32,
-        scatter_speed: scatter_speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_pixel_dust.enabled = enabled != 0;
+            effects.cursor_pixel_dust.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_pixel_dust.count = dust_count as u32;
+            effects.cursor_pixel_dust.scatter_speed = scatter_speed as f32 / 100.0;
+            effects.cursor_pixel_dust.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure celtic knot overlay effect
@@ -6892,18 +6778,16 @@ pub unsafe extern "C" fn neomacs_display_set_celtic_knot(
     weave_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCelticKnot {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        knot_scale: knot_scale as f32,
-        weave_speed: weave_speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.celtic_knot.enabled = enabled != 0;
+            effects.celtic_knot.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.celtic_knot.scale = knot_scale as f32;
+            effects.celtic_knot.weave_speed = weave_speed as f32 / 100.0;
+            effects.celtic_knot.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor candle flame effect
@@ -6917,18 +6801,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_candle_flame(
     flicker_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorCandleFlame {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        flame_height: flame_height as u32,
-        flicker_speed: flicker_speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_candle_flame.enabled = enabled != 0;
+            effects.cursor_candle_flame.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_candle_flame.height = flame_height as u32;
+            effects.cursor_candle_flame.flicker_speed = flicker_speed as f32 / 100.0;
+            effects.cursor_candle_flame.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure argyle pattern overlay effect
@@ -6942,18 +6824,16 @@ pub unsafe extern "C" fn neomacs_display_set_argyle_pattern(
     line_width: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetArgylePattern {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        diamond_size: diamond_size as f32,
-        line_width: line_width as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.argyle_pattern.enabled = enabled != 0;
+            effects.argyle_pattern.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.argyle_pattern.diamond_size = diamond_size as f32;
+            effects.argyle_pattern.line_width = line_width as f32;
+            effects.argyle_pattern.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor moth flame effect
@@ -6967,18 +6847,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_moth_flame(
     orbit_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorMothFlame {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        moth_count: moth_count as u32,
-        orbit_speed: orbit_speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_moth_flame.enabled = enabled != 0;
+            effects.cursor_moth_flame.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_moth_flame.moth_count = moth_count as u32;
+            effects.cursor_moth_flame.orbit_speed = orbit_speed as f32 / 100.0;
+            effects.cursor_moth_flame.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure basket weave overlay effect
@@ -6992,18 +6870,16 @@ pub unsafe extern "C" fn neomacs_display_set_basket_weave(
     strip_spacing: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetBasketWeave {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        strip_width: strip_width as f32,
-        strip_spacing: strip_spacing as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.basket_weave.enabled = enabled != 0;
+            effects.basket_weave.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.basket_weave.strip_width = strip_width as f32;
+            effects.basket_weave.strip_spacing = strip_spacing as f32;
+            effects.basket_weave.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor sparkler effect
@@ -7017,18 +6893,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_sparkler(
     burn_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorSparkler {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        spark_count: spark_count as u32,
-        burn_speed: burn_speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_sparkler.enabled = enabled != 0;
+            effects.cursor_sparkler.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_sparkler.spark_count = spark_count as u32;
+            effects.cursor_sparkler.burn_speed = burn_speed as f32 / 100.0;
+            effects.cursor_sparkler.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure fish scale overlay effect
@@ -7042,18 +6916,16 @@ pub unsafe extern "C" fn neomacs_display_set_fish_scale(
     row_offset: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetFishScale {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        scale_size: scale_size as f32,
-        row_offset: row_offset as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.fish_scale.enabled = enabled != 0;
+            effects.fish_scale.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.fish_scale.size = scale_size as f32;
+            effects.fish_scale.row_offset = row_offset as f32 / 100.0;
+            effects.fish_scale.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor plasma ball effect
@@ -7067,18 +6939,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_plasma_ball(
     arc_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorPlasmaBall {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        tendril_count: tendril_count as u32,
-        arc_speed: arc_speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_plasma_ball.enabled = enabled != 0;
+            effects.cursor_plasma_ball.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_plasma_ball.tendril_count = tendril_count as u32;
+            effects.cursor_plasma_ball.arc_speed = arc_speed as f32 / 100.0;
+            effects.cursor_plasma_ball.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure trefoil knot overlay effect
@@ -7092,18 +6962,16 @@ pub unsafe extern "C" fn neomacs_display_set_trefoil_knot(
     rotation_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetTrefoilKnot {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        knot_size: knot_size as f32,
-        rotation_speed: rotation_speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.trefoil_knot.enabled = enabled != 0;
+            effects.trefoil_knot.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.trefoil_knot.size = knot_size as f32;
+            effects.trefoil_knot.rotation_speed = rotation_speed as f32 / 100.0;
+            effects.trefoil_knot.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor quill pen effect
@@ -7117,18 +6985,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_quill_pen(
     ink_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorQuillPen {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        trail_length: trail_length as u32,
-        ink_speed: ink_speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_quill_pen.enabled = enabled != 0;
+            effects.cursor_quill_pen.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_quill_pen.trail_length = trail_length as u32;
+            effects.cursor_quill_pen.ink_speed = ink_speed as f32 / 100.0;
+            effects.cursor_quill_pen.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure herringbone pattern overlay effect
@@ -7142,18 +7008,16 @@ pub unsafe extern "C" fn neomacs_display_set_herringbone_pattern(
     tile_height: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetHerringbonePattern {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        tile_width: tile_width as f32,
-        tile_height: tile_height as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.herringbone_pattern.enabled = enabled != 0;
+            effects.herringbone_pattern.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.herringbone_pattern.tile_width = tile_width as f32;
+            effects.herringbone_pattern.tile_height = tile_height as f32;
+            effects.herringbone_pattern.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor aurora borealis effect
@@ -7167,18 +7031,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_aurora_borealis(
     shimmer_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorAuroraBorealis {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        band_count: band_count as u32,
-        shimmer_speed: shimmer_speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_aurora_borealis.enabled = enabled != 0;
+            effects.cursor_aurora_borealis.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_aurora_borealis.band_count = band_count as u32;
+            effects.cursor_aurora_borealis.shimmer_speed = shimmer_speed as f32 / 100.0;
+            effects.cursor_aurora_borealis.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure target reticle overlay effect
@@ -7192,18 +7054,16 @@ pub unsafe extern "C" fn neomacs_display_set_target_reticle(
     pulse_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetTargetReticle {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        ring_count: ring_count as u32,
-        pulse_speed: pulse_speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.target_reticle.enabled = enabled != 0;
+            effects.target_reticle.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.target_reticle.ring_count = ring_count as u32;
+            effects.target_reticle.pulse_speed = pulse_speed as f32 / 100.0;
+            effects.target_reticle.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor feather effect
@@ -7217,18 +7077,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_feather(
     drift_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorFeather {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        feather_count: feather_count as u32,
-        drift_speed: drift_speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_feather.enabled = enabled != 0;
+            effects.cursor_feather.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_feather.count = feather_count as u32;
+            effects.cursor_feather.drift_speed = drift_speed as f32 / 100.0;
+            effects.cursor_feather.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure plaid pattern overlay effect
@@ -7242,18 +7100,16 @@ pub unsafe extern "C" fn neomacs_display_set_plaid_pattern(
     band_spacing: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetPlaidPattern {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        band_width: band_width as f32,
-        band_spacing: band_spacing as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.plaid_pattern.enabled = enabled != 0;
+            effects.plaid_pattern.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.plaid_pattern.band_width = band_width as f32;
+            effects.plaid_pattern.band_spacing = band_spacing as f32;
+            effects.plaid_pattern.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor stardust effect
@@ -7267,18 +7123,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_stardust(
     fall_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorStardust {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        particle_count: particle_count as u32,
-        fall_speed: fall_speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_stardust.enabled = enabled != 0;
+            effects.cursor_stardust.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_stardust.particle_count = particle_count as u32;
+            effects.cursor_stardust.fall_speed = fall_speed as f32 / 100.0;
+            effects.cursor_stardust.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure brick wall overlay effect
@@ -7292,18 +7146,16 @@ pub unsafe extern "C" fn neomacs_display_set_brick_wall(
     brick_height: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetBrickWall {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        brick_width: brick_width as f32,
-        brick_height: brick_height as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.brick_wall.enabled = enabled != 0;
+            effects.brick_wall.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.brick_wall.width = brick_width as f32;
+            effects.brick_wall.height = brick_height as f32;
+            effects.brick_wall.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor compass needle effect
@@ -7317,18 +7169,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_compass_needle(
     spin_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorCompassNeedle {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        needle_length: needle_length as f32,
-        spin_speed: spin_speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_compass_needle.enabled = enabled != 0;
+            effects.cursor_compass_needle.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_compass_needle.length = needle_length as f32;
+            effects.cursor_compass_needle.spin_speed = spin_speed as f32 / 100.0;
+            effects.cursor_compass_needle.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure sine wave overlay effect
@@ -7343,19 +7193,17 @@ pub unsafe extern "C" fn neomacs_display_set_sine_wave(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetSineWave {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        amplitude: amplitude as f32,
-        wavelength: wavelength as f32,
-        speed: speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.sine_wave.enabled = enabled != 0;
+            effects.sine_wave.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.sine_wave.amplitude = amplitude as f32;
+            effects.sine_wave.wavelength = wavelength as f32;
+            effects.sine_wave.speed = speed as f32 / 100.0;
+            effects.sine_wave.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor galaxy effect
@@ -7369,18 +7217,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_galaxy(
     radius: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorGalaxy {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        star_count: star_count as u32,
-        radius: radius as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_galaxy.enabled = enabled != 0;
+            effects.cursor_galaxy.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_galaxy.star_count = star_count as u32;
+            effects.cursor_galaxy.radius = radius as f32;
+            effects.cursor_galaxy.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure rotating gear overlay effect
@@ -7394,18 +7240,16 @@ pub unsafe extern "C" fn neomacs_display_set_rotating_gear(
     rotation_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetRotatingGear {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        gear_size: gear_size as f32,
-        rotation_speed: rotation_speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.rotating_gear.enabled = enabled != 0;
+            effects.rotating_gear.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.rotating_gear.size = gear_size as f32;
+            effects.rotating_gear.speed = rotation_speed as f32 / 100.0;
+            effects.rotating_gear.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor prism effect
@@ -7419,18 +7263,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_prism(
     spread: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorPrism {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        ray_count: ray_count as u32,
-        spread: spread as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_prism.enabled = enabled != 0;
+            effects.cursor_prism.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_prism.ray_count = ray_count as u32;
+            effects.cursor_prism.spread = spread as f32;
+            effects.cursor_prism.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure crosshatch pattern overlay effect
@@ -7445,19 +7287,17 @@ pub unsafe extern "C" fn neomacs_display_set_crosshatch_pattern(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCrosshatchPattern {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        line_spacing: line_spacing as f32,
-        angle: angle as f32,
-        speed: speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.crosshatch_pattern.enabled = enabled != 0;
+            effects.crosshatch_pattern.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.crosshatch_pattern.line_spacing = line_spacing as f32;
+            effects.crosshatch_pattern.angle = angle as f32;
+            effects.crosshatch_pattern.speed = speed as f32 / 100.0;
+            effects.crosshatch_pattern.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor moth effect
@@ -7471,18 +7311,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_moth(
     wing_size: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorMoth {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        moth_count: moth_count as u32,
-        wing_size: wing_size as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_moth.enabled = enabled != 0;
+            effects.cursor_moth.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_moth.count = moth_count as u32;
+            effects.cursor_moth.wing_size = wing_size as f32;
+            effects.cursor_moth.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure concentric rings overlay effect
@@ -7496,18 +7334,16 @@ pub unsafe extern "C" fn neomacs_display_set_concentric_rings(
     expansion_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetConcentricRings {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        ring_spacing: ring_spacing as f32,
-        expansion_speed: expansion_speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.concentric_rings.enabled = enabled != 0;
+            effects.concentric_rings.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.concentric_rings.spacing = ring_spacing as f32;
+            effects.concentric_rings.expansion_speed = expansion_speed as f32 / 100.0;
+            effects.concentric_rings.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor flame effect
@@ -7521,18 +7357,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_flame(
     height: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorFlame {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        particle_count: particle_count as u32,
-        height: height as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_flame.enabled = enabled != 0;
+            effects.cursor_flame.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_flame.particle_count = particle_count as u32;
+            effects.cursor_flame.height = height as f32;
+            effects.cursor_flame.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure zigzag pattern overlay effect
@@ -7547,19 +7381,17 @@ pub unsafe extern "C" fn neomacs_display_set_zigzag_pattern(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetZigzagPattern {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        amplitude: amplitude as f32,
-        frequency: frequency as f32 / 100.0,
-        speed: speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.zigzag_pattern.enabled = enabled != 0;
+            effects.zigzag_pattern.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.zigzag_pattern.amplitude = amplitude as f32;
+            effects.zigzag_pattern.frequency = frequency as f32 / 100.0;
+            effects.zigzag_pattern.speed = speed as f32 / 100.0;
+            effects.zigzag_pattern.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor crystal effect
@@ -7573,18 +7405,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_crystal(
     radius: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorCrystal {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        facet_count: facet_count as u32,
-        radius: radius as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_crystal.enabled = enabled != 0;
+            effects.cursor_crystal.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_crystal.facet_count = facet_count as u32;
+            effects.cursor_crystal.radius = radius as f32;
+            effects.cursor_crystal.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure moiré pattern overlay effect
@@ -7599,19 +7429,17 @@ pub unsafe extern "C" fn neomacs_display_set_moire_pattern(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetMoirePattern {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        line_spacing: line_spacing as f32,
-        angle_offset: angle_offset as f32,
-        speed: speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.moire_pattern.enabled = enabled != 0;
+            effects.moire_pattern.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.moire_pattern.line_spacing = line_spacing as f32;
+            effects.moire_pattern.angle_offset = angle_offset as f32;
+            effects.moire_pattern.speed = speed as f32 / 100.0;
+            effects.moire_pattern.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor lightning effect
@@ -7625,18 +7453,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_lightning(
     max_length: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorLightning {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        bolt_count: bolt_count as u32,
-        max_length: max_length as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_lightning.enabled = enabled != 0;
+            effects.cursor_lightning.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_lightning.bolt_count = bolt_count as u32;
+            effects.cursor_lightning.max_length = max_length as f32;
+            effects.cursor_lightning.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure dot matrix overlay effect
@@ -7650,18 +7476,16 @@ pub unsafe extern "C" fn neomacs_display_set_dot_matrix(
     pulse_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetDotMatrix {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        dot_spacing: dot_spacing as f32,
-        pulse_speed: pulse_speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.dot_matrix.enabled = enabled != 0;
+            effects.dot_matrix.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.dot_matrix.spacing = dot_spacing as f32;
+            effects.dot_matrix.pulse_speed = pulse_speed as f32 / 100.0;
+            effects.dot_matrix.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor snowflake effect
@@ -7675,18 +7499,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_snowflake(
     fall_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorSnowflake {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        count: count as u32,
-        fall_speed: fall_speed as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_snowflake.enabled = enabled != 0;
+            effects.cursor_snowflake.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_snowflake.count = count as u32;
+            effects.cursor_snowflake.fall_speed = fall_speed as f32;
+            effects.cursor_snowflake.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure sunburst pattern overlay effect
@@ -7700,18 +7522,16 @@ pub unsafe extern "C" fn neomacs_display_set_sunburst_pattern(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetSunburstPattern {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        ray_count: ray_count as u32,
-        speed: speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.sunburst_pattern.enabled = enabled != 0;
+            effects.sunburst_pattern.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.sunburst_pattern.ray_count = ray_count as u32;
+            effects.sunburst_pattern.speed = speed as f32 / 100.0;
+            effects.sunburst_pattern.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor firework effect
@@ -7725,18 +7545,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_firework(
     burst_radius: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorFirework {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        particle_count: particle_count as u32,
-        burst_radius: burst_radius as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_firework.enabled = enabled != 0;
+            effects.cursor_firework.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_firework.particle_count = particle_count as u32;
+            effects.cursor_firework.burst_radius = burst_radius as f32;
+            effects.cursor_firework.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure honeycomb dissolve overlay effect
@@ -7750,18 +7568,16 @@ pub unsafe extern "C" fn neomacs_display_set_honeycomb_dissolve(
     dissolve_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetHoneycombDissolve {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        cell_size: cell_size as f32,
-        dissolve_speed: dissolve_speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.honeycomb_dissolve.enabled = enabled != 0;
+            effects.honeycomb_dissolve.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.honeycomb_dissolve.cell_size = cell_size as f32;
+            effects.honeycomb_dissolve.speed = dissolve_speed as f32 / 100.0;
+            effects.honeycomb_dissolve.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor tornado effect
@@ -7775,18 +7591,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_tornado(
     particle_count: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorTornado {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        radius: radius as f32,
-        particle_count: particle_count as u32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_tornado.enabled = enabled != 0;
+            effects.cursor_tornado.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_tornado.radius = radius as f32;
+            effects.cursor_tornado.particle_count = particle_count as u32;
+            effects.cursor_tornado.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure wave interference overlay effect
@@ -7801,19 +7615,17 @@ pub unsafe extern "C" fn neomacs_display_set_wave_interference(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetWaveInterference {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        wavelength: wavelength as f32,
-        source_count: source_count as u32,
-        speed: speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.wave_interference.enabled = enabled != 0;
+            effects.wave_interference.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.wave_interference.wavelength = wavelength as f32;
+            effects.wave_interference.source_count = source_count as u32;
+            effects.wave_interference.speed = speed as f32 / 100.0;
+            effects.wave_interference.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor portal effect
@@ -7827,18 +7639,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_portal(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorPortal {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        radius: radius as f32,
-        speed: speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_portal.enabled = enabled != 0;
+            effects.cursor_portal.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_portal.radius = radius as f32;
+            effects.cursor_portal.speed = speed as f32 / 100.0;
+            effects.cursor_portal.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure chevron pattern overlay effect
@@ -7852,18 +7662,16 @@ pub unsafe extern "C" fn neomacs_display_set_chevron_pattern(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetChevronPattern {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        spacing: spacing as f32,
-        speed: speed as f32 / 100.0,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.chevron_pattern.enabled = enabled != 0;
+            effects.chevron_pattern.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.chevron_pattern.spacing = spacing as f32;
+            effects.chevron_pattern.speed = speed as f32 / 100.0;
+            effects.chevron_pattern.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Configure cursor bubble effect
@@ -7877,18 +7685,16 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_bubble(
     rise_speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetCursorBubble {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        count: count as u32,
-        rise_speed: rise_speed as f32,
-        opacity: opacity as f32 / 100.0,
-    };
-    if let Some(ref state) = THREADED_STATE {
-        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
-    }
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.cursor_bubble.enabled = enabled != 0;
+            effects.cursor_bubble.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.cursor_bubble.count = count as u32;
+            effects.cursor_bubble.rise_speed = rise_speed as f32;
+            effects.cursor_bubble.opacity = opacity as f32 / 100.0;
+        })));
+        if let Some(ref state) = THREADED_STATE {
+            let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+        }
 }
 
 /// Shutdown threaded display
