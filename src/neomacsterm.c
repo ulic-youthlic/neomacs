@@ -10967,6 +10967,154 @@ OPACITY is 0-100 (default 20). */)
   return on ? Qt : Qnil;
 }
 
+DEFUN ("neomacs-set-trefoil-knot",
+       Fneomacs_set_trefoil_knot,
+       Sneomacs_set_trefoil_knot, 0, 5, 0,
+       doc: /* Configure trefoil knot overlay effect.
+ENABLED non-nil activates animated trefoil knot pattern overlay.
+COLOR is a hex color string like "#RRGGBB" (default "#6699E6").
+KNOT-SIZE is size in pixels (default 80).
+ROTATION-SPEED is speed * 100 (default 100).
+OPACITY is 0-100 (default 6). */)
+  (Lisp_Object enabled, Lisp_Object color, Lisp_Object knot_size,
+   Lisp_Object rotation_speed, Lisp_Object opacity)
+{
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+  int on = !NILP (enabled);
+  int r = 0x66, g = 0x99, b = 0xE6, ks = 80, rs = 100, op = 6;
+  if (STRINGP (color))
+    {
+      const char *s = SSDATA (color);
+      if (s[0] == '#' && strlen (s) == 7)
+        {
+          unsigned int hex;
+          sscanf (s + 1, "%06x", &hex);
+          r = (hex >> 16) & 0xFF;
+          g = (hex >> 8) & 0xFF;
+          b = hex & 0xFF;
+        }
+    }
+  if (FIXNUMP (knot_size)) ks = XFIXNUM (knot_size);
+  if (FIXNUMP (rotation_speed)) rs = XFIXNUM (rotation_speed);
+  if (FIXNUMP (opacity)) op = XFIXNUM (opacity);
+
+  neomacs_display_set_trefoil_knot (dpyinfo->display_handle, on, r, g, b, ks, rs, op);
+  return on ? Qt : Qnil;
+}
+
+DEFUN ("neomacs-set-cursor-quill-pen",
+       Fneomacs_set_cursor_quill_pen,
+       Sneomacs_set_cursor_quill_pen, 0, 5, 0,
+       doc: /* Configure cursor quill pen effect.
+ENABLED non-nil activates ink drips and flourishes around cursor.
+COLOR is a hex color string like "#RRGGBB" (default "#4D260D").
+TRAIL-LENGTH is number of ink drips (default 8).
+INK-SPEED is speed * 100 (default 100).
+OPACITY is 0-100 (default 20). */)
+  (Lisp_Object enabled, Lisp_Object color, Lisp_Object trail_length,
+   Lisp_Object ink_speed, Lisp_Object opacity)
+{
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+  int on = !NILP (enabled);
+  int r = 0x4D, g = 0x26, b = 0x0D, tl = 8, is = 100, op = 20;
+  if (STRINGP (color))
+    {
+      const char *s = SSDATA (color);
+      if (s[0] == '#' && strlen (s) == 7)
+        {
+          unsigned int hex;
+          sscanf (s + 1, "%06x", &hex);
+          r = (hex >> 16) & 0xFF;
+          g = (hex >> 8) & 0xFF;
+          b = hex & 0xFF;
+        }
+    }
+  if (FIXNUMP (trail_length)) tl = XFIXNUM (trail_length);
+  if (FIXNUMP (ink_speed)) is = XFIXNUM (ink_speed);
+  if (FIXNUMP (opacity)) op = XFIXNUM (opacity);
+
+  neomacs_display_set_cursor_quill_pen (dpyinfo->display_handle, on, r, g, b, tl, is, op);
+  return on ? Qt : Qnil;
+}
+
+DEFUN ("neomacs-set-herringbone-pattern",
+       Fneomacs_set_herringbone_pattern,
+       Sneomacs_set_herringbone_pattern, 0, 5, 0,
+       doc: /* Configure herringbone pattern overlay effect.
+ENABLED non-nil activates V-shaped weave pattern overlay.
+COLOR is a hex color string like "#RRGGBB" (default "#998066").
+TILE-WIDTH is width of each tile in pixels (default 20).
+TILE-HEIGHT is height of each tile in pixels (default 10).
+OPACITY is 0-100 (default 5). */)
+  (Lisp_Object enabled, Lisp_Object color, Lisp_Object tile_width,
+   Lisp_Object tile_height, Lisp_Object opacity)
+{
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+  int on = !NILP (enabled);
+  int r = 0x99, g = 0x80, b = 0x66, tw = 20, th = 10, op = 5;
+  if (STRINGP (color))
+    {
+      const char *s = SSDATA (color);
+      if (s[0] == '#' && strlen (s) == 7)
+        {
+          unsigned int hex;
+          sscanf (s + 1, "%06x", &hex);
+          r = (hex >> 16) & 0xFF;
+          g = (hex >> 8) & 0xFF;
+          b = hex & 0xFF;
+        }
+    }
+  if (FIXNUMP (tile_width)) tw = XFIXNUM (tile_width);
+  if (FIXNUMP (tile_height)) th = XFIXNUM (tile_height);
+  if (FIXNUMP (opacity)) op = XFIXNUM (opacity);
+
+  neomacs_display_set_herringbone_pattern (dpyinfo->display_handle, on, r, g, b, tw, th, op);
+  return on ? Qt : Qnil;
+}
+
+DEFUN ("neomacs-set-cursor-aurora-borealis",
+       Fneomacs_set_cursor_aurora_borealis,
+       Sneomacs_set_cursor_aurora_borealis, 0, 5, 0,
+       doc: /* Configure cursor aurora borealis effect.
+ENABLED non-nil activates shimmering aurora bands above cursor.
+COLOR is a hex color string like "#RRGGBB" (default "#33E680").
+BAND-COUNT is number of aurora bands (default 5).
+SHIMMER-SPEED is speed * 100 (default 100).
+OPACITY is 0-100 (default 15). */)
+  (Lisp_Object enabled, Lisp_Object color, Lisp_Object band_count,
+   Lisp_Object shimmer_speed, Lisp_Object opacity)
+{
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+  int on = !NILP (enabled);
+  int r = 0x33, g = 0xE6, b = 0x80, bc = 5, ss = 100, op = 15;
+  if (STRINGP (color))
+    {
+      const char *s = SSDATA (color);
+      if (s[0] == '#' && strlen (s) == 7)
+        {
+          unsigned int hex;
+          sscanf (s + 1, "%06x", &hex);
+          r = (hex >> 16) & 0xFF;
+          g = (hex >> 8) & 0xFF;
+          b = hex & 0xFF;
+        }
+    }
+  if (FIXNUMP (band_count)) bc = XFIXNUM (band_count);
+  if (FIXNUMP (shimmer_speed)) ss = XFIXNUM (shimmer_speed);
+  if (FIXNUMP (opacity)) op = XFIXNUM (opacity);
+
+  neomacs_display_set_cursor_aurora_borealis (dpyinfo->display_handle, on, r, g, b, bc, ss, op);
+  return on ? Qt : Qnil;
+}
+
 DEFUN ("neomacs-set-target-reticle",
        Fneomacs_set_target_reticle,
        Sneomacs_set_target_reticle, 0, 5, 0,
@@ -13846,6 +13994,10 @@ syms_of_neomacsterm (void)
   defsubr (&Sneomacs_set_cursor_shockwave);
   defsubr (&Sneomacs_set_diamond_lattice);
   defsubr (&Sneomacs_set_cursor_gravity_well);
+  defsubr (&Sneomacs_set_trefoil_knot);
+  defsubr (&Sneomacs_set_cursor_quill_pen);
+  defsubr (&Sneomacs_set_herringbone_pattern);
+  defsubr (&Sneomacs_set_cursor_aurora_borealis);
   defsubr (&Sneomacs_set_target_reticle);
   defsubr (&Sneomacs_set_cursor_feather);
   defsubr (&Sneomacs_set_plaid_pattern);

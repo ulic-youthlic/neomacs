@@ -729,6 +729,54 @@ pub struct WgpuRenderer {
     cursor_crystal_facet_count: u32,
     cursor_crystal_radius: f32,
     cursor_crystal_opacity: f32,
+    /// Trefoil knot overlay
+    trefoil_knot_enabled: bool,
+    trefoil_knot_color: (f32, f32, f32),
+    trefoil_knot_size: f32,
+    trefoil_knot_rotation_speed: f32,
+    trefoil_knot_opacity: f32,
+    /// Cursor quill pen effect
+    cursor_quill_pen_enabled: bool,
+    cursor_quill_pen_color: (f32, f32, f32),
+    cursor_quill_pen_trail_length: u32,
+    cursor_quill_pen_ink_speed: f32,
+    cursor_quill_pen_opacity: f32,
+    /// Herringbone pattern overlay
+    herringbone_pattern_enabled: bool,
+    herringbone_pattern_color: (f32, f32, f32),
+    herringbone_pattern_tile_width: f32,
+    herringbone_pattern_tile_height: f32,
+    herringbone_pattern_opacity: f32,
+    /// Cursor aurora borealis effect
+    cursor_aurora_borealis_enabled: bool,
+    cursor_aurora_borealis_color: (f32, f32, f32),
+    cursor_aurora_borealis_band_count: u32,
+    cursor_aurora_borealis_shimmer_speed: f32,
+    cursor_aurora_borealis_opacity: f32,
+    /// Target reticle overlay
+    target_reticle_enabled: bool,
+    target_reticle_color: (f32, f32, f32),
+    target_reticle_ring_count: u32,
+    target_reticle_pulse_speed: f32,
+    target_reticle_opacity: f32,
+    /// Cursor feather effect
+    cursor_feather_enabled: bool,
+    cursor_feather_color: (f32, f32, f32),
+    cursor_feather_count: u32,
+    cursor_feather_drift_speed: f32,
+    cursor_feather_opacity: f32,
+    /// Plaid pattern overlay
+    plaid_pattern_enabled: bool,
+    plaid_pattern_color: (f32, f32, f32),
+    plaid_pattern_band_width: f32,
+    plaid_pattern_band_spacing: f32,
+    plaid_pattern_opacity: f32,
+    /// Cursor stardust effect
+    cursor_stardust_enabled: bool,
+    cursor_stardust_color: (f32, f32, f32),
+    cursor_stardust_particle_count: u32,
+    cursor_stardust_fall_speed: f32,
+    cursor_stardust_opacity: f32,
     /// Brick wall overlay
     brick_wall_enabled: bool,
     brick_wall_color: (f32, f32, f32),
@@ -1985,6 +2033,46 @@ impl WgpuRenderer {
             cursor_crystal_facet_count: 6,
             cursor_crystal_radius: 25.0,
             cursor_crystal_opacity: 0.3,
+            trefoil_knot_enabled: false,
+            trefoil_knot_color: (0.4, 0.6, 0.9),
+            trefoil_knot_size: 80.0,
+            trefoil_knot_rotation_speed: 1.0,
+            trefoil_knot_opacity: 0.06,
+            cursor_quill_pen_enabled: false,
+            cursor_quill_pen_color: (0.3, 0.15, 0.05),
+            cursor_quill_pen_trail_length: 8,
+            cursor_quill_pen_ink_speed: 1.0,
+            cursor_quill_pen_opacity: 0.2,
+            herringbone_pattern_enabled: false,
+            herringbone_pattern_color: (0.6, 0.5, 0.4),
+            herringbone_pattern_tile_width: 20.0,
+            herringbone_pattern_tile_height: 10.0,
+            herringbone_pattern_opacity: 0.05,
+            cursor_aurora_borealis_enabled: false,
+            cursor_aurora_borealis_color: (0.2, 0.9, 0.5),
+            cursor_aurora_borealis_band_count: 5,
+            cursor_aurora_borealis_shimmer_speed: 1.0,
+            cursor_aurora_borealis_opacity: 0.15,
+            target_reticle_enabled: false,
+            target_reticle_color: (0.2, 0.8, 0.2),
+            target_reticle_ring_count: 3,
+            target_reticle_pulse_speed: 1.0,
+            target_reticle_opacity: 0.08,
+            cursor_feather_enabled: false,
+            cursor_feather_color: (0.9, 0.85, 0.7),
+            cursor_feather_count: 4,
+            cursor_feather_drift_speed: 1.0,
+            cursor_feather_opacity: 0.18,
+            plaid_pattern_enabled: false,
+            plaid_pattern_color: (0.7, 0.3, 0.3),
+            plaid_pattern_band_width: 4.0,
+            plaid_pattern_band_spacing: 30.0,
+            plaid_pattern_opacity: 0.05,
+            cursor_stardust_enabled: false,
+            cursor_stardust_color: (1.0, 0.9, 0.5),
+            cursor_stardust_particle_count: 20,
+            cursor_stardust_fall_speed: 1.0,
+            cursor_stardust_opacity: 0.2,
             brick_wall_enabled: false,
             brick_wall_color: (0.6, 0.4, 0.3),
             brick_wall_width: 40.0,
@@ -3077,6 +3165,78 @@ impl WgpuRenderer {
         self.cursor_crystal_facet_count = facet_count;
         self.cursor_crystal_radius = radius;
         self.cursor_crystal_opacity = opacity;
+    }
+
+    /// Update trefoil knot config
+    pub fn set_trefoil_knot(&mut self, enabled: bool, color: (f32, f32, f32), knot_size: f32, rotation_speed: f32, opacity: f32) {
+        self.trefoil_knot_enabled = enabled;
+        self.trefoil_knot_color = color;
+        self.trefoil_knot_size = knot_size;
+        self.trefoil_knot_rotation_speed = rotation_speed;
+        self.trefoil_knot_opacity = opacity;
+    }
+
+    /// Update cursor quill pen config
+    pub fn set_cursor_quill_pen(&mut self, enabled: bool, color: (f32, f32, f32), trail_length: u32, ink_speed: f32, opacity: f32) {
+        self.cursor_quill_pen_enabled = enabled;
+        self.cursor_quill_pen_color = color;
+        self.cursor_quill_pen_trail_length = trail_length;
+        self.cursor_quill_pen_ink_speed = ink_speed;
+        self.cursor_quill_pen_opacity = opacity;
+    }
+
+    /// Update herringbone pattern config
+    pub fn set_herringbone_pattern(&mut self, enabled: bool, color: (f32, f32, f32), tile_width: f32, tile_height: f32, opacity: f32) {
+        self.herringbone_pattern_enabled = enabled;
+        self.herringbone_pattern_color = color;
+        self.herringbone_pattern_tile_width = tile_width;
+        self.herringbone_pattern_tile_height = tile_height;
+        self.herringbone_pattern_opacity = opacity;
+    }
+
+    /// Update cursor aurora borealis config
+    pub fn set_cursor_aurora_borealis(&mut self, enabled: bool, color: (f32, f32, f32), band_count: u32, shimmer_speed: f32, opacity: f32) {
+        self.cursor_aurora_borealis_enabled = enabled;
+        self.cursor_aurora_borealis_color = color;
+        self.cursor_aurora_borealis_band_count = band_count;
+        self.cursor_aurora_borealis_shimmer_speed = shimmer_speed;
+        self.cursor_aurora_borealis_opacity = opacity;
+    }
+
+    /// Update target reticle config
+    pub fn set_target_reticle(&mut self, enabled: bool, color: (f32, f32, f32), ring_count: u32, pulse_speed: f32, opacity: f32) {
+        self.target_reticle_enabled = enabled;
+        self.target_reticle_color = color;
+        self.target_reticle_ring_count = ring_count;
+        self.target_reticle_pulse_speed = pulse_speed;
+        self.target_reticle_opacity = opacity;
+    }
+
+    /// Update cursor feather config
+    pub fn set_cursor_feather(&mut self, enabled: bool, color: (f32, f32, f32), feather_count: u32, drift_speed: f32, opacity: f32) {
+        self.cursor_feather_enabled = enabled;
+        self.cursor_feather_color = color;
+        self.cursor_feather_count = feather_count;
+        self.cursor_feather_drift_speed = drift_speed;
+        self.cursor_feather_opacity = opacity;
+    }
+
+    /// Update plaid pattern config
+    pub fn set_plaid_pattern(&mut self, enabled: bool, color: (f32, f32, f32), band_width: f32, band_spacing: f32, opacity: f32) {
+        self.plaid_pattern_enabled = enabled;
+        self.plaid_pattern_color = color;
+        self.plaid_pattern_band_width = band_width;
+        self.plaid_pattern_band_spacing = band_spacing;
+        self.plaid_pattern_opacity = opacity;
+    }
+
+    /// Update cursor stardust config
+    pub fn set_cursor_stardust(&mut self, enabled: bool, color: (f32, f32, f32), particle_count: u32, fall_speed: f32, opacity: f32) {
+        self.cursor_stardust_enabled = enabled;
+        self.cursor_stardust_color = color;
+        self.cursor_stardust_particle_count = particle_count;
+        self.cursor_stardust_fall_speed = fall_speed;
+        self.cursor_stardust_opacity = opacity;
     }
 
     /// Update brick wall config
@@ -8194,6 +8354,405 @@ impl WgpuRenderer {
                         render_pass.draw(0..ct_verts.len() as u32, 0..1);
                     }
                     self.needs_continuous_redraw = true;
+                }
+            }
+
+            // === Trefoil knot overlay effect ===
+            if self.trefoil_knot_enabled {
+                let width = self.width() as f32;
+                let height = self.height() as f32;
+                let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
+                let (kr, kg, kb) = self.trefoil_knot_color;
+                let knot_size = self.trefoil_knot_size;
+                let rot_speed = self.trefoil_knot_rotation_speed;
+                let alpha = self.trefoil_knot_opacity;
+                let mut overlay_verts = Vec::new();
+
+                let cx = width / 2.0;
+                let cy = height / 2.0;
+                let segments = 120;
+                let seg_width = 3.0;
+
+                for i in 0..segments {
+                    let t = (i as f32 / segments as f32) * std::f32::consts::TAU;
+                    let angle = now * rot_speed;
+                    // Trefoil knot parametric equations
+                    let x = (t.sin() + 2.0 * (2.0 * t).sin()) * knot_size * 0.5;
+                    let y = (t.cos() - 2.0 * (2.0 * t).cos()) * knot_size * 0.5;
+                    // Apply rotation
+                    let rx = x * angle.cos() - y * angle.sin() + cx;
+                    let ry = x * angle.sin() + y * angle.cos() + cy;
+
+                    let phase = (t * 3.0 + now * 2.0).sin() * 0.3 + 0.7;
+                    let c = Color::new(kr, kg, kb, alpha * phase);
+                    self.add_rect(&mut overlay_verts, rx - seg_width / 2.0, ry - seg_width / 2.0, seg_width, seg_width, &c);
+                }
+
+                if !overlay_verts.is_empty() {
+                    let buf = self.device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("trefoil_knot_verts"),
+                        contents: bytemuck::cast_slice(&overlay_verts),
+                        usage: wgpu::BufferUsages::VERTEX,
+                    });
+                    render_pass.set_pipeline(&self.rect_pipeline);
+                    render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                    render_pass.set_vertex_buffer(0, buf.slice(..));
+                    render_pass.draw(0..overlay_verts.len() as u32, 0..1);
+                    self.needs_continuous_redraw = true;
+                }
+            }
+
+            // === Cursor quill pen effect ===
+            if self.cursor_quill_pen_enabled && cursor_visible {
+                if let Some(ref anim) = animated_cursor {
+                    let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
+                    let (qr, qg, qb) = self.cursor_quill_pen_color;
+                    let trail_len = self.cursor_quill_pen_trail_length;
+                    let ink_speed = self.cursor_quill_pen_ink_speed;
+                    let alpha = self.cursor_quill_pen_opacity;
+                    let mut overlay_verts = Vec::new();
+
+                    let cx = anim.x + anim.width / 2.0;
+                    let cy = anim.y + anim.height / 2.0;
+
+                    // Ink drips falling from cursor
+                    for i in 0..trail_len {
+                        let phase = now * ink_speed + i as f32 * 0.7;
+                        let drip_y = cy + (i as f32 * 8.0) + (phase % 3.0) * 10.0;
+                        let drip_x = cx + (phase * 1.3).sin() * 4.0;
+                        let fade = 1.0 - (i as f32 / trail_len as f32);
+                        let size = 3.0 - i as f32 * 0.2;
+                        if size > 0.5 {
+                            let c = Color::new(qr, qg, qb, alpha * fade);
+                            self.add_rect(&mut overlay_verts, drip_x - size / 2.0, drip_y, size, size * 1.5, &c);
+                        }
+                    }
+
+                    // Quill flourish curves
+                    for f in 0..3 {
+                        let angle_off = f as f32 * std::f32::consts::TAU / 3.0 + now * ink_speed * 0.5;
+                        for j in 0..8 {
+                            let t = j as f32 / 8.0;
+                            let r = 10.0 + t * 15.0;
+                            let a = angle_off + t * 1.5;
+                            let fx = cx + a.cos() * r;
+                            let fy = cy - 5.0 + a.sin() * r * 0.5;
+                            let fade = 1.0 - t;
+                            let c = Color::new(qr, qg, qb, alpha * fade * 0.6);
+                            self.add_rect(&mut overlay_verts, fx - 1.0, fy - 1.0, 2.0, 2.0, &c);
+                        }
+                    }
+
+                    if !overlay_verts.is_empty() {
+                        let buf = self.device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("cursor_quill_pen_verts"),
+                            contents: bytemuck::cast_slice(&overlay_verts),
+                            usage: wgpu::BufferUsages::VERTEX,
+                        });
+                        render_pass.set_pipeline(&self.rect_pipeline);
+                        render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                        render_pass.set_vertex_buffer(0, buf.slice(..));
+                        render_pass.draw(0..overlay_verts.len() as u32, 0..1);
+                        self.needs_continuous_redraw = true;
+                    }
+                }
+            }
+
+            // === Herringbone pattern overlay effect ===
+            if self.herringbone_pattern_enabled {
+                let width = self.width() as f32;
+                let height = self.height() as f32;
+                let (hr, hg, hb) = self.herringbone_pattern_color;
+                let tw = self.herringbone_pattern_tile_width;
+                let th = self.herringbone_pattern_tile_height;
+                let alpha = self.herringbone_pattern_opacity;
+                let mut overlay_verts = Vec::new();
+
+                let line_w = 1.0;
+                let cols = (width / tw) as i32 + 2;
+                let rows = (height / th) as i32 + 2;
+
+                for row in 0..rows {
+                    for col in 0..cols {
+                        let x = col as f32 * tw;
+                        let y = row as f32 * th;
+                        let even_row = row % 2 == 0;
+
+                        if even_row {
+                            // Draw V-shape pointing right
+                            // Top diagonal: from (x, y) to (x + tw/2, y + th/2)
+                            let steps = (tw / 2.0) as i32;
+                            for s in 0..steps {
+                                let t = s as f32 / steps as f32;
+                                let px = x + t * tw / 2.0;
+                                let py = y + t * th / 2.0;
+                                let c = Color::new(hr, hg, hb, alpha);
+                                self.add_rect(&mut overlay_verts, px, py, line_w, line_w, &c);
+                            }
+                            // Bottom diagonal: from (x, y + th) to (x + tw/2, y + th/2)
+                            for s in 0..steps {
+                                let t = s as f32 / steps as f32;
+                                let px = x + t * tw / 2.0;
+                                let py = y + th - t * th / 2.0;
+                                let c = Color::new(hr, hg, hb, alpha);
+                                self.add_rect(&mut overlay_verts, px, py, line_w, line_w, &c);
+                            }
+                        } else {
+                            // Offset row: V-shape shifted
+                            let offset = tw / 2.0;
+                            let steps = (tw / 2.0) as i32;
+                            for s in 0..steps {
+                                let t = s as f32 / steps as f32;
+                                let px = x + offset + t * tw / 2.0;
+                                let py = y + t * th / 2.0;
+                                let c = Color::new(hr, hg, hb, alpha);
+                                self.add_rect(&mut overlay_verts, px, py, line_w, line_w, &c);
+                            }
+                            for s in 0..steps {
+                                let t = s as f32 / steps as f32;
+                                let px = x + offset + t * tw / 2.0;
+                                let py = y + th - t * th / 2.0;
+                                let c = Color::new(hr, hg, hb, alpha);
+                                self.add_rect(&mut overlay_verts, px, py, line_w, line_w, &c);
+                            }
+                        }
+                    }
+                }
+
+                if !overlay_verts.is_empty() {
+                    let buf = self.device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("herringbone_pattern_verts"),
+                        contents: bytemuck::cast_slice(&overlay_verts),
+                        usage: wgpu::BufferUsages::VERTEX,
+                    });
+                    render_pass.set_pipeline(&self.rect_pipeline);
+                    render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                    render_pass.set_vertex_buffer(0, buf.slice(..));
+                    render_pass.draw(0..overlay_verts.len() as u32, 0..1);
+                }
+            }
+
+            // === Cursor aurora borealis effect ===
+            if self.cursor_aurora_borealis_enabled && cursor_visible {
+                if let Some(ref anim) = animated_cursor {
+                    let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
+                    let (ar, ag, ab) = self.cursor_aurora_borealis_color;
+                    let band_count = self.cursor_aurora_borealis_band_count;
+                    let shimmer = self.cursor_aurora_borealis_shimmer_speed;
+                    let alpha = self.cursor_aurora_borealis_opacity;
+                    let mut overlay_verts = Vec::new();
+
+                    let cx = anim.x + anim.width / 2.0;
+                    let cy = anim.y;
+
+                    // Shimmering bands above cursor
+                    for band in 0..band_count {
+                        let band_y = cy - 10.0 - band as f32 * 12.0;
+                        let band_width = 40.0 + band as f32 * 15.0;
+                        let segments = 20;
+
+                        for s in 0..segments {
+                            let t = s as f32 / segments as f32;
+                            let x = cx - band_width / 2.0 + t * band_width;
+                            let wave = (t * std::f32::consts::TAU * 2.0 + now * shimmer * 3.0 + band as f32 * 0.8).sin();
+                            let y = band_y + wave * 4.0;
+                            let brightness = (t * std::f32::consts::PI).sin();
+                            let hue_shift = (band as f32 * 0.3 + now * shimmer * 0.5).sin() * 0.3;
+
+                            let cr = (ar + hue_shift).clamp(0.0, 1.0);
+                            let cg = (ag + hue_shift * 0.5).clamp(0.0, 1.0);
+                            let cb = (ab - hue_shift * 0.3).clamp(0.0, 1.0);
+
+                            let h = 3.0 + wave.abs() * 2.0;
+                            let fade = 1.0 - (band as f32 / band_count as f32) * 0.5;
+                            let c = Color::new(cr, cg, cb, alpha * brightness * fade);
+                            self.add_rect(&mut overlay_verts, x, y, band_width / segments as f32, h, &c);
+                        }
+                    }
+
+                    if !overlay_verts.is_empty() {
+                        let buf = self.device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("cursor_aurora_borealis_verts"),
+                            contents: bytemuck::cast_slice(&overlay_verts),
+                            usage: wgpu::BufferUsages::VERTEX,
+                        });
+                        render_pass.set_pipeline(&self.rect_pipeline);
+                        render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                        render_pass.set_vertex_buffer(0, buf.slice(..));
+                        render_pass.draw(0..overlay_verts.len() as u32, 0..1);
+                        self.needs_continuous_redraw = true;
+                    }
+                }
+            }
+
+            // === Target reticle overlay effect ===
+            if self.target_reticle_enabled {
+                let width = self.width() as f32;
+                let height = self.height() as f32;
+                let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
+                let (tr, tg, tb) = self.target_reticle_color;
+                let ring_count = self.target_reticle_ring_count;
+                let pulse = self.target_reticle_pulse_speed;
+                let opacity = self.target_reticle_opacity;
+                let cx = width / 2.0;
+                let cy = height / 2.0;
+                let mut overlay_verts = Vec::new();
+                for ring in 0..ring_count {
+                    let base_r = 50.0 + ring as f32 * 60.0;
+                    let r = base_r + (now * pulse + ring as f32 * 0.5).sin() * 10.0;
+                    let segments = 60;
+                    for s in 0..segments {
+                        let angle = s as f32 * std::f32::consts::TAU / segments as f32;
+                        let x = cx + angle.cos() * r;
+                        let y = cy + angle.sin() * r;
+                        let alpha = opacity * (1.0 - ring as f32 / ring_count as f32 * 0.5);
+                        let c = Color::new(tr, tg, tb, alpha);
+                        self.add_rect(&mut overlay_verts, x - 1.0, y - 1.0, 2.0, 2.0, &c);
+                    }
+                }
+                // Crosshair lines
+                let ch_c = Color::new(tr, tg, tb, opacity * 0.5);
+                self.add_rect(&mut overlay_verts, cx - 1.0, 0.0, 2.0, height, &ch_c);
+                self.add_rect(&mut overlay_verts, 0.0, cy - 1.0, width, 2.0, &ch_c);
+                if !overlay_verts.is_empty() {
+                    let buf = self.device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("target_reticle_verts"),
+                        contents: bytemuck::cast_slice(&overlay_verts),
+                        usage: wgpu::BufferUsages::VERTEX,
+                    });
+                    render_pass.set_pipeline(&self.rect_pipeline);
+                    render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                    render_pass.set_vertex_buffer(0, buf.slice(..));
+                    render_pass.draw(0..overlay_verts.len() as u32, 0..1);
+                    self.needs_continuous_redraw = true;
+                }
+            }
+
+            // === Cursor feather effect ===
+            if self.cursor_feather_enabled && cursor_visible {
+                if let Some(ref anim) = animated_cursor {
+                    let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
+                    let cx = anim.x + anim.width / 2.0;
+                    let cy = anim.y + anim.height / 2.0;
+                    let (fr, fg, fb) = self.cursor_feather_color;
+                    let count = self.cursor_feather_count;
+                    let drift = self.cursor_feather_drift_speed;
+                    let opacity = self.cursor_feather_opacity;
+                    let mut overlay_verts = Vec::new();
+                    for i in 0..count {
+                        let phase = i as f32 * std::f32::consts::TAU / count as f32;
+                        let t = (now * drift + phase).rem_euclid(3.0);
+                        let drift_x = (now * 0.5 + phase * 2.0).sin() * 15.0;
+                        let drift_y = t * 20.0;
+                        let fx = cx + drift_x;
+                        let fy = cy - drift_y;
+                        let alpha = opacity * (1.0 - t / 3.0);
+                        let sway = (now * 2.0 + phase).sin() * 0.3;
+                        // Feather quill (center line)
+                        for s in 0..8 {
+                            let st = s as f32 / 8.0;
+                            let qx = fx + st * 6.0 * (1.0 + sway);
+                            let qy = fy + st * 3.0;
+                            let c = Color::new(fr, fg, fb, alpha * (1.0 - st * 0.3));
+                            self.add_rect(&mut overlay_verts, qx, qy, 1.0, 1.0, &c);
+                        }
+                        // Feather barbs (side wisps)
+                        for s in 0..5 {
+                            let st = s as f32 / 5.0;
+                            let bx = fx + st * 5.0;
+                            let by_up = fy + st * 2.0 - 2.0;
+                            let by_down = fy + st * 2.0 + 2.0;
+                            let bc = Color::new(fr, fg, fb, alpha * 0.6);
+                            self.add_rect(&mut overlay_verts, bx, by_up, 2.0, 1.0, &bc);
+                            self.add_rect(&mut overlay_verts, bx, by_down, 2.0, 1.0, &bc);
+                        }
+                    }
+                    if !overlay_verts.is_empty() {
+                        let buf = self.device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("cursor_feather_verts"),
+                            contents: bytemuck::cast_slice(&overlay_verts),
+                            usage: wgpu::BufferUsages::VERTEX,
+                        });
+                        render_pass.set_pipeline(&self.rect_pipeline);
+                        render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                        render_pass.set_vertex_buffer(0, buf.slice(..));
+                        render_pass.draw(0..overlay_verts.len() as u32, 0..1);
+                        self.needs_continuous_redraw = true;
+                    }
+                }
+            }
+
+            // === Plaid pattern overlay effect ===
+            if self.plaid_pattern_enabled {
+                let width = self.width() as f32;
+                let height = self.height() as f32;
+                let (pr, pg, pb) = self.plaid_pattern_color;
+                let band_w = self.plaid_pattern_band_width;
+                let spacing = self.plaid_pattern_band_spacing;
+                let opacity = self.plaid_pattern_opacity;
+                let mut overlay_verts = Vec::new();
+                // Horizontal bands
+                let h_count = (height / spacing) as i32 + 1;
+                for i in 0..h_count {
+                    let y = i as f32 * spacing;
+                    let c = Color::new(pr, pg, pb, opacity);
+                    self.add_rect(&mut overlay_verts, 0.0, y, width, band_w, &c);
+                }
+                // Vertical bands (lighter, for plaid cross effect)
+                let v_count = (width / spacing) as i32 + 1;
+                for i in 0..v_count {
+                    let x = i as f32 * spacing;
+                    let c = Color::new(pr * 0.8, pg * 0.8, pb, opacity * 0.7);
+                    self.add_rect(&mut overlay_verts, x, 0.0, band_w, height, &c);
+                }
+                if !overlay_verts.is_empty() {
+                    let buf = self.device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("plaid_pattern_verts"),
+                        contents: bytemuck::cast_slice(&overlay_verts),
+                        usage: wgpu::BufferUsages::VERTEX,
+                    });
+                    render_pass.set_pipeline(&self.rect_pipeline);
+                    render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                    render_pass.set_vertex_buffer(0, buf.slice(..));
+                    render_pass.draw(0..overlay_verts.len() as u32, 0..1);
+                }
+            }
+
+            // === Cursor stardust effect ===
+            if self.cursor_stardust_enabled && cursor_visible {
+                if let Some(ref anim) = animated_cursor {
+                    let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
+                    let cx = anim.x + anim.width / 2.0;
+                    let cy = anim.y + anim.height / 2.0;
+                    let (sr, sg, sb) = self.cursor_stardust_color;
+                    let count = self.cursor_stardust_particle_count;
+                    let fall = self.cursor_stardust_fall_speed;
+                    let opacity = self.cursor_stardust_opacity;
+                    let mut overlay_verts = Vec::new();
+                    for i in 0..count {
+                        let phase = i as f32 * 2.71828;
+                        let t = (now * fall + phase).rem_euclid(2.0);
+                        let spread = (phase * 1.618).sin() * 15.0;
+                        let x = cx + spread + (now * 0.3 + phase).sin() * 3.0;
+                        let y = cy + t * 25.0;
+                        let alpha = opacity * (1.0 - t / 2.0);
+                        let twinkle = ((now * 5.0 + phase * 3.0).sin() * 0.5 + 0.5);
+                        let size = 1.0 + twinkle * 2.0;
+                        let c = Color::new(sr, sg * (0.8 + twinkle * 0.2), sb, alpha * twinkle);
+                        self.add_rect(&mut overlay_verts, x - size / 2.0, y - size / 2.0, size, size, &c);
+                    }
+                    if !overlay_verts.is_empty() {
+                        let buf = self.device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("cursor_stardust_verts"),
+                            contents: bytemuck::cast_slice(&overlay_verts),
+                            usage: wgpu::BufferUsages::VERTEX,
+                        });
+                        render_pass.set_pipeline(&self.rect_pipeline);
+                        render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                        render_pass.set_vertex_buffer(0, buf.slice(..));
+                        render_pass.draw(0..overlay_verts.len() as u32, 0..1);
+                        self.needs_continuous_redraw = true;
+                    }
                 }
             }
 

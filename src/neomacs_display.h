@@ -2026,6 +2026,46 @@ void neomacs_display_set_cursor_gravity_well(struct NeomacsDisplay *handle,
     int opacity);
 
 /**
+ * Configure trefoil knot overlay effect.
+ */
+void neomacs_display_set_trefoil_knot(struct NeomacsDisplay *handle,
+    int enabled,
+    int r, int g, int b,
+    int knot_size,
+    int rotation_speed,
+    int opacity);
+
+/**
+ * Configure cursor quill pen effect.
+ */
+void neomacs_display_set_cursor_quill_pen(struct NeomacsDisplay *handle,
+    int enabled,
+    int r, int g, int b,
+    int trail_length,
+    int ink_speed,
+    int opacity);
+
+/**
+ * Configure herringbone pattern overlay effect.
+ */
+void neomacs_display_set_herringbone_pattern(struct NeomacsDisplay *handle,
+    int enabled,
+    int r, int g, int b,
+    int tile_width,
+    int tile_height,
+    int opacity);
+
+/**
+ * Configure cursor aurora borealis effect.
+ */
+void neomacs_display_set_cursor_aurora_borealis(struct NeomacsDisplay *handle,
+    int enabled,
+    int r, int g, int b,
+    int band_count,
+    int shimmer_speed,
+    int opacity);
+
+/**
  * Configure target reticle overlay effect.
  */
 void neomacs_display_set_target_reticle(struct NeomacsDisplay *handle,

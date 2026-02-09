@@ -5982,6 +5982,298 @@ Non-nil renders animated flowing color bands at the top of the frame."
                 neomacs-cursor-gravity-well-line-count nil)
             val))))
 
+;; Trefoil knot overlay effect
+(declare-function neomacs-set-trefoil-knot "neomacsterm.c")
+
+(defcustom neomacs-trefoil-knot nil
+  "Enable trefoil knot overlay effect."
+  :type 'boolean
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (fboundp 'neomacs-set-trefoil-knot)
+           (if val
+               (neomacs-set-trefoil-knot t)
+             (neomacs-set-trefoil-knot nil)))))
+
+(defcustom neomacs-trefoil-knot-color "#6699E6"
+  "Trefoil knot color."
+  :type 'color
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-trefoil-knot)
+                    (boundp 'neomacs-trefoil-knot)
+                    neomacs-trefoil-knot)
+           (neomacs-set-trefoil-knot t val))))
+
+(defcustom neomacs-trefoil-knot-size 80
+  "Trefoil knot size in pixels."
+  :type '(integer :tag "Knot size (px)")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-trefoil-knot)
+                    (boundp 'neomacs-trefoil-knot)
+                    neomacs-trefoil-knot)
+           (neomacs-set-trefoil-knot t
+            (if (boundp 'neomacs-trefoil-knot-color)
+                neomacs-trefoil-knot-color nil)
+            val))))
+
+(defcustom neomacs-trefoil-knot-rotation-speed 100
+  "Trefoil knot rotation speed (* 100)."
+  :type '(integer :tag "Rotation speed")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-trefoil-knot)
+                    (boundp 'neomacs-trefoil-knot)
+                    neomacs-trefoil-knot)
+           (neomacs-set-trefoil-knot t
+            (if (boundp 'neomacs-trefoil-knot-color)
+                neomacs-trefoil-knot-color nil)
+            (if (boundp 'neomacs-trefoil-knot-size)
+                neomacs-trefoil-knot-size nil)
+            val))))
+
+(defcustom neomacs-trefoil-knot-opacity 6
+  "Trefoil knot opacity (0-100)."
+  :type '(integer :tag "Opacity (0-100)")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-trefoil-knot)
+                    (boundp 'neomacs-trefoil-knot)
+                    neomacs-trefoil-knot)
+           (neomacs-set-trefoil-knot t
+            (if (boundp 'neomacs-trefoil-knot-color)
+                neomacs-trefoil-knot-color nil)
+            (if (boundp 'neomacs-trefoil-knot-size)
+                neomacs-trefoil-knot-size nil)
+            (if (boundp 'neomacs-trefoil-knot-rotation-speed)
+                neomacs-trefoil-knot-rotation-speed nil)
+            val))))
+
+;; Cursor quill pen effect
+(declare-function neomacs-set-cursor-quill-pen "neomacsterm.c")
+
+(defcustom neomacs-cursor-quill-pen nil
+  "Enable cursor quill pen effect."
+  :type 'boolean
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (fboundp 'neomacs-set-cursor-quill-pen)
+           (if val
+               (neomacs-set-cursor-quill-pen t)
+             (neomacs-set-cursor-quill-pen nil)))))
+
+(defcustom neomacs-cursor-quill-pen-color "#4D260D"
+  "Cursor quill pen color."
+  :type 'color
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-quill-pen)
+                    (boundp 'neomacs-cursor-quill-pen)
+                    neomacs-cursor-quill-pen)
+           (neomacs-set-cursor-quill-pen t val))))
+
+(defcustom neomacs-cursor-quill-pen-trail-length 8
+  "Number of ink drips in quill trail."
+  :type '(integer :tag "Trail length")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-quill-pen)
+                    (boundp 'neomacs-cursor-quill-pen)
+                    neomacs-cursor-quill-pen)
+           (neomacs-set-cursor-quill-pen t
+            (if (boundp 'neomacs-cursor-quill-pen-color)
+                neomacs-cursor-quill-pen-color nil)
+            val))))
+
+(defcustom neomacs-cursor-quill-pen-ink-speed 100
+  "Cursor quill pen ink speed (* 100)."
+  :type '(integer :tag "Ink speed")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-quill-pen)
+                    (boundp 'neomacs-cursor-quill-pen)
+                    neomacs-cursor-quill-pen)
+           (neomacs-set-cursor-quill-pen t
+            (if (boundp 'neomacs-cursor-quill-pen-color)
+                neomacs-cursor-quill-pen-color nil)
+            (if (boundp 'neomacs-cursor-quill-pen-trail-length)
+                neomacs-cursor-quill-pen-trail-length nil)
+            val))))
+
+(defcustom neomacs-cursor-quill-pen-opacity 20
+  "Cursor quill pen opacity (0-100)."
+  :type '(integer :tag "Opacity (0-100)")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-quill-pen)
+                    (boundp 'neomacs-cursor-quill-pen)
+                    neomacs-cursor-quill-pen)
+           (neomacs-set-cursor-quill-pen t
+            (if (boundp 'neomacs-cursor-quill-pen-color)
+                neomacs-cursor-quill-pen-color nil)
+            (if (boundp 'neomacs-cursor-quill-pen-trail-length)
+                neomacs-cursor-quill-pen-trail-length nil)
+            (if (boundp 'neomacs-cursor-quill-pen-ink-speed)
+                neomacs-cursor-quill-pen-ink-speed nil)
+            val))))
+
+;; Herringbone pattern overlay effect
+(declare-function neomacs-set-herringbone-pattern "neomacsterm.c")
+
+(defcustom neomacs-herringbone-pattern nil
+  "Enable herringbone pattern overlay effect."
+  :type 'boolean
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (fboundp 'neomacs-set-herringbone-pattern)
+           (if val
+               (neomacs-set-herringbone-pattern t)
+             (neomacs-set-herringbone-pattern nil)))))
+
+(defcustom neomacs-herringbone-pattern-color "#998066"
+  "Herringbone pattern color."
+  :type 'color
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-herringbone-pattern)
+                    (boundp 'neomacs-herringbone-pattern)
+                    neomacs-herringbone-pattern)
+           (neomacs-set-herringbone-pattern t val))))
+
+(defcustom neomacs-herringbone-pattern-tile-width 20
+  "Herringbone tile width in pixels."
+  :type '(integer :tag "Tile width (px)")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-herringbone-pattern)
+                    (boundp 'neomacs-herringbone-pattern)
+                    neomacs-herringbone-pattern)
+           (neomacs-set-herringbone-pattern t
+            (if (boundp 'neomacs-herringbone-pattern-color)
+                neomacs-herringbone-pattern-color nil)
+            val))))
+
+(defcustom neomacs-herringbone-pattern-tile-height 10
+  "Herringbone tile height in pixels."
+  :type '(integer :tag "Tile height (px)")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-herringbone-pattern)
+                    (boundp 'neomacs-herringbone-pattern)
+                    neomacs-herringbone-pattern)
+           (neomacs-set-herringbone-pattern t
+            (if (boundp 'neomacs-herringbone-pattern-color)
+                neomacs-herringbone-pattern-color nil)
+            (if (boundp 'neomacs-herringbone-pattern-tile-width)
+                neomacs-herringbone-pattern-tile-width nil)
+            val))))
+
+(defcustom neomacs-herringbone-pattern-opacity 5
+  "Herringbone pattern opacity (0-100)."
+  :type '(integer :tag "Opacity (0-100)")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-herringbone-pattern)
+                    (boundp 'neomacs-herringbone-pattern)
+                    neomacs-herringbone-pattern)
+           (neomacs-set-herringbone-pattern t
+            (if (boundp 'neomacs-herringbone-pattern-color)
+                neomacs-herringbone-pattern-color nil)
+            (if (boundp 'neomacs-herringbone-pattern-tile-width)
+                neomacs-herringbone-pattern-tile-width nil)
+            (if (boundp 'neomacs-herringbone-pattern-tile-height)
+                neomacs-herringbone-pattern-tile-height nil)
+            val))))
+
+;; Cursor aurora borealis effect
+(declare-function neomacs-set-cursor-aurora-borealis "neomacsterm.c")
+
+(defcustom neomacs-cursor-aurora-borealis nil
+  "Enable cursor aurora borealis effect."
+  :type 'boolean
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (fboundp 'neomacs-set-cursor-aurora-borealis)
+           (if val
+               (neomacs-set-cursor-aurora-borealis t)
+             (neomacs-set-cursor-aurora-borealis nil)))))
+
+(defcustom neomacs-cursor-aurora-borealis-color "#33E680"
+  "Cursor aurora borealis color."
+  :type 'color
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-aurora-borealis)
+                    (boundp 'neomacs-cursor-aurora-borealis)
+                    neomacs-cursor-aurora-borealis)
+           (neomacs-set-cursor-aurora-borealis t val))))
+
+(defcustom neomacs-cursor-aurora-borealis-band-count 5
+  "Number of aurora bands."
+  :type '(integer :tag "Band count")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-aurora-borealis)
+                    (boundp 'neomacs-cursor-aurora-borealis)
+                    neomacs-cursor-aurora-borealis)
+           (neomacs-set-cursor-aurora-borealis t
+            (if (boundp 'neomacs-cursor-aurora-borealis-color)
+                neomacs-cursor-aurora-borealis-color nil)
+            val))))
+
+(defcustom neomacs-cursor-aurora-borealis-shimmer-speed 100
+  "Cursor aurora borealis shimmer speed (* 100)."
+  :type '(integer :tag "Shimmer speed")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-aurora-borealis)
+                    (boundp 'neomacs-cursor-aurora-borealis)
+                    neomacs-cursor-aurora-borealis)
+           (neomacs-set-cursor-aurora-borealis t
+            (if (boundp 'neomacs-cursor-aurora-borealis-color)
+                neomacs-cursor-aurora-borealis-color nil)
+            (if (boundp 'neomacs-cursor-aurora-borealis-band-count)
+                neomacs-cursor-aurora-borealis-band-count nil)
+            val))))
+
+(defcustom neomacs-cursor-aurora-borealis-opacity 15
+  "Cursor aurora borealis opacity (0-100)."
+  :type '(integer :tag "Opacity (0-100)")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-aurora-borealis)
+                    (boundp 'neomacs-cursor-aurora-borealis)
+                    neomacs-cursor-aurora-borealis)
+           (neomacs-set-cursor-aurora-borealis t
+            (if (boundp 'neomacs-cursor-aurora-borealis-color)
+                neomacs-cursor-aurora-borealis-color nil)
+            (if (boundp 'neomacs-cursor-aurora-borealis-band-count)
+                neomacs-cursor-aurora-borealis-band-count nil)
+            (if (boundp 'neomacs-cursor-aurora-borealis-shimmer-speed)
+                neomacs-cursor-aurora-borealis-shimmer-speed nil)
+            val))))
+
 ;; Target reticle overlay effect
 (declare-function neomacs-set-target-reticle "neomacsterm.c")
 

@@ -1467,6 +1467,70 @@ pub enum RenderCommand {
         radius: f32,
         opacity: f32,
     },
+    /// Configure trefoil knot overlay effect
+    SetTrefoilKnot {
+        enabled: bool,
+        r: f32, g: f32, b: f32,
+        knot_size: f32,
+        rotation_speed: f32,
+        opacity: f32,
+    },
+    /// Configure cursor quill pen effect
+    SetCursorQuillPen {
+        enabled: bool,
+        r: f32, g: f32, b: f32,
+        trail_length: u32,
+        ink_speed: f32,
+        opacity: f32,
+    },
+    /// Configure herringbone pattern overlay effect
+    SetHerringbonePattern {
+        enabled: bool,
+        r: f32, g: f32, b: f32,
+        tile_width: f32,
+        tile_height: f32,
+        opacity: f32,
+    },
+    /// Configure cursor aurora borealis effect
+    SetCursorAuroraBorealis {
+        enabled: bool,
+        r: f32, g: f32, b: f32,
+        band_count: u32,
+        shimmer_speed: f32,
+        opacity: f32,
+    },
+    /// Configure target reticle overlay effect
+    SetTargetReticle {
+        enabled: bool,
+        r: f32, g: f32, b: f32,
+        ring_count: u32,
+        pulse_speed: f32,
+        opacity: f32,
+    },
+    /// Configure cursor feather effect
+    SetCursorFeather {
+        enabled: bool,
+        r: f32, g: f32, b: f32,
+        feather_count: u32,
+        drift_speed: f32,
+        opacity: f32,
+    },
+    /// Configure plaid pattern overlay effect
+    SetPlaidPattern {
+        enabled: bool,
+        r: f32, g: f32, b: f32,
+        band_width: f32,
+        band_spacing: f32,
+        opacity: f32,
+    },
+    /// Configure cursor stardust effect
+    SetCursorStardust {
+        enabled: bool,
+        r: f32, g: f32, b: f32,
+        particle_count: u32,
+        fall_speed: f32,
+        opacity: f32,
+    },
     /// Configure brick wall overlay effect
     SetBrickWall {
         enabled: bool,

@@ -878,6 +878,47 @@ struct RenderApp {
     cursor_crystal_radius: f32,
     cursor_crystal_opacity: f32,
 
+    trefoil_knot_enabled: bool,
+    trefoil_knot_color: (f32, f32, f32),
+    trefoil_knot_size: f32,
+    trefoil_knot_rotation_speed: f32,
+    trefoil_knot_opacity: f32,
+    cursor_quill_pen_enabled: bool,
+    cursor_quill_pen_color: (f32, f32, f32),
+    cursor_quill_pen_trail_length: u32,
+    cursor_quill_pen_ink_speed: f32,
+    cursor_quill_pen_opacity: f32,
+    herringbone_pattern_enabled: bool,
+    herringbone_pattern_color: (f32, f32, f32),
+    herringbone_pattern_tile_width: f32,
+    herringbone_pattern_tile_height: f32,
+    herringbone_pattern_opacity: f32,
+    cursor_aurora_borealis_enabled: bool,
+    cursor_aurora_borealis_color: (f32, f32, f32),
+    cursor_aurora_borealis_band_count: u32,
+    cursor_aurora_borealis_shimmer_speed: f32,
+    cursor_aurora_borealis_opacity: f32,
+
+    target_reticle_enabled: bool,
+    target_reticle_color: (f32, f32, f32),
+    target_reticle_ring_count: u32,
+    target_reticle_pulse_speed: f32,
+    target_reticle_opacity: f32,
+    cursor_feather_enabled: bool,
+    cursor_feather_color: (f32, f32, f32),
+    cursor_feather_count: u32,
+    cursor_feather_drift_speed: f32,
+    cursor_feather_opacity: f32,
+    plaid_pattern_enabled: bool,
+    plaid_pattern_color: (f32, f32, f32),
+    plaid_pattern_band_width: f32,
+    plaid_pattern_band_spacing: f32,
+    plaid_pattern_opacity: f32,
+    cursor_stardust_enabled: bool,
+    cursor_stardust_color: (f32, f32, f32),
+    cursor_stardust_particle_count: u32,
+    cursor_stardust_fall_speed: f32,
+    cursor_stardust_opacity: f32,
     brick_wall_enabled: bool,
     brick_wall_color: (f32, f32, f32),
     brick_wall_width: f32,
@@ -1710,6 +1751,46 @@ impl RenderApp {
             cursor_crystal_facet_count: 6,
             cursor_crystal_radius: 25.0,
             cursor_crystal_opacity: 0.3,
+            trefoil_knot_enabled: false,
+            trefoil_knot_color: (0.4, 0.6, 0.9),
+            trefoil_knot_size: 80.0,
+            trefoil_knot_rotation_speed: 1.0,
+            trefoil_knot_opacity: 0.06,
+            cursor_quill_pen_enabled: false,
+            cursor_quill_pen_color: (0.3, 0.15, 0.05),
+            cursor_quill_pen_trail_length: 8,
+            cursor_quill_pen_ink_speed: 1.0,
+            cursor_quill_pen_opacity: 0.2,
+            herringbone_pattern_enabled: false,
+            herringbone_pattern_color: (0.6, 0.5, 0.4),
+            herringbone_pattern_tile_width: 20.0,
+            herringbone_pattern_tile_height: 10.0,
+            herringbone_pattern_opacity: 0.05,
+            cursor_aurora_borealis_enabled: false,
+            cursor_aurora_borealis_color: (0.2, 0.9, 0.5),
+            cursor_aurora_borealis_band_count: 5,
+            cursor_aurora_borealis_shimmer_speed: 1.0,
+            cursor_aurora_borealis_opacity: 0.15,
+            target_reticle_enabled: false,
+            target_reticle_color: (0.2, 0.8, 0.2),
+            target_reticle_ring_count: 3,
+            target_reticle_pulse_speed: 1.0,
+            target_reticle_opacity: 0.08,
+            cursor_feather_enabled: false,
+            cursor_feather_color: (0.9, 0.85, 0.7),
+            cursor_feather_count: 4,
+            cursor_feather_drift_speed: 1.0,
+            cursor_feather_opacity: 0.18,
+            plaid_pattern_enabled: false,
+            plaid_pattern_color: (0.7, 0.3, 0.3),
+            plaid_pattern_band_width: 4.0,
+            plaid_pattern_band_spacing: 30.0,
+            plaid_pattern_opacity: 0.05,
+            cursor_stardust_enabled: false,
+            cursor_stardust_color: (1.0, 0.9, 0.5),
+            cursor_stardust_particle_count: 20,
+            cursor_stardust_fall_speed: 1.0,
+            cursor_stardust_opacity: 0.2,
             brick_wall_enabled: false,
             brick_wall_color: (0.6, 0.4, 0.3),
             brick_wall_width: 40.0,
@@ -3805,6 +3886,94 @@ impl RenderApp {
                     self.cursor_tornado_opacity = opacity;
                     if let Some(renderer) = self.renderer.as_mut() {
                         renderer.set_cursor_tornado(enabled, (r, g, b), radius, particle_count, opacity);
+                    }
+                    self.frame_dirty = true;
+                }
+                RenderCommand::SetTrefoilKnot { enabled, r, g, b, knot_size, rotation_speed, opacity } => {
+                    self.trefoil_knot_enabled = enabled;
+                    self.trefoil_knot_color = (r, g, b);
+                    self.trefoil_knot_size = knot_size;
+                    self.trefoil_knot_rotation_speed = rotation_speed;
+                    self.trefoil_knot_opacity = opacity;
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_trefoil_knot(enabled, (r, g, b), knot_size, rotation_speed, opacity);
+                    }
+                    self.frame_dirty = true;
+                }
+                RenderCommand::SetCursorQuillPen { enabled, r, g, b, trail_length, ink_speed, opacity } => {
+                    self.cursor_quill_pen_enabled = enabled;
+                    self.cursor_quill_pen_color = (r, g, b);
+                    self.cursor_quill_pen_trail_length = trail_length;
+                    self.cursor_quill_pen_ink_speed = ink_speed;
+                    self.cursor_quill_pen_opacity = opacity;
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_cursor_quill_pen(enabled, (r, g, b), trail_length, ink_speed, opacity);
+                    }
+                    self.frame_dirty = true;
+                }
+                RenderCommand::SetHerringbonePattern { enabled, r, g, b, tile_width, tile_height, opacity } => {
+                    self.herringbone_pattern_enabled = enabled;
+                    self.herringbone_pattern_color = (r, g, b);
+                    self.herringbone_pattern_tile_width = tile_width;
+                    self.herringbone_pattern_tile_height = tile_height;
+                    self.herringbone_pattern_opacity = opacity;
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_herringbone_pattern(enabled, (r, g, b), tile_width, tile_height, opacity);
+                    }
+                    self.frame_dirty = true;
+                }
+                RenderCommand::SetCursorAuroraBorealis { enabled, r, g, b, band_count, shimmer_speed, opacity } => {
+                    self.cursor_aurora_borealis_enabled = enabled;
+                    self.cursor_aurora_borealis_color = (r, g, b);
+                    self.cursor_aurora_borealis_band_count = band_count;
+                    self.cursor_aurora_borealis_shimmer_speed = shimmer_speed;
+                    self.cursor_aurora_borealis_opacity = opacity;
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_cursor_aurora_borealis(enabled, (r, g, b), band_count, shimmer_speed, opacity);
+                    }
+                    self.frame_dirty = true;
+                }
+                RenderCommand::SetTargetReticle { enabled, r, g, b, ring_count, pulse_speed, opacity } => {
+                    self.target_reticle_enabled = enabled;
+                    self.target_reticle_color = (r, g, b);
+                    self.target_reticle_ring_count = ring_count;
+                    self.target_reticle_pulse_speed = pulse_speed;
+                    self.target_reticle_opacity = opacity;
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_target_reticle(enabled, (r, g, b), ring_count, pulse_speed, opacity);
+                    }
+                    self.frame_dirty = true;
+                }
+                RenderCommand::SetCursorFeather { enabled, r, g, b, feather_count, drift_speed, opacity } => {
+                    self.cursor_feather_enabled = enabled;
+                    self.cursor_feather_color = (r, g, b);
+                    self.cursor_feather_count = feather_count;
+                    self.cursor_feather_drift_speed = drift_speed;
+                    self.cursor_feather_opacity = opacity;
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_cursor_feather(enabled, (r, g, b), feather_count, drift_speed, opacity);
+                    }
+                    self.frame_dirty = true;
+                }
+                RenderCommand::SetPlaidPattern { enabled, r, g, b, band_width, band_spacing, opacity } => {
+                    self.plaid_pattern_enabled = enabled;
+                    self.plaid_pattern_color = (r, g, b);
+                    self.plaid_pattern_band_width = band_width;
+                    self.plaid_pattern_band_spacing = band_spacing;
+                    self.plaid_pattern_opacity = opacity;
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_plaid_pattern(enabled, (r, g, b), band_width, band_spacing, opacity);
+                    }
+                    self.frame_dirty = true;
+                }
+                RenderCommand::SetCursorStardust { enabled, r, g, b, particle_count, fall_speed, opacity } => {
+                    self.cursor_stardust_enabled = enabled;
+                    self.cursor_stardust_color = (r, g, b);
+                    self.cursor_stardust_particle_count = particle_count;
+                    self.cursor_stardust_fall_speed = fall_speed;
+                    self.cursor_stardust_opacity = opacity;
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_cursor_stardust(enabled, (r, g, b), particle_count, fall_speed, opacity);
                     }
                     self.frame_dirty = true;
                 }

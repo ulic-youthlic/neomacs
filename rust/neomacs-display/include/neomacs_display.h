@@ -2775,6 +2775,54 @@ void neomacs_display_set_cursor_gravity_well(struct NeomacsDisplay *handle,
                                              int opacity);
 
 /**
+ * Configure trefoil knot overlay effect
+ */
+void neomacs_display_set_trefoil_knot(struct NeomacsDisplay *handle,
+                                      int enabled,
+                                      int r,
+                                      int g,
+                                      int b,
+                                      int knotSize,
+                                      int rotationSpeed,
+                                      int opacity);
+
+/**
+ * Configure cursor quill pen effect
+ */
+void neomacs_display_set_cursor_quill_pen(struct NeomacsDisplay *handle,
+                                          int enabled,
+                                          int r,
+                                          int g,
+                                          int b,
+                                          int trailLength,
+                                          int inkSpeed,
+                                          int opacity);
+
+/**
+ * Configure herringbone pattern overlay effect
+ */
+void neomacs_display_set_herringbone_pattern(struct NeomacsDisplay *handle,
+                                             int enabled,
+                                             int r,
+                                             int g,
+                                             int b,
+                                             int tileWidth,
+                                             int tileHeight,
+                                             int opacity);
+
+/**
+ * Configure cursor aurora borealis effect
+ */
+void neomacs_display_set_cursor_aurora_borealis(struct NeomacsDisplay *handle,
+                                                int enabled,
+                                                int r,
+                                                int g,
+                                                int b,
+                                                int bandCount,
+                                                int shimmerSpeed,
+                                                int opacity);
+
+/**
  * Configure target reticle overlay effect
  */
 void neomacs_display_set_target_reticle(struct NeomacsDisplay *handle,

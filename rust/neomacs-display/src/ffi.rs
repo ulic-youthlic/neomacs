@@ -6648,6 +6648,106 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_gravity_well(
     }
 }
 
+/// Configure trefoil knot overlay effect
+#[cfg(feature = "winit-backend")]
+#[no_mangle]
+pub unsafe extern "C" fn neomacs_display_set_trefoil_knot(
+    _handle: *mut NeomacsDisplay,
+    enabled: c_int,
+    r: c_int, g: c_int, b: c_int,
+    knot_size: c_int,
+    rotation_speed: c_int,
+    opacity: c_int,
+) {
+    let cmd = RenderCommand::SetTrefoilKnot {
+        enabled: enabled != 0,
+        r: r as f32 / 255.0,
+        g: g as f32 / 255.0,
+        b: b as f32 / 255.0,
+        knot_size: knot_size as f32,
+        rotation_speed: rotation_speed as f32 / 100.0,
+        opacity: opacity as f32 / 100.0,
+    };
+    if let Some(ref state) = THREADED_STATE {
+        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+    }
+}
+
+/// Configure cursor quill pen effect
+#[cfg(feature = "winit-backend")]
+#[no_mangle]
+pub unsafe extern "C" fn neomacs_display_set_cursor_quill_pen(
+    _handle: *mut NeomacsDisplay,
+    enabled: c_int,
+    r: c_int, g: c_int, b: c_int,
+    trail_length: c_int,
+    ink_speed: c_int,
+    opacity: c_int,
+) {
+    let cmd = RenderCommand::SetCursorQuillPen {
+        enabled: enabled != 0,
+        r: r as f32 / 255.0,
+        g: g as f32 / 255.0,
+        b: b as f32 / 255.0,
+        trail_length: trail_length as u32,
+        ink_speed: ink_speed as f32 / 100.0,
+        opacity: opacity as f32 / 100.0,
+    };
+    if let Some(ref state) = THREADED_STATE {
+        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+    }
+}
+
+/// Configure herringbone pattern overlay effect
+#[cfg(feature = "winit-backend")]
+#[no_mangle]
+pub unsafe extern "C" fn neomacs_display_set_herringbone_pattern(
+    _handle: *mut NeomacsDisplay,
+    enabled: c_int,
+    r: c_int, g: c_int, b: c_int,
+    tile_width: c_int,
+    tile_height: c_int,
+    opacity: c_int,
+) {
+    let cmd = RenderCommand::SetHerringbonePattern {
+        enabled: enabled != 0,
+        r: r as f32 / 255.0,
+        g: g as f32 / 255.0,
+        b: b as f32 / 255.0,
+        tile_width: tile_width as f32,
+        tile_height: tile_height as f32,
+        opacity: opacity as f32 / 100.0,
+    };
+    if let Some(ref state) = THREADED_STATE {
+        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+    }
+}
+
+/// Configure cursor aurora borealis effect
+#[cfg(feature = "winit-backend")]
+#[no_mangle]
+pub unsafe extern "C" fn neomacs_display_set_cursor_aurora_borealis(
+    _handle: *mut NeomacsDisplay,
+    enabled: c_int,
+    r: c_int, g: c_int, b: c_int,
+    band_count: c_int,
+    shimmer_speed: c_int,
+    opacity: c_int,
+) {
+    let cmd = RenderCommand::SetCursorAuroraBorealis {
+        enabled: enabled != 0,
+        r: r as f32 / 255.0,
+        g: g as f32 / 255.0,
+        b: b as f32 / 255.0,
+        band_count: band_count as u32,
+        shimmer_speed: shimmer_speed as f32 / 100.0,
+        opacity: opacity as f32 / 100.0,
+    };
+    if let Some(ref state) = THREADED_STATE {
+        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+    }
+}
+
 /// Configure target reticle overlay effect
 #[cfg(feature = "winit-backend")]
 #[no_mangle]
