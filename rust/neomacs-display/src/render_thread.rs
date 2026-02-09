@@ -1823,7 +1823,7 @@ impl RenderApp {
                 }
                 RenderCommand::SetCursorTrailFade { enabled, length, fade_ms } => {
                     self.effects.cursor_trail_fade.enabled = enabled;
-                    self.effects.cursor_trail_fade.length = length;
+                    self.effects.cursor_trail_fade.length = length as usize;
                     self.effects.cursor_trail_fade.ms = fade_ms;
                     if let Some(renderer) = self.renderer.as_mut() {
                         renderer.set_cursor_trail_fade(enabled, length as usize, fade_ms);
@@ -1887,7 +1887,7 @@ impl RenderApp {
                 RenderCommand::SetScrollLineSpacing { enabled, max_spacing, duration_ms } => {
                     self.effects.scroll_line_spacing.enabled = enabled;
                     self.effects.scroll_line_spacing.max = max_spacing;
-                    self.effects.scroll_line_spacing.duration = std::time::Duration::from_millis(duration_ms as u64);
+                    self.effects.scroll_line_spacing.duration_ms = duration_ms;
                     if let Some(renderer) = self.renderer.as_mut() {
                         renderer.set_scroll_line_spacing(enabled, max_spacing, duration_ms);
                     }

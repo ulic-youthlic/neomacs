@@ -745,7 +745,7 @@ effect_config!(
     /// Configuration for the cursor trail fade effect.
     CursorTrailFadeConfig {
         enabled: bool = false,
-        length: u32 = 8,
+        length: usize = 8,
         ms: u32 = 300,
     }
 );
@@ -1261,7 +1261,7 @@ effect_config!(
     ScrollLineSpacingConfig {
         enabled: bool = false,
         max: f32 = 6.0,
-        duration: std::time::Duration = std::time::Duration::from_millis(200),
+        duration_ms: u32 = 200,
     }
 );
 

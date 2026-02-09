@@ -43,892 +43,102 @@ pub struct WgpuRenderer {
     height: u32,
     /// Display scale factor (physical pixels / logical pixels)
     scale_factor: f32,
-    /// Scroll bar thumb corner radius ratio (0.0-1.0)
-    scroll_bar_thumb_radius: f32,
-    /// Scroll bar track opacity (0.0-1.0)
-    scroll_bar_track_opacity: f32,
-    /// Scroll bar hover brightness multiplier
-    scroll_bar_hover_brightness: f32,
-    /// Indent guide rendering enabled
-    indent_guides_enabled: bool,
-    /// Indent guide color (linear RGBA)
-    indent_guide_color: (f32, f32, f32, f32),
-    /// Rainbow indent guide enabled (overrides single color when active)
-    indent_guide_rainbow_enabled: bool,
-    /// Rainbow indent guide colors (linear RGBA, cycling by depth)
-    indent_guide_rainbow_colors: Vec<(f32, f32, f32, f32)>,
-    /// Current line highlight enabled
-    line_highlight_enabled: bool,
-    /// Current line highlight color (linear RGBA)
-    line_highlight_color: (f32, f32, f32, f32),
-    /// Visible whitespace enabled
-    show_whitespace_enabled: bool,
-    /// Visible whitespace color (linear RGBA)
-    show_whitespace_color: (f32, f32, f32, f32),
-    /// Inactive window dimming enabled
-    inactive_dim_enabled: bool,
-    /// Inactive window dimming opacity
-    inactive_dim_opacity: f32,
+
+    // All visual effect configurations
+    pub effects: crate::effect_config::EffectsConfig,
     /// Per-window dim opacity for smooth fade transitions
     per_window_dim: std::collections::HashMap<i64, f32>,
     /// Last dim update time for smooth interpolation
     last_dim_tick: std::time::Instant,
     /// Flag: renderer needs continuous redraws (e.g. dim fade in progress)
     pub needs_continuous_redraw: bool,
-    /// Mode-line separator style (0=none, 1=line, 2=shadow, 3=gradient)
-    mode_line_separator_style: u32,
-    /// Mode-line separator color (linear RGB)
-    mode_line_separator_color: (f32, f32, f32),
-    /// Mode-line separator height in pixels
-    mode_line_separator_height: f32,
-    /// Cursor glow enabled
-    cursor_glow_enabled: bool,
-    /// Cursor glow color (linear RGB)
-    cursor_glow_color: (f32, f32, f32),
-    /// Cursor glow radius
-    cursor_glow_radius: f32,
-    /// Cursor glow peak opacity
-    cursor_glow_opacity: f32,
-    /// Cursor pulse enabled (sinusoidal glow modulation)
-    cursor_pulse_enabled: bool,
-    /// Cursor pulse speed in Hz
-    cursor_pulse_speed: f32,
-    /// Cursor pulse minimum opacity multiplier (0.0-1.0)
-    cursor_pulse_min_opacity: f32,
     /// Start time for pulse phase calculation
     cursor_pulse_start: std::time::Instant,
-    /// Focus mode enabled (dim outside current paragraph)
-    focus_mode_enabled: bool,
-    /// Focus mode dimming opacity
-    focus_mode_opacity: f32,
-    /// Minimap enabled
-    minimap_enabled: bool,
-    /// Minimap column width in logical pixels
-    minimap_width: f32,
-    /// Typing ripple effect enabled
-    typing_ripple_enabled: bool,
-    /// Max ripple radius in pixels
-    typing_ripple_max_radius: f32,
     /// Ripple duration in seconds
     typing_ripple_duration: f32,
     /// Active ripples: (center_x, center_y, spawn_instant)
     active_ripples: Vec<(f32, f32, std::time::Instant)>,
-    /// Search highlight pulse enabled
-    search_pulse_enabled: bool,
-    /// Face ID of the isearch face
-    search_pulse_face_id: u32,
     /// Pulse start time
     search_pulse_start: std::time::Instant,
-    /// Vignette effect
-    vignette_enabled: bool,
-    vignette_intensity: f32,
-    vignette_radius: f32,
-    /// Zen mode (distraction-free centered content)
-    zen_mode_enabled: bool,
-    zen_mode_content_width_pct: f32,
-    zen_mode_margin_opacity: f32,
-    /// Background pattern style (0=none, 1=dots, 2=grid, 3=crosshatch)
-    bg_pattern_style: u32,
-    /// Pattern spacing in pixels
-    bg_pattern_spacing: f32,
-    /// Pattern color (sRGB)
-    bg_pattern_color: (f32, f32, f32),
-    /// Pattern opacity
-    bg_pattern_opacity: f32,
-    /// Line insertion/deletion animation
-    line_animation_enabled: bool,
-    line_animation_duration_ms: u32,
     active_line_anims: Vec<LineAnimEntry>,
-    /// Header/mode-line shadow depth effect
-    header_shadow_enabled: bool,
-    header_shadow_intensity: f32,
-    header_shadow_size: f32,
-    /// Cursor color cycling (rainbow hue rotation)
-    cursor_color_cycle_enabled: bool,
-    cursor_color_cycle_speed: f32,
-    cursor_color_cycle_saturation: f32,
-    cursor_color_cycle_lightness: f32,
     cursor_color_cycle_start: std::time::Instant,
-    /// Window switch highlight fade
-    window_switch_fade_enabled: bool,
-    window_switch_fade_duration_ms: u32,
-    window_switch_fade_intensity: f32,
     /// Active window switch fades: (window_id, bounds, started, duration, intensity)
     active_window_fades: Vec<WindowFadeEntry>,
-    /// Breadcrumb/path bar overlay
-    breadcrumb_enabled: bool,
-    breadcrumb_opacity: f32,
-    /// Frosted glass effect on mode-lines
-    /// Smooth border color transition
-    border_transition_enabled: bool,
-    border_transition_active_color: (f32, f32, f32),
     border_transition_duration: std::time::Duration,
     /// Per-window border transition state: (window_id, is_becoming_active, start_time)
     border_transitions: Vec<(i64, bool, std::time::Instant)>,
     /// Previous selected window for border transition detection
     prev_border_selected: i64,
-    /// Buffer-local accent color strip
-    accent_strip_enabled: bool,
-    accent_strip_width: f32,
-    /// Cursor trail fade (afterimage)
-    cursor_trail_fade_enabled: bool,
-    cursor_trail_fade_length: usize,
     cursor_trail_fade_duration: std::time::Duration,
     cursor_trail_positions: Vec<(f32, f32, f32, f32, std::time::Instant)>,
     cursor_trail_last_pos: (f32, f32),
-    /// Cursor drop shadow
-    cursor_shadow_enabled: bool,
-    cursor_shadow_offset_x: f32,
-    cursor_shadow_offset_y: f32,
-    cursor_shadow_opacity: f32,
-    /// Animated focus ring
-    focus_ring_enabled: bool,
-    focus_ring_color: (f32, f32, f32),
-    focus_ring_opacity: f32,
-    focus_ring_dash_length: f32,
-    focus_ring_speed: f32,
     focus_ring_start: std::time::Instant,
-    /// Window background tint based on file type
-    window_mode_tint_enabled: bool,
-    window_mode_tint_opacity: f32,
-    /// Window watermark for empty buffers
-    window_watermark_enabled: bool,
-    window_watermark_opacity: f32,
-    window_watermark_threshold: u32,
-    /// Selection region glow
-    region_glow_enabled: bool,
-    region_glow_face_id: u32,
-    region_glow_radius: f32,
-    region_glow_opacity: f32,
     /// Idle screen dimming alpha (0.0 = no dim, >0 = overlay)
     idle_dim_alpha: f32,
-    /// Noise/film grain overlay
-    noise_grain_enabled: bool,
-    noise_grain_intensity: f32,
-    noise_grain_size: f32,
     noise_grain_frame: u32,
-    /// Window padding gradient (inner edge shading)
-    padding_gradient_enabled: bool,
-    padding_gradient_color: (f32, f32, f32),
-    padding_gradient_opacity: f32,
-    padding_gradient_width: f32,
-    frosted_glass_enabled: bool,
-    frosted_glass_opacity: f32,
-    frosted_glass_blur: f32,
-    /// Title fade animation
-    title_fade_enabled: bool,
-    title_fade_duration_ms: u32,
     /// Previous breadcrumb text per window (window_id -> file_name)
     prev_breadcrumb_text: std::collections::HashMap<i64, String>,
     /// Active title fades (window_id -> (old_text, new_text, start_time))
     active_title_fades: Vec<TitleFadeEntry>,
-    /// Active window border glow
-    window_glow_enabled: bool,
-    window_glow_color: (f32, f32, f32),
-    window_glow_radius: f32,
-    window_glow_intensity: f32,
-    /// Scroll progress indicator bar
-    scroll_progress_enabled: bool,
-    scroll_progress_height: f32,
-    scroll_progress_color: (f32, f32, f32),
-    scroll_progress_opacity: f32,
-    /// Inactive window color tint
-    inactive_tint_enabled: bool,
-    inactive_tint_color: (f32, f32, f32),
-    inactive_tint_opacity: f32,
-    /// Mode-line content transition
-    mode_line_transition_enabled: bool,
-    mode_line_transition_duration_ms: u32,
     /// Per-window mode-line content hash for change detection
     prev_mode_line_hashes: std::collections::HashMap<i64, u64>,
     /// Active mode-line transition fades
     active_mode_line_fades: Vec<ModeLineFadeEntry>,
-    /// Text fade-in animation
-    text_fade_in_enabled: bool,
-    text_fade_in_duration_ms: u32,
     /// Active text fade-in animations per window
     active_text_fades: Vec<TextFadeEntry>,
-    /// Scroll line spacing animation (accordion effect)
-    scroll_line_spacing_enabled: bool,
-    scroll_line_spacing_max: f32,
     scroll_line_spacing_duration_ms: u32,
     /// Active scroll line spacing animations: (window_id, bounds, direction, started)
     active_scroll_spacings: Vec<ScrollSpacingEntry>,
-    /// Cursor wake animation (pop/scale effect on blink-on)
-    cursor_wake_enabled: bool,
-    cursor_wake_duration_ms: u32,
-    cursor_wake_scale: f32,
     /// Timestamp of last cursor wake trigger
     cursor_wake_started: Option<std::time::Instant>,
-    /// Window content shadow/depth between split panes
-    window_content_shadow_enabled: bool,
-    window_content_shadow_size: f32,
-    window_content_shadow_opacity: f32,
-    /// Click halo effect
-    click_halo_enabled: bool,
-    click_halo_color: (f32, f32, f32),
-    click_halo_duration_ms: u32,
-    click_halo_max_radius: f32,
     click_halos: Vec<ClickHaloEntry>,
-    /// Window edge snap indicator
-    edge_snap_enabled: bool,
-    edge_snap_color: (f32, f32, f32),
-    edge_snap_duration_ms: u32,
     edge_snaps: Vec<EdgeSnapEntry>,
-    /// Cursor crosshair guide lines
-    cursor_crosshair_enabled: bool,
-    cursor_crosshair_color: (f32, f32, f32),
-    cursor_crosshair_opacity: f32,
-    /// Inactive window stained glass effect
-    stained_glass_enabled: bool,
-    stained_glass_opacity: f32,
-    stained_glass_saturation: f32,
-    /// Focus gradient border
-    focus_gradient_border_enabled: bool,
-    focus_gradient_border_top_color: (f32, f32, f32),
-    focus_gradient_border_bot_color: (f32, f32, f32),
-    focus_gradient_border_width: f32,
-    focus_gradient_border_opacity: f32,
-    /// Cursor magnetism effect
-    cursor_magnetism_enabled: bool,
-    cursor_magnetism_color: (f32, f32, f32),
-    cursor_magnetism_ring_count: u32,
-    cursor_magnetism_duration_ms: u32,
-    cursor_magnetism_opacity: f32,
     cursor_magnetism_entries: Vec<(f32, f32, std::time::Instant)>, // x, y, time
-    /// Window depth shadow layers
-    depth_shadow_enabled: bool,
-    depth_shadow_layers: u32,
-    depth_shadow_offset: f32,
-    depth_shadow_color: (f32, f32, f32),
-    depth_shadow_opacity: f32,
-    /// Mode-line gradient background
-    mode_line_gradient_enabled: bool,
-    mode_line_gradient_left_color: (f32, f32, f32),
-    mode_line_gradient_right_color: (f32, f32, f32),
-    mode_line_gradient_opacity: f32,
-    /// Window corner fold effect
-    corner_fold_enabled: bool,
-    corner_fold_size: f32,
-    corner_fold_color: (f32, f32, f32),
-    corner_fold_opacity: f32,
-    /// Frosted window border effect
-    frosted_border_enabled: bool,
-    frosted_border_width: f32,
-    frosted_border_opacity: f32,
-    frosted_border_color: (f32, f32, f32),
-    /// Line number pulse on cursor line
-    line_number_pulse_enabled: bool,
-    line_number_pulse_color: (f32, f32, f32),
-    line_number_pulse_intensity: f32,
-    line_number_pulse_cycle_ms: u32,
-    /// Window breathing border animation
-    breathing_border_enabled: bool,
-    breathing_border_color: (f32, f32, f32),
-    breathing_border_min_opacity: f32,
-    breathing_border_max_opacity: f32,
-    breathing_border_cycle_ms: u32,
-    /// Window scanline (CRT) effect
-    scanlines_enabled: bool,
-    scanlines_spacing: u32,
-    scanlines_opacity: f32,
-    scanlines_color: (f32, f32, f32),
-    /// Cursor comet tail effect
-    cursor_comet_enabled: bool,
-    cursor_comet_trail_length: u32,
-    cursor_comet_fade_ms: u32,
-    cursor_comet_color: (f32, f32, f32),
-    cursor_comet_opacity: f32,
     cursor_comet_positions: Vec<(f32, f32, f32, f32, std::time::Instant)>, // x, y, w, h, time
-    /// Cursor spotlight/radial gradient effect
-    cursor_spotlight_enabled: bool,
-    cursor_spotlight_radius: f32,
-    cursor_spotlight_intensity: f32,
-    cursor_spotlight_color: (f32, f32, f32),
-    /// Cursor particle trail effect
-    cursor_particles_enabled: bool,
-    cursor_particles_color: (f32, f32, f32),
-    cursor_particles_count: u32,
-    cursor_particles_lifetime_ms: u32,
-    cursor_particles_gravity: f32,
     cursor_particles: Vec<CursorParticle>,
     cursor_particles_prev_pos: Option<(f32, f32)>,
-    /// Per-window rounded border
-    window_border_radius_enabled: bool,
-    window_border_radius: f32,
-    window_border_width: f32,
-    window_border_color: (f32, f32, f32),
-    window_border_opacity: f32,
-    /// Typing heat map overlay
-    typing_heatmap_enabled: bool,
-    typing_heatmap_color: (f32, f32, f32),
-    typing_heatmap_fade_ms: u32,
-    typing_heatmap_opacity: f32,
     typing_heatmap_entries: Vec<HeatMapEntry>,
     typing_heatmap_prev_cursor: Option<(f32, f32)>,
-    /// Buffer modified border indicator
-    modified_indicator_enabled: bool,
-    modified_indicator_color: (f32, f32, f32),
-    modified_indicator_width: f32,
-    modified_indicator_opacity: f32,
-    /// Scroll velocity fade overlay
-    scroll_velocity_fade_enabled: bool,
-    scroll_velocity_fade_max_opacity: f32,
-    scroll_velocity_fade_ms: u32,
     scroll_velocity_fades: Vec<ScrollVelocityFadeEntry>,
-    /// Mini-buffer completion highlight glow
-    minibuffer_highlight_enabled: bool,
-    minibuffer_highlight_color: (f32, f32, f32),
-    minibuffer_highlight_opacity: f32,
-    /// Smooth window padding transition on resize
-    resize_padding_enabled: bool,
-    resize_padding_duration_ms: u32,
-    resize_padding_max: f32,
     resize_padding_started: Option<std::time::Instant>,
-    /// Cursor error pulse (brief color flash on bell)
-    cursor_error_pulse_enabled: bool,
-    cursor_error_pulse_color: (f32, f32, f32),
-    cursor_error_pulse_duration_ms: u32,
     cursor_error_pulse_started: Option<std::time::Instant>,
-    /// Line wrap indicator overlay
-    wrap_indicator_enabled: bool,
-    wrap_indicator_color: (f32, f32, f32),
-    wrap_indicator_opacity: f32,
-    /// Per-window scroll momentum indicator
-    scroll_momentum_enabled: bool,
-    scroll_momentum_fade_ms: u32,
-    scroll_momentum_width: f32,
     /// Active scroll momentum entries
     active_scroll_momentums: Vec<ScrollMomentumEntry>,
-    /// Matrix/digital rain effect
-    matrix_rain_enabled: bool,
-    matrix_rain_color: (f32, f32, f32),
-    matrix_rain_column_count: u32,
-    matrix_rain_speed: f32,
-    matrix_rain_opacity: f32,
     matrix_rain_columns: Vec<MatrixColumn>,
-    /// Cursor elastic snap animation
-    cursor_elastic_snap_enabled: bool,
-    cursor_elastic_snap_overshoot: f32,
-    cursor_elastic_snap_duration_ms: u32,
-    /// Window frost/ice border effect
-    frost_border_enabled: bool,
-    frost_border_color: (f32, f32, f32),
-    frost_border_width: f32,
-    frost_border_opacity: f32,
-    /// Cursor afterimage ghost effect
-    cursor_ghost_enabled: bool,
-    cursor_ghost_color: (f32, f32, f32),
-    cursor_ghost_count: u32,
-    cursor_ghost_fade_ms: u32,
-    cursor_ghost_drift: f32,
-    cursor_ghost_opacity: f32,
     cursor_ghost_entries: Vec<CursorGhostEntry>,
-    /// Heat distortion/shimmer effect
-    heat_distortion_enabled: bool,
-    heat_distortion_intensity: f32,
-    heat_distortion_speed: f32,
-    heat_distortion_edge_width: f32,
-    heat_distortion_opacity: f32,
-    /// Cursor lighthouse beam effect
-    cursor_lighthouse_enabled: bool,
-    cursor_lighthouse_color: (f32, f32, f32),
-    cursor_lighthouse_beam_width: f32,
-    cursor_lighthouse_rotation_speed: f32,
-    cursor_lighthouse_beam_length: f32,
-    cursor_lighthouse_opacity: f32,
-    /// Neon border effect
-    neon_border_enabled: bool,
-    neon_border_color: (f32, f32, f32),
-    neon_border_intensity: f32,
-    neon_border_flicker: f32,
-    neon_border_thickness: f32,
-    neon_border_opacity: f32,
-    /// Cursor sonar ping effect
-    cursor_sonar_ping_enabled: bool,
-    cursor_sonar_ping_color: (f32, f32, f32),
-    cursor_sonar_ping_ring_count: u32,
-    cursor_sonar_ping_max_radius: f32,
-    cursor_sonar_ping_duration_ms: u32,
-    cursor_sonar_ping_opacity: f32,
     cursor_sonar_ping_entries: Vec<SonarPingEntry>,
-    /// Lightning bolt effect
-    lightning_bolt_enabled: bool,
-    lightning_bolt_color: (f32, f32, f32),
-    lightning_bolt_frequency: f32,
-    lightning_bolt_intensity: f32,
-    lightning_bolt_opacity: f32,
     lightning_bolt_last: std::time::Instant,
     lightning_bolt_segments: Vec<(f32, f32, f32, f32)>, // (x1, y1, x2, y2)
     lightning_bolt_age: f32,
-    /// Cursor orbit particles
-    cursor_orbit_particles_enabled: bool,
-    cursor_orbit_particles_color: (f32, f32, f32),
-    cursor_orbit_particles_count: u32,
-    cursor_orbit_particles_radius: f32,
-    cursor_orbit_particles_speed: f32,
-    cursor_orbit_particles_opacity: f32,
-    /// Plasma border effect
-    plasma_border_enabled: bool,
-    plasma_border_color1: (f32, f32, f32),
-    plasma_border_color2: (f32, f32, f32),
-    plasma_border_width: f32,
-    plasma_border_speed: f32,
-    plasma_border_opacity: f32,
-    /// Cursor heartbeat pulse
-    cursor_heartbeat_enabled: bool,
-    cursor_heartbeat_color: (f32, f32, f32),
-    cursor_heartbeat_bpm: f32,
-    cursor_heartbeat_max_radius: f32,
-    cursor_heartbeat_opacity: f32,
-    /// Warp/distortion grid effect
-    warp_grid_enabled: bool,
-    warp_grid_color: (f32, f32, f32),
-    warp_grid_density: u32,
-    warp_grid_amplitude: f32,
-    warp_grid_speed: f32,
-    warp_grid_opacity: f32,
-    /// Cursor DNA helix trail
-    cursor_dna_helix_enabled: bool,
-    cursor_dna_helix_color1: (f32, f32, f32),
-    cursor_dna_helix_color2: (f32, f32, f32),
-    cursor_dna_helix_radius: f32,
-    cursor_dna_helix_speed: f32,
-    cursor_dna_helix_opacity: f32,
-    /// Prism/rainbow edge effect
-    prism_edge_enabled: bool,
-    prism_edge_width: f32,
-    prism_edge_speed: f32,
-    prism_edge_saturation: f32,
-    prism_edge_opacity: f32,
-    /// Cursor pendulum swing
-    cursor_pendulum_enabled: bool,
-    cursor_pendulum_color: (f32, f32, f32),
-    cursor_pendulum_arc_length: f32,
-    cursor_pendulum_damping: f32,
-    cursor_pendulum_opacity: f32,
     cursor_pendulum_last_x: f32,
     cursor_pendulum_last_y: f32,
     cursor_pendulum_swing_start: Option<std::time::Instant>,
-    /// Hex grid overlay
-    hex_grid_enabled: bool,
-    hex_grid_color: (f32, f32, f32),
-    hex_grid_cell_size: f32,
-    hex_grid_pulse_speed: f32,
-    hex_grid_opacity: f32,
-    /// Cursor sparkle burst
-    cursor_sparkle_burst_enabled: bool,
-    cursor_sparkle_burst_color: (f32, f32, f32),
-    cursor_sparkle_burst_count: u32,
-    cursor_sparkle_burst_radius: f32,
-    cursor_sparkle_burst_opacity: f32,
     cursor_sparkle_burst_entries: Vec<SparkleBurstEntry>,
-    /// Circuit board trace
-    circuit_trace_enabled: bool,
-    circuit_trace_color: (f32, f32, f32),
-    circuit_trace_width: f32,
-    circuit_trace_speed: f32,
-    circuit_trace_opacity: f32,
-    /// Cursor compass rose
-    cursor_compass_enabled: bool,
-    cursor_compass_color: (f32, f32, f32),
-    cursor_compass_size: f32,
-    cursor_compass_speed: f32,
-    cursor_compass_opacity: f32,
-    /// Topographic contour effect
-    topo_contour_enabled: bool,
-    topo_contour_color: (f32, f32, f32),
-    topo_contour_spacing: f32,
-    topo_contour_speed: f32,
-    topo_contour_opacity: f32,
-    /// Cursor metronome tick
-    cursor_metronome_enabled: bool,
-    cursor_metronome_color: (f32, f32, f32),
-    cursor_metronome_tick_height: f32,
-    cursor_metronome_fade_ms: u32,
-    cursor_metronome_opacity: f32,
     cursor_metronome_last_x: f32,
     cursor_metronome_last_y: f32,
     cursor_metronome_tick_start: Option<std::time::Instant>,
-    /// Constellation overlay
-    constellation_enabled: bool,
-    constellation_color: (f32, f32, f32),
-    constellation_star_count: u32,
-    constellation_connect_dist: f32,
-    constellation_twinkle_speed: f32,
-    constellation_opacity: f32,
-    /// Cursor radar sweep
-    cursor_radar_enabled: bool,
-    cursor_radar_color: (f32, f32, f32),
-    cursor_radar_radius: f32,
-    cursor_radar_speed: f32,
-    cursor_radar_opacity: f32,
-    /// Kaleidoscope overlay
-    kaleidoscope_enabled: bool,
-    kaleidoscope_color: (f32, f32, f32),
-    kaleidoscope_segments: u32,
-    kaleidoscope_speed: f32,
-    kaleidoscope_opacity: f32,
-    /// Cursor ripple ring
-    cursor_ripple_ring_enabled: bool,
-    cursor_ripple_ring_color: (f32, f32, f32),
-    cursor_ripple_ring_max_radius: f32,
-    cursor_ripple_ring_count: u32,
-    cursor_ripple_ring_speed: f32,
-    cursor_ripple_ring_opacity: f32,
     cursor_ripple_ring_start: Option<std::time::Instant>,
     cursor_ripple_ring_last_x: f32,
     cursor_ripple_ring_last_y: f32,
-    /// Noise field overlay
-    noise_field_enabled: bool,
-    noise_field_color: (f32, f32, f32),
-    noise_field_scale: f32,
-    noise_field_speed: f32,
-    noise_field_opacity: f32,
-    /// Cursor scope
-    cursor_scope_enabled: bool,
-    cursor_scope_color: (f32, f32, f32),
-    cursor_scope_thickness: f32,
-    cursor_scope_gap: f32,
-    cursor_scope_opacity: f32,
-    /// Spiral vortex overlay
-    spiral_vortex_enabled: bool,
-    spiral_vortex_color: (f32, f32, f32),
-    spiral_vortex_arms: u32,
-    spiral_vortex_speed: f32,
-    spiral_vortex_opacity: f32,
-    /// Cursor shockwave
-    cursor_shockwave_enabled: bool,
-    cursor_shockwave_color: (f32, f32, f32),
-    cursor_shockwave_radius: f32,
-    cursor_shockwave_decay: f32,
-    cursor_shockwave_opacity: f32,
     cursor_shockwave_start: Option<std::time::Instant>,
     cursor_shockwave_last_x: f32,
     cursor_shockwave_last_y: f32,
-    /// Diamond lattice overlay
-    diamond_lattice_enabled: bool,
-    diamond_lattice_color: (f32, f32, f32),
-    diamond_lattice_cell_size: f32,
-    diamond_lattice_shimmer_speed: f32,
-    diamond_lattice_opacity: f32,
-    /// Cursor gravity well
-    cursor_gravity_well_enabled: bool,
-    cursor_gravity_well_color: (f32, f32, f32),
-    cursor_gravity_well_field_radius: f32,
-    cursor_gravity_well_line_count: u32,
-    cursor_gravity_well_opacity: f32,
-    /// Wave interference overlay
-    wave_interference_enabled: bool,
-    wave_interference_color: (f32, f32, f32),
-    wave_interference_wavelength: f32,
-    wave_interference_source_count: u32,
-    wave_interference_speed: f32,
-    wave_interference_opacity: f32,
-    /// Cursor portal
-    cursor_portal_enabled: bool,
-    cursor_portal_color: (f32, f32, f32),
-    cursor_portal_radius: f32,
-    cursor_portal_speed: f32,
-    cursor_portal_opacity: f32,
-    /// Chevron pattern overlay
-    chevron_pattern_enabled: bool,
-    chevron_pattern_color: (f32, f32, f32),
-    chevron_pattern_spacing: f32,
-    chevron_pattern_speed: f32,
-    chevron_pattern_opacity: f32,
-    /// Cursor bubble
-    cursor_bubble_enabled: bool,
-    cursor_bubble_color: (f32, f32, f32),
-    cursor_bubble_count: u32,
-    cursor_bubble_rise_speed: f32,
-    cursor_bubble_opacity: f32,
     cursor_bubble_spawn_time: Option<std::time::Instant>,
     cursor_bubble_last_x: f32,
     cursor_bubble_last_y: f32,
-    /// Sunburst pattern
-    sunburst_pattern_enabled: bool,
-    sunburst_pattern_color: (f32, f32, f32),
-    sunburst_pattern_ray_count: u32,
-    sunburst_pattern_speed: f32,
-    sunburst_pattern_opacity: f32,
-    /// Cursor firework
-    cursor_firework_enabled: bool,
-    cursor_firework_color: (f32, f32, f32),
-    cursor_firework_particle_count: u32,
-    cursor_firework_burst_radius: f32,
-    cursor_firework_opacity: f32,
     cursor_firework_start: Option<std::time::Instant>,
     cursor_firework_last_x: f32,
     cursor_firework_last_y: f32,
-    /// Honeycomb dissolve
-    honeycomb_dissolve_enabled: bool,
-    honeycomb_dissolve_color: (f32, f32, f32),
-    honeycomb_dissolve_cell_size: f32,
-    honeycomb_dissolve_speed: f32,
-    honeycomb_dissolve_opacity: f32,
-    /// Cursor tornado
-    cursor_tornado_enabled: bool,
-    cursor_tornado_color: (f32, f32, f32),
-    cursor_tornado_radius: f32,
-    cursor_tornado_particle_count: u32,
-    cursor_tornado_opacity: f32,
-    /// Moiré pattern
-    moire_pattern_enabled: bool,
-    moire_pattern_color: (f32, f32, f32),
-    moire_pattern_line_spacing: f32,
-    moire_pattern_angle_offset: f32,
-    moire_pattern_speed: f32,
-    moire_pattern_opacity: f32,
-    /// Cursor lightning
-    cursor_lightning_enabled: bool,
-    cursor_lightning_color: (f32, f32, f32),
-    cursor_lightning_bolt_count: u32,
-    cursor_lightning_max_length: f32,
-    cursor_lightning_opacity: f32,
     cursor_lightning_start: Option<std::time::Instant>,
     cursor_lightning_last_x: f32,
     cursor_lightning_last_y: f32,
-    /// Dot matrix
-    dot_matrix_enabled: bool,
-    dot_matrix_color: (f32, f32, f32),
-    dot_matrix_spacing: f32,
-    dot_matrix_pulse_speed: f32,
-    dot_matrix_opacity: f32,
-    /// Cursor snowflake
-    cursor_snowflake_enabled: bool,
-    cursor_snowflake_color: (f32, f32, f32),
-    cursor_snowflake_count: u32,
-    cursor_snowflake_fall_speed: f32,
-    cursor_snowflake_opacity: f32,
     cursor_snowflake_start: Option<std::time::Instant>,
     cursor_snowflake_last_x: f32,
     cursor_snowflake_last_y: f32,
-    /// Concentric rings
-    concentric_rings_enabled: bool,
-    concentric_rings_color: (f32, f32, f32),
-    concentric_rings_spacing: f32,
-    concentric_rings_expansion_speed: f32,
-    concentric_rings_opacity: f32,
-    /// Cursor flame
-    cursor_flame_enabled: bool,
-    cursor_flame_color: (f32, f32, f32),
-    cursor_flame_particle_count: u32,
-    cursor_flame_height: f32,
-    cursor_flame_opacity: f32,
-    /// Zigzag pattern
-    zigzag_pattern_enabled: bool,
-    zigzag_pattern_color: (f32, f32, f32),
-    zigzag_pattern_amplitude: f32,
-    zigzag_pattern_frequency: f32,
-    zigzag_pattern_speed: f32,
-    zigzag_pattern_opacity: f32,
-    /// Cursor crystal
-    cursor_crystal_enabled: bool,
-    cursor_crystal_color: (f32, f32, f32),
-    cursor_crystal_facet_count: u32,
-    cursor_crystal_radius: f32,
-    cursor_crystal_opacity: f32,
-    /// Tessellation overlay
-    tessellation_enabled: bool,
-    tessellation_color: (f32, f32, f32),
-    tessellation_tile_size: f32,
-    tessellation_rotation: f32,
-    tessellation_opacity: f32,
-    /// Cursor water drop effect
-    cursor_water_drop_enabled: bool,
-    cursor_water_drop_color: (f32, f32, f32),
-    cursor_water_drop_ripple_count: u32,
-    cursor_water_drop_expand_speed: f32,
-    cursor_water_drop_opacity: f32,
-    /// Guilloche overlay
-    guilloche_enabled: bool,
-    guilloche_color: (f32, f32, f32),
-    guilloche_curve_count: u32,
-    guilloche_wave_freq: f32,
-    guilloche_opacity: f32,
-    /// Cursor pixel dust effect
-    cursor_pixel_dust_enabled: bool,
-    cursor_pixel_dust_color: (f32, f32, f32),
-    cursor_pixel_dust_count: u32,
-    cursor_pixel_dust_scatter_speed: f32,
-    cursor_pixel_dust_opacity: f32,
-    /// Celtic knot overlay
-    celtic_knot_enabled: bool,
-    celtic_knot_color: (f32, f32, f32),
-    celtic_knot_scale: f32,
-    celtic_knot_weave_speed: f32,
-    celtic_knot_opacity: f32,
-    /// Cursor candle flame effect
-    cursor_candle_flame_enabled: bool,
-    cursor_candle_flame_color: (f32, f32, f32),
-    cursor_candle_flame_height: u32,
-    cursor_candle_flame_flicker_speed: f32,
-    cursor_candle_flame_opacity: f32,
-    /// Argyle pattern overlay
-    argyle_pattern_enabled: bool,
-    argyle_pattern_color: (f32, f32, f32),
-    argyle_pattern_diamond_size: f32,
-    argyle_pattern_line_width: f32,
-    argyle_pattern_opacity: f32,
-    /// Cursor moth flame effect
-    cursor_moth_flame_enabled: bool,
-    cursor_moth_flame_color: (f32, f32, f32),
-    cursor_moth_flame_moth_count: u32,
-    cursor_moth_flame_orbit_speed: f32,
-    cursor_moth_flame_opacity: f32,
-    /// Basket weave overlay
-    basket_weave_enabled: bool,
-    basket_weave_color: (f32, f32, f32),
-    basket_weave_strip_width: f32,
-    basket_weave_strip_spacing: f32,
-    basket_weave_opacity: f32,
-    /// Cursor sparkler effect
-    cursor_sparkler_enabled: bool,
-    cursor_sparkler_color: (f32, f32, f32),
-    cursor_sparkler_spark_count: u32,
-    cursor_sparkler_burn_speed: f32,
-    cursor_sparkler_opacity: f32,
-    /// Fish scale overlay
-    fish_scale_enabled: bool,
-    fish_scale_color: (f32, f32, f32),
-    fish_scale_size: f32,
-    fish_scale_row_offset: f32,
-    fish_scale_opacity: f32,
-    /// Cursor plasma ball effect
-    cursor_plasma_ball_enabled: bool,
-    cursor_plasma_ball_color: (f32, f32, f32),
-    cursor_plasma_ball_tendril_count: u32,
-    cursor_plasma_ball_arc_speed: f32,
-    cursor_plasma_ball_opacity: f32,
-    /// Trefoil knot overlay
-    trefoil_knot_enabled: bool,
-    trefoil_knot_color: (f32, f32, f32),
-    trefoil_knot_size: f32,
-    trefoil_knot_rotation_speed: f32,
-    trefoil_knot_opacity: f32,
-    /// Cursor quill pen effect
-    cursor_quill_pen_enabled: bool,
-    cursor_quill_pen_color: (f32, f32, f32),
-    cursor_quill_pen_trail_length: u32,
-    cursor_quill_pen_ink_speed: f32,
-    cursor_quill_pen_opacity: f32,
-    /// Herringbone pattern overlay
-    herringbone_pattern_enabled: bool,
-    herringbone_pattern_color: (f32, f32, f32),
-    herringbone_pattern_tile_width: f32,
-    herringbone_pattern_tile_height: f32,
-    herringbone_pattern_opacity: f32,
-    /// Cursor aurora borealis effect
-    cursor_aurora_borealis_enabled: bool,
-    cursor_aurora_borealis_color: (f32, f32, f32),
-    cursor_aurora_borealis_band_count: u32,
-    cursor_aurora_borealis_shimmer_speed: f32,
-    cursor_aurora_borealis_opacity: f32,
-    /// Target reticle overlay
-    target_reticle_enabled: bool,
-    target_reticle_color: (f32, f32, f32),
-    target_reticle_ring_count: u32,
-    target_reticle_pulse_speed: f32,
-    target_reticle_opacity: f32,
-    /// Cursor feather effect
-    cursor_feather_enabled: bool,
-    cursor_feather_color: (f32, f32, f32),
-    cursor_feather_count: u32,
-    cursor_feather_drift_speed: f32,
-    cursor_feather_opacity: f32,
-    /// Plaid pattern overlay
-    plaid_pattern_enabled: bool,
-    plaid_pattern_color: (f32, f32, f32),
-    plaid_pattern_band_width: f32,
-    plaid_pattern_band_spacing: f32,
-    plaid_pattern_opacity: f32,
-    /// Cursor stardust effect
-    cursor_stardust_enabled: bool,
-    cursor_stardust_color: (f32, f32, f32),
-    cursor_stardust_particle_count: u32,
-    cursor_stardust_fall_speed: f32,
-    cursor_stardust_opacity: f32,
-    /// Brick wall overlay
-    brick_wall_enabled: bool,
-    brick_wall_color: (f32, f32, f32),
-    brick_wall_width: f32,
-    brick_wall_height: f32,
-    brick_wall_opacity: f32,
-    /// Cursor compass needle effect
-    cursor_compass_needle_enabled: bool,
-    cursor_compass_needle_color: (f32, f32, f32),
-    cursor_compass_needle_length: f32,
-    cursor_compass_needle_spin_speed: f32,
-    cursor_compass_needle_opacity: f32,
-    /// Sine wave overlay
-    sine_wave_enabled: bool,
-    sine_wave_color: (f32, f32, f32),
-    sine_wave_amplitude: f32,
-    sine_wave_wavelength: f32,
-    sine_wave_speed: f32,
-    sine_wave_opacity: f32,
-    /// Cursor galaxy effect
-    cursor_galaxy_enabled: bool,
-    cursor_galaxy_color: (f32, f32, f32),
-    cursor_galaxy_star_count: u32,
-    cursor_galaxy_radius: f32,
-    cursor_galaxy_opacity: f32,
-    /// Rotating gear overlay
-    rotating_gear_enabled: bool,
-    rotating_gear_color: (f32, f32, f32),
-    rotating_gear_size: f32,
-    rotating_gear_speed: f32,
-    rotating_gear_opacity: f32,
-    /// Cursor prism effect
-    cursor_prism_enabled: bool,
-    cursor_prism_color: (f32, f32, f32),
-    cursor_prism_ray_count: u32,
-    cursor_prism_spread: f32,
-    cursor_prism_opacity: f32,
-    /// Crosshatch pattern overlay
-    crosshatch_pattern_enabled: bool,
-    crosshatch_pattern_color: (f32, f32, f32),
-    crosshatch_pattern_line_spacing: f32,
-    crosshatch_pattern_angle: f32,
-    crosshatch_pattern_speed: f32,
-    crosshatch_pattern_opacity: f32,
-    /// Cursor moth effect
-    cursor_moth_enabled: bool,
-    cursor_moth_color: (f32, f32, f32),
-    cursor_moth_count: u32,
-    cursor_moth_wing_size: f32,
-    cursor_moth_opacity: f32,
-    /// Window edge glow on scroll boundaries
-    edge_glow_enabled: bool,
-    edge_glow_color: (f32, f32, f32),
-    edge_glow_height: f32,
-    edge_glow_opacity: f32,
-    edge_glow_fade_ms: u32,
     edge_glow_entries: Vec<EdgeGlowEntry>,
-    /// Window rain/drip effect
-    rain_effect_enabled: bool,
-    rain_effect_color: (f32, f32, f32),
-    rain_effect_drop_count: u32,
-    rain_effect_speed: f32,
-    rain_effect_opacity: f32,
     rain_drops: Vec<RainDrop>,
     rain_last_spawn: std::time::Instant,
-    /// Cursor ripple wave effect
-    cursor_ripple_wave_enabled: bool,
-    cursor_ripple_wave_color: (f32, f32, f32),
-    cursor_ripple_wave_ring_count: u32,
-    cursor_ripple_wave_max_radius: f32,
-    cursor_ripple_wave_duration_ms: u32,
-    cursor_ripple_wave_opacity: f32,
     cursor_ripple_waves: Vec<RippleWaveEntry>,
-    /// Window aurora/northern lights effect
-    aurora_enabled: bool,
-    aurora_color1: (f32, f32, f32),
-    aurora_color2: (f32, f32, f32),
-    aurora_height: f32,
-    aurora_speed: f32,
-    aurora_opacity: f32,
     aurora_start: std::time::Instant,
 }
 
@@ -1573,776 +783,151 @@ impl WgpuRenderer {
             width,
             height,
             scale_factor,
-            scroll_bar_thumb_radius: 0.4,
-            scroll_bar_track_opacity: 0.6,
-            scroll_bar_hover_brightness: 1.4,
-            indent_guides_enabled: false,
-            indent_guide_color: (0.3, 0.3, 0.3, 0.3),
-            indent_guide_rainbow_enabled: false,
-            indent_guide_rainbow_colors: Vec::new(),
-            line_highlight_enabled: false,
-            line_highlight_color: (0.2, 0.2, 0.3, 0.15),
-            show_whitespace_enabled: false,
-            show_whitespace_color: (0.4, 0.4, 0.4, 0.3),
-            inactive_dim_enabled: false,
-            inactive_dim_opacity: 0.15,
+            effects: crate::effect_config::EffectsConfig::default(),
             per_window_dim: std::collections::HashMap::new(),
             last_dim_tick: std::time::Instant::now(),
             needs_continuous_redraw: false,
-            mode_line_separator_style: 0,
-            mode_line_separator_color: (0.0, 0.0, 0.0),
-            mode_line_separator_height: 3.0,
-            cursor_glow_enabled: false,
-            cursor_glow_color: (0.4, 0.6, 1.0),
-            cursor_glow_radius: 30.0,
-            cursor_glow_opacity: 0.15,
-            cursor_pulse_enabled: false,
-            cursor_pulse_speed: 1.0,
-            cursor_pulse_min_opacity: 0.3,
             cursor_pulse_start: std::time::Instant::now(),
-            focus_mode_enabled: false,
-            focus_mode_opacity: 0.4,
-            minimap_enabled: false,
-            minimap_width: 80.0,
-            typing_ripple_enabled: false,
-            typing_ripple_max_radius: 40.0,
             typing_ripple_duration: 0.3,
             active_ripples: Vec::new(),
-            search_pulse_enabled: false,
-            search_pulse_face_id: 0,
             search_pulse_start: std::time::Instant::now(),
-            vignette_enabled: false,
-            vignette_intensity: 0.3,
-            vignette_radius: 50.0,
-            zen_mode_enabled: false,
-            zen_mode_content_width_pct: 60.0,
-            zen_mode_margin_opacity: 0.3,
-            bg_pattern_style: 0,
-            bg_pattern_spacing: 20.0,
-            bg_pattern_color: (0.5, 0.5, 0.5),
-            bg_pattern_opacity: 0.05,
-            line_animation_enabled: false,
-            line_animation_duration_ms: 150,
             active_line_anims: Vec::new(),
-            header_shadow_enabled: false,
-            header_shadow_intensity: 0.3,
-            header_shadow_size: 6.0,
-            cursor_color_cycle_enabled: false,
-            cursor_color_cycle_speed: 0.5,
-            cursor_color_cycle_saturation: 0.8,
-            cursor_color_cycle_lightness: 0.6,
             cursor_color_cycle_start: std::time::Instant::now(),
-            window_switch_fade_enabled: false,
-            window_switch_fade_duration_ms: 200,
-            window_switch_fade_intensity: 0.15,
             active_window_fades: Vec::new(),
-            breadcrumb_enabled: false,
-            breadcrumb_opacity: 0.7,
-            border_transition_enabled: false,
-            border_transition_active_color: (0.4, 0.6, 1.0),
             border_transition_duration: std::time::Duration::from_millis(200),
             border_transitions: Vec::new(),
             prev_border_selected: 0,
-            accent_strip_enabled: false,
-            accent_strip_width: 3.0,
-            cursor_trail_fade_enabled: false,
-            cursor_trail_fade_length: 8,
             cursor_trail_fade_duration: std::time::Duration::from_millis(300),
             cursor_trail_positions: Vec::new(),
             cursor_trail_last_pos: (0.0, 0.0),
-            cursor_shadow_enabled: false,
-            cursor_shadow_offset_x: 2.0,
-            cursor_shadow_offset_y: 2.0,
-            cursor_shadow_opacity: 0.3,
-            focus_ring_enabled: false,
-            focus_ring_color: (0.4, 0.6, 1.0),
-            focus_ring_opacity: 0.5,
-            focus_ring_dash_length: 8.0,
-            focus_ring_speed: 40.0,
             focus_ring_start: std::time::Instant::now(),
-            window_mode_tint_enabled: false,
-            window_mode_tint_opacity: 0.03,
-            window_watermark_enabled: false,
-            window_watermark_opacity: 0.08,
-            window_watermark_threshold: 10,
-            region_glow_enabled: false,
-            region_glow_face_id: 0,
-            region_glow_radius: 6.0,
-            region_glow_opacity: 0.3,
             idle_dim_alpha: 0.0,
-            noise_grain_enabled: false,
-            noise_grain_intensity: 0.03,
-            noise_grain_size: 2.0,
             noise_grain_frame: 0,
-            padding_gradient_enabled: false,
-            padding_gradient_color: (0.0, 0.0, 0.0),
-            padding_gradient_opacity: 0.15,
-            padding_gradient_width: 8.0,
-            frosted_glass_enabled: false,
-            frosted_glass_opacity: 0.3,
-            frosted_glass_blur: 4.0,
-            title_fade_enabled: false,
-            title_fade_duration_ms: 300,
             prev_breadcrumb_text: std::collections::HashMap::new(),
             active_title_fades: Vec::new(),
-            window_glow_enabled: false,
-            window_glow_color: (0.4, 0.6, 1.0),
-            window_glow_radius: 8.0,
-            window_glow_intensity: 0.4,
-            scroll_progress_enabled: false,
-            scroll_progress_height: 2.0,
-            scroll_progress_color: (0.4, 0.6, 1.0),
-            scroll_progress_opacity: 0.8,
-            inactive_tint_enabled: false,
-            inactive_tint_color: (0.2, 0.1, 0.0),
-            inactive_tint_opacity: 0.1,
-            mode_line_transition_enabled: false,
-            mode_line_transition_duration_ms: 200,
             prev_mode_line_hashes: std::collections::HashMap::new(),
             active_mode_line_fades: Vec::new(),
-            text_fade_in_enabled: false,
-            text_fade_in_duration_ms: 150,
             active_text_fades: Vec::new(),
-            scroll_line_spacing_enabled: false,
-            scroll_line_spacing_max: 6.0,
             scroll_line_spacing_duration_ms: 200,
             active_scroll_spacings: Vec::new(),
-            cursor_wake_enabled: false,
-            cursor_wake_duration_ms: 120,
-            cursor_wake_scale: 1.3,
             cursor_wake_started: None,
-            window_content_shadow_enabled: false,
-            window_content_shadow_size: 6.0,
-            window_content_shadow_opacity: 0.15,
-            click_halo_enabled: false,
-            click_halo_color: (0.4, 0.6, 1.0),
-            click_halo_duration_ms: 300,
-            click_halo_max_radius: 30.0,
             click_halos: Vec::new(),
-            edge_snap_enabled: false,
-            edge_snap_color: (1.0, 0.5, 0.2),
-            edge_snap_duration_ms: 200,
             edge_snaps: Vec::new(),
-            cursor_crosshair_enabled: false,
-            cursor_crosshair_color: (0.5, 0.5, 0.5),
-            cursor_crosshair_opacity: 0.15,
-            stained_glass_enabled: false,
-            stained_glass_opacity: 0.08,
-            stained_glass_saturation: 0.6,
-            focus_gradient_border_enabled: false,
-            focus_gradient_border_top_color: (0.3, 0.6, 1.0),
-            focus_gradient_border_bot_color: (0.6, 0.3, 1.0),
-            focus_gradient_border_width: 2.0,
-            focus_gradient_border_opacity: 0.6,
-            cursor_magnetism_enabled: false,
-            cursor_magnetism_color: (0.4, 0.7, 1.0),
-            cursor_magnetism_ring_count: 3,
-            cursor_magnetism_duration_ms: 300,
-            cursor_magnetism_opacity: 0.5,
             cursor_magnetism_entries: Vec::new(),
-            depth_shadow_enabled: false,
-            depth_shadow_layers: 3,
-            depth_shadow_offset: 2.0,
-            depth_shadow_color: (0.0, 0.0, 0.0),
-            depth_shadow_opacity: 0.15,
-            mode_line_gradient_enabled: false,
-            mode_line_gradient_left_color: (0.2, 0.3, 0.5),
-            mode_line_gradient_right_color: (0.5, 0.3, 0.2),
-            mode_line_gradient_opacity: 0.3,
-            corner_fold_enabled: false,
-            corner_fold_size: 20.0,
-            corner_fold_color: (0.6, 0.4, 0.2),
-            corner_fold_opacity: 0.5,
-            frosted_border_enabled: false,
-            frosted_border_width: 4.0,
-            frosted_border_opacity: 0.15,
-            frosted_border_color: (1.0, 1.0, 1.0),
-            line_number_pulse_enabled: false,
-            line_number_pulse_color: (0.4, 0.6, 1.0),
-            line_number_pulse_intensity: 0.3,
-            line_number_pulse_cycle_ms: 2000,
-            breathing_border_enabled: false,
-            breathing_border_color: (0.5, 0.5, 0.5),
-            breathing_border_min_opacity: 0.05,
-            breathing_border_max_opacity: 0.3,
-            breathing_border_cycle_ms: 3000,
-            scanlines_enabled: false,
-            scanlines_spacing: 2,
-            scanlines_opacity: 0.08,
-            scanlines_color: (0.0, 0.0, 0.0),
-            cursor_comet_enabled: false,
-            cursor_comet_trail_length: 5,
-            cursor_comet_fade_ms: 300,
-            cursor_comet_color: (0.5, 0.7, 1.0),
-            cursor_comet_opacity: 0.6,
             cursor_comet_positions: Vec::new(),
-            cursor_spotlight_enabled: false,
-            cursor_spotlight_radius: 200.0,
-            cursor_spotlight_intensity: 0.15,
-            cursor_spotlight_color: (1.0, 1.0, 0.9),
-            cursor_particles_enabled: false,
-            cursor_particles_color: (1.0, 0.6, 0.2),
-            cursor_particles_count: 6,
-            cursor_particles_lifetime_ms: 800,
-            cursor_particles_gravity: 120.0,
             cursor_particles: Vec::new(),
             cursor_particles_prev_pos: None,
-            window_border_radius_enabled: false,
-            window_border_radius: 8.0,
-            window_border_width: 1.0,
-            window_border_color: (0.5, 0.5, 0.5),
-            window_border_opacity: 0.3,
-            typing_heatmap_enabled: false,
-            typing_heatmap_color: (1.0, 0.4, 0.1),
-            typing_heatmap_fade_ms: 2000,
-            typing_heatmap_opacity: 0.15,
             typing_heatmap_entries: Vec::new(),
             typing_heatmap_prev_cursor: None,
-            modified_indicator_enabled: false,
-            modified_indicator_color: (1.0, 0.6, 0.2),
-            modified_indicator_width: 3.0,
-            modified_indicator_opacity: 0.8,
-            scroll_velocity_fade_enabled: false,
-            scroll_velocity_fade_max_opacity: 0.15,
-            scroll_velocity_fade_ms: 300,
             scroll_velocity_fades: Vec::new(),
-            minibuffer_highlight_enabled: false,
-            minibuffer_highlight_color: (0.4, 0.6, 1.0),
-            minibuffer_highlight_opacity: 0.25,
-            resize_padding_enabled: false,
-            resize_padding_duration_ms: 200,
-            resize_padding_max: 12.0,
             resize_padding_started: None,
-            cursor_error_pulse_enabled: false,
-            cursor_error_pulse_color: (1.0, 0.2, 0.2),
-            cursor_error_pulse_duration_ms: 250,
             cursor_error_pulse_started: None,
-            wrap_indicator_enabled: false,
-            wrap_indicator_color: (0.5, 0.6, 0.8),
-            wrap_indicator_opacity: 0.3,
-            scroll_momentum_enabled: false,
-            scroll_momentum_fade_ms: 300,
-            scroll_momentum_width: 3.0,
             active_scroll_momentums: Vec::new(),
-            matrix_rain_enabled: false,
-            matrix_rain_color: (0.0, 0.8, 0.2),
-            matrix_rain_column_count: 40,
-            matrix_rain_speed: 150.0,
-            matrix_rain_opacity: 0.12,
             matrix_rain_columns: Vec::new(),
-            cursor_elastic_snap_enabled: false,
-            cursor_elastic_snap_overshoot: 0.15,
-            cursor_elastic_snap_duration_ms: 200,
-            frost_border_enabled: false,
-            frost_border_color: (0.7, 0.85, 1.0),
-            frost_border_width: 6.0,
-            frost_border_opacity: 0.2,
-            cursor_ghost_enabled: false,
-            cursor_ghost_color: (0.5, 0.5, 1.0),
-            cursor_ghost_count: 4,
-            cursor_ghost_fade_ms: 600,
-            cursor_ghost_drift: 20.0,
-            cursor_ghost_opacity: 0.4,
             cursor_ghost_entries: Vec::new(),
-            heat_distortion_enabled: false,
-            heat_distortion_intensity: 0.3,
-            heat_distortion_speed: 1.0,
-            heat_distortion_edge_width: 30.0,
-            heat_distortion_opacity: 0.15,
-            cursor_lighthouse_enabled: false,
-            cursor_lighthouse_color: (1.0, 0.9, 0.3),
-            cursor_lighthouse_beam_width: 15.0,
-            cursor_lighthouse_rotation_speed: 0.5,
-            cursor_lighthouse_beam_length: 200.0,
-            cursor_lighthouse_opacity: 0.12,
-            neon_border_enabled: false,
-            neon_border_color: (0.0, 1.0, 0.8),
-            neon_border_intensity: 0.6,
-            neon_border_flicker: 0.1,
-            neon_border_thickness: 3.0,
-            neon_border_opacity: 0.4,
-            cursor_sonar_ping_enabled: false,
-            cursor_sonar_ping_color: (0.3, 0.7, 1.0),
-            cursor_sonar_ping_ring_count: 3,
-            cursor_sonar_ping_max_radius: 60.0,
-            cursor_sonar_ping_duration_ms: 600,
-            cursor_sonar_ping_opacity: 0.25,
             cursor_sonar_ping_entries: Vec::new(),
-            lightning_bolt_enabled: false,
-            lightning_bolt_color: (0.7, 0.8, 1.0),
-            lightning_bolt_frequency: 1.0,
-            lightning_bolt_intensity: 0.8,
-            lightning_bolt_opacity: 0.3,
             lightning_bolt_last: std::time::Instant::now(),
             lightning_bolt_segments: Vec::new(),
             lightning_bolt_age: 0.0,
-            cursor_orbit_particles_enabled: false,
-            cursor_orbit_particles_color: (1.0, 0.8, 0.3),
-            cursor_orbit_particles_count: 6,
-            cursor_orbit_particles_radius: 25.0,
-            cursor_orbit_particles_speed: 1.5,
-            cursor_orbit_particles_opacity: 0.35,
-            plasma_border_enabled: false,
-            plasma_border_color1: (1.0, 0.2, 0.5),
-            plasma_border_color2: (0.2, 0.5, 1.0),
-            plasma_border_width: 4.0,
-            plasma_border_speed: 1.0,
-            plasma_border_opacity: 0.3,
-            cursor_heartbeat_enabled: false,
-            cursor_heartbeat_color: (1.0, 0.3, 0.3),
-            cursor_heartbeat_bpm: 72.0,
-            cursor_heartbeat_max_radius: 50.0,
-            cursor_heartbeat_opacity: 0.2,
-            warp_grid_enabled: false,
-            warp_grid_color: (0.3, 0.5, 0.9),
-            warp_grid_density: 20,
-            warp_grid_amplitude: 5.0,
-            warp_grid_speed: 1.0,
-            warp_grid_opacity: 0.15,
-            cursor_dna_helix_enabled: false,
-            cursor_dna_helix_color1: (0.3, 0.9, 0.5),
-            cursor_dna_helix_color2: (0.5, 0.3, 0.9),
-            cursor_dna_helix_radius: 12.0,
-            cursor_dna_helix_speed: 1.5,
-            cursor_dna_helix_opacity: 0.3,
-            prism_edge_enabled: false,
-            prism_edge_width: 6.0,
-            prism_edge_speed: 1.0,
-            prism_edge_saturation: 0.8,
-            prism_edge_opacity: 0.25,
-            cursor_pendulum_enabled: false,
-            cursor_pendulum_color: (0.9, 0.7, 0.3),
-            cursor_pendulum_arc_length: 40.0,
-            cursor_pendulum_damping: 0.5,
-            cursor_pendulum_opacity: 0.3,
             cursor_pendulum_last_x: 0.0,
             cursor_pendulum_last_y: 0.0,
             cursor_pendulum_swing_start: None,
-            hex_grid_enabled: false,
-            hex_grid_color: (0.3, 0.6, 0.9),
-            hex_grid_cell_size: 40.0,
-            hex_grid_pulse_speed: 1.0,
-            hex_grid_opacity: 0.1,
-            cursor_sparkle_burst_enabled: false,
-            cursor_sparkle_burst_color: (1.0, 0.85, 0.3),
-            cursor_sparkle_burst_count: 12,
-            cursor_sparkle_burst_radius: 30.0,
-            cursor_sparkle_burst_opacity: 0.4,
             cursor_sparkle_burst_entries: Vec::new(),
-            circuit_trace_enabled: false,
-            circuit_trace_color: (0.2, 0.8, 0.4),
-            circuit_trace_width: 2.0,
-            circuit_trace_speed: 1.0,
-            circuit_trace_opacity: 0.2,
-            cursor_compass_enabled: false,
-            cursor_compass_color: (0.9, 0.6, 0.2),
-            cursor_compass_size: 20.0,
-            cursor_compass_speed: 1.0,
-            cursor_compass_opacity: 0.25,
-            topo_contour_enabled: false,
-            topo_contour_color: (0.4, 0.7, 0.5),
-            topo_contour_spacing: 30.0,
-            topo_contour_speed: 1.0,
-            topo_contour_opacity: 0.1,
-            cursor_metronome_enabled: false,
-            cursor_metronome_color: (0.9, 0.5, 0.2),
-            cursor_metronome_tick_height: 20.0,
-            cursor_metronome_fade_ms: 300,
-            cursor_metronome_opacity: 0.4,
             cursor_metronome_last_x: 0.0,
             cursor_metronome_last_y: 0.0,
             cursor_metronome_tick_start: None,
-            constellation_enabled: false,
-            constellation_color: (0.7, 0.8, 1.0),
-            constellation_star_count: 50,
-            constellation_connect_dist: 80.0,
-            constellation_twinkle_speed: 1.0,
-            constellation_opacity: 0.15,
-            cursor_radar_enabled: false,
-            cursor_radar_color: (0.2, 0.9, 0.4),
-            cursor_radar_radius: 40.0,
-            cursor_radar_speed: 1.5,
-            cursor_radar_opacity: 0.2,
-            kaleidoscope_enabled: false,
-            kaleidoscope_color: (0.6, 0.3, 0.9),
-            kaleidoscope_segments: 6,
-            kaleidoscope_speed: 0.5,
-            kaleidoscope_opacity: 0.1,
-            cursor_ripple_ring_enabled: false,
-            cursor_ripple_ring_color: (0.3, 0.8, 1.0),
-            cursor_ripple_ring_max_radius: 60.0,
-            cursor_ripple_ring_count: 3,
-            cursor_ripple_ring_speed: 2.0,
-            cursor_ripple_ring_opacity: 0.25,
             cursor_ripple_ring_start: None,
             cursor_ripple_ring_last_x: 0.0,
             cursor_ripple_ring_last_y: 0.0,
-            noise_field_enabled: false,
-            noise_field_color: (0.5, 0.7, 0.3),
-            noise_field_scale: 50.0,
-            noise_field_speed: 0.5,
-            noise_field_opacity: 0.08,
-            cursor_scope_enabled: false,
-            cursor_scope_color: (1.0, 0.8, 0.2),
-            cursor_scope_thickness: 1.0,
-            cursor_scope_gap: 10.0,
-            cursor_scope_opacity: 0.3,
-            spiral_vortex_enabled: false,
-            spiral_vortex_color: (0.4, 0.2, 0.8),
-            spiral_vortex_arms: 4,
-            spiral_vortex_speed: 0.5,
-            spiral_vortex_opacity: 0.1,
-            cursor_shockwave_enabled: false,
-            cursor_shockwave_color: (1.0, 0.6, 0.2),
-            cursor_shockwave_radius: 80.0,
-            cursor_shockwave_decay: 2.0,
-            cursor_shockwave_opacity: 0.3,
             cursor_shockwave_start: None,
             cursor_shockwave_last_x: 0.0,
             cursor_shockwave_last_y: 0.0,
-            diamond_lattice_enabled: false,
-            diamond_lattice_color: (0.7, 0.5, 0.9),
-            diamond_lattice_cell_size: 30.0,
-            diamond_lattice_shimmer_speed: 0.8,
-            diamond_lattice_opacity: 0.08,
-            cursor_gravity_well_enabled: false,
-            cursor_gravity_well_color: (0.3, 0.6, 1.0),
-            cursor_gravity_well_field_radius: 80.0,
-            cursor_gravity_well_line_count: 8,
-            cursor_gravity_well_opacity: 0.2,
-            wave_interference_enabled: false,
-            wave_interference_color: (0.3, 0.5, 0.9),
-            wave_interference_wavelength: 30.0,
-            wave_interference_source_count: 3,
-            wave_interference_speed: 1.0,
-            wave_interference_opacity: 0.08,
-            cursor_portal_enabled: false,
-            cursor_portal_color: (0.6, 0.2, 0.9),
-            cursor_portal_radius: 30.0,
-            cursor_portal_speed: 2.0,
-            cursor_portal_opacity: 0.25,
-            chevron_pattern_enabled: false,
-            chevron_pattern_color: (0.4, 0.7, 0.5),
-            chevron_pattern_spacing: 40.0,
-            chevron_pattern_speed: 0.5,
-            chevron_pattern_opacity: 0.06,
-            cursor_bubble_enabled: false,
-            cursor_bubble_color: (0.4, 0.8, 1.0),
-            cursor_bubble_count: 6,
-            cursor_bubble_rise_speed: 80.0,
-            cursor_bubble_opacity: 0.2,
             cursor_bubble_spawn_time: None,
             cursor_bubble_last_x: 0.0,
             cursor_bubble_last_y: 0.0,
-            sunburst_pattern_enabled: false,
-            sunburst_pattern_color: (1.0, 0.8, 0.3),
-            sunburst_pattern_ray_count: 12,
-            sunburst_pattern_speed: 0.5,
-            sunburst_pattern_opacity: 0.08,
-            cursor_firework_enabled: false,
-            cursor_firework_color: (1.0, 0.6, 0.2),
-            cursor_firework_particle_count: 16,
-            cursor_firework_burst_radius: 60.0,
-            cursor_firework_opacity: 0.3,
             cursor_firework_start: None,
             cursor_firework_last_x: 0.0,
             cursor_firework_last_y: 0.0,
-            honeycomb_dissolve_enabled: false,
-            honeycomb_dissolve_color: (0.8, 0.6, 0.2),
-            honeycomb_dissolve_cell_size: 30.0,
-            honeycomb_dissolve_speed: 0.8,
-            honeycomb_dissolve_opacity: 0.08,
-            cursor_tornado_enabled: false,
-            cursor_tornado_color: (0.5, 0.7, 1.0),
-            cursor_tornado_radius: 40.0,
-            cursor_tornado_particle_count: 12,
-            cursor_tornado_opacity: 0.25,
-            moire_pattern_enabled: false,
-            moire_pattern_color: (0.5, 0.5, 0.8),
-            moire_pattern_line_spacing: 8.0,
-            moire_pattern_angle_offset: 5.0,
-            moire_pattern_speed: 0.3,
-            moire_pattern_opacity: 0.06,
-            cursor_lightning_enabled: false,
-            cursor_lightning_color: (0.6, 0.8, 1.0),
-            cursor_lightning_bolt_count: 4,
-            cursor_lightning_max_length: 50.0,
-            cursor_lightning_opacity: 0.4,
             cursor_lightning_start: None,
             cursor_lightning_last_x: 0.0,
             cursor_lightning_last_y: 0.0,
-            dot_matrix_enabled: false,
-            dot_matrix_color: (0.3, 1.0, 0.3),
-            dot_matrix_spacing: 12.0,
-            dot_matrix_pulse_speed: 1.0,
-            dot_matrix_opacity: 0.06,
-            cursor_snowflake_enabled: false,
-            cursor_snowflake_color: (0.8, 0.9, 1.0),
-            cursor_snowflake_count: 8,
-            cursor_snowflake_fall_speed: 30.0,
-            cursor_snowflake_opacity: 0.3,
             cursor_snowflake_start: None,
             cursor_snowflake_last_x: 0.0,
             cursor_snowflake_last_y: 0.0,
-            concentric_rings_enabled: false,
-            concentric_rings_color: (0.4, 0.6, 1.0),
-            concentric_rings_spacing: 30.0,
-            concentric_rings_expansion_speed: 1.0,
-            concentric_rings_opacity: 0.06,
-            cursor_flame_enabled: false,
-            cursor_flame_color: (1.0, 0.5, 0.1),
-            cursor_flame_particle_count: 10,
-            cursor_flame_height: 40.0,
-            cursor_flame_opacity: 0.3,
-            zigzag_pattern_enabled: false,
-            zigzag_pattern_color: (0.6, 0.4, 1.0),
-            zigzag_pattern_amplitude: 15.0,
-            zigzag_pattern_frequency: 0.1,
-            zigzag_pattern_speed: 1.0,
-            zigzag_pattern_opacity: 0.06,
-            cursor_crystal_enabled: false,
-            cursor_crystal_color: (0.7, 0.9, 1.0),
-            cursor_crystal_facet_count: 6,
-            cursor_crystal_radius: 25.0,
-            cursor_crystal_opacity: 0.3,
-            tessellation_enabled: false,
-            tessellation_color: (0.5, 0.5, 0.7),
-            tessellation_tile_size: 40.0,
-            tessellation_rotation: 0.0,
-            tessellation_opacity: 0.04,
-            cursor_water_drop_enabled: false,
-            cursor_water_drop_color: (0.3, 0.6, 0.9),
-            cursor_water_drop_ripple_count: 4,
-            cursor_water_drop_expand_speed: 1.0,
-            cursor_water_drop_opacity: 0.15,
-            guilloche_enabled: false,
-            guilloche_color: (0.6, 0.4, 0.7),
-            guilloche_curve_count: 8,
-            guilloche_wave_freq: 1.0,
-            guilloche_opacity: 0.05,
-            cursor_pixel_dust_enabled: false,
-            cursor_pixel_dust_color: (0.8, 0.8, 0.6),
-            cursor_pixel_dust_count: 15,
-            cursor_pixel_dust_scatter_speed: 1.0,
-            cursor_pixel_dust_opacity: 0.2,
-            celtic_knot_enabled: false,
-            celtic_knot_color: (0.0, 0.6, 0.3),
-            celtic_knot_scale: 60.0,
-            celtic_knot_weave_speed: 1.0,
-            celtic_knot_opacity: 0.06,
-            cursor_candle_flame_enabled: false,
-            cursor_candle_flame_color: (1.0, 0.7, 0.2),
-            cursor_candle_flame_height: 20,
-            cursor_candle_flame_flicker_speed: 1.0,
-            cursor_candle_flame_opacity: 0.2,
-            argyle_pattern_enabled: false,
-            argyle_pattern_color: (0.5, 0.3, 0.3),
-            argyle_pattern_diamond_size: 30.0,
-            argyle_pattern_line_width: 1.0,
-            argyle_pattern_opacity: 0.05,
-            cursor_moth_flame_enabled: false,
-            cursor_moth_flame_color: (0.8, 0.7, 0.5),
-            cursor_moth_flame_moth_count: 5,
-            cursor_moth_flame_orbit_speed: 1.0,
-            cursor_moth_flame_opacity: 0.18,
-            basket_weave_enabled: false,
-            basket_weave_color: (0.55, 0.4, 0.25),
-            basket_weave_strip_width: 6.0,
-            basket_weave_strip_spacing: 20.0,
-            basket_weave_opacity: 0.05,
-            cursor_sparkler_enabled: false,
-            cursor_sparkler_color: (1.0, 0.85, 0.3),
-            cursor_sparkler_spark_count: 12,
-            cursor_sparkler_burn_speed: 1.0,
-            cursor_sparkler_opacity: 0.25,
-            fish_scale_enabled: false,
-            fish_scale_color: (0.3, 0.6, 0.7),
-            fish_scale_size: 16.0,
-            fish_scale_row_offset: 0.5,
-            fish_scale_opacity: 0.04,
-            cursor_plasma_ball_enabled: false,
-            cursor_plasma_ball_color: (0.7, 0.3, 1.0),
-            cursor_plasma_ball_tendril_count: 6,
-            cursor_plasma_ball_arc_speed: 1.0,
-            cursor_plasma_ball_opacity: 0.2,
-            trefoil_knot_enabled: false,
-            trefoil_knot_color: (0.4, 0.6, 0.9),
-            trefoil_knot_size: 80.0,
-            trefoil_knot_rotation_speed: 1.0,
-            trefoil_knot_opacity: 0.06,
-            cursor_quill_pen_enabled: false,
-            cursor_quill_pen_color: (0.3, 0.15, 0.05),
-            cursor_quill_pen_trail_length: 8,
-            cursor_quill_pen_ink_speed: 1.0,
-            cursor_quill_pen_opacity: 0.2,
-            herringbone_pattern_enabled: false,
-            herringbone_pattern_color: (0.6, 0.5, 0.4),
-            herringbone_pattern_tile_width: 20.0,
-            herringbone_pattern_tile_height: 10.0,
-            herringbone_pattern_opacity: 0.05,
-            cursor_aurora_borealis_enabled: false,
-            cursor_aurora_borealis_color: (0.2, 0.9, 0.5),
-            cursor_aurora_borealis_band_count: 5,
-            cursor_aurora_borealis_shimmer_speed: 1.0,
-            cursor_aurora_borealis_opacity: 0.15,
-            target_reticle_enabled: false,
-            target_reticle_color: (0.2, 0.8, 0.2),
-            target_reticle_ring_count: 3,
-            target_reticle_pulse_speed: 1.0,
-            target_reticle_opacity: 0.08,
-            cursor_feather_enabled: false,
-            cursor_feather_color: (0.9, 0.85, 0.7),
-            cursor_feather_count: 4,
-            cursor_feather_drift_speed: 1.0,
-            cursor_feather_opacity: 0.18,
-            plaid_pattern_enabled: false,
-            plaid_pattern_color: (0.7, 0.3, 0.3),
-            plaid_pattern_band_width: 4.0,
-            plaid_pattern_band_spacing: 30.0,
-            plaid_pattern_opacity: 0.05,
-            cursor_stardust_enabled: false,
-            cursor_stardust_color: (1.0, 0.9, 0.5),
-            cursor_stardust_particle_count: 20,
-            cursor_stardust_fall_speed: 1.0,
-            cursor_stardust_opacity: 0.2,
-            brick_wall_enabled: false,
-            brick_wall_color: (0.6, 0.4, 0.3),
-            brick_wall_width: 40.0,
-            brick_wall_height: 20.0,
-            brick_wall_opacity: 0.06,
-            cursor_compass_needle_enabled: false,
-            cursor_compass_needle_color: (1.0, 0.3, 0.3),
-            cursor_compass_needle_length: 20.0,
-            cursor_compass_needle_spin_speed: 2.0,
-            cursor_compass_needle_opacity: 0.2,
-            sine_wave_enabled: false,
-            sine_wave_color: (0.3, 0.7, 1.0),
-            sine_wave_amplitude: 20.0,
-            sine_wave_wavelength: 80.0,
-            sine_wave_speed: 1.0,
-            sine_wave_opacity: 0.06,
-            cursor_galaxy_enabled: false,
-            cursor_galaxy_color: (0.8, 0.8, 1.0),
-            cursor_galaxy_star_count: 30,
-            cursor_galaxy_radius: 30.0,
-            cursor_galaxy_opacity: 0.2,
-            rotating_gear_enabled: false,
-            rotating_gear_color: (0.6, 0.7, 0.8),
-            rotating_gear_size: 40.0,
-            rotating_gear_speed: 0.5,
-            rotating_gear_opacity: 0.08,
-            cursor_prism_enabled: false,
-            cursor_prism_color: (1.0, 1.0, 1.0),
-            cursor_prism_ray_count: 7,
-            cursor_prism_spread: 30.0,
-            cursor_prism_opacity: 0.15,
-            crosshatch_pattern_enabled: false,
-            crosshatch_pattern_color: (0.5, 0.6, 0.4),
-            crosshatch_pattern_line_spacing: 20.0,
-            crosshatch_pattern_angle: 45.0,
-            crosshatch_pattern_speed: 0.3,
-            crosshatch_pattern_opacity: 0.06,
-            cursor_moth_enabled: false,
-            cursor_moth_color: (0.9, 0.8, 0.5),
-            cursor_moth_count: 5,
-            cursor_moth_wing_size: 8.0,
-            cursor_moth_opacity: 0.2,
-            edge_glow_enabled: false,
-            edge_glow_color: (0.4, 0.6, 1.0),
-            edge_glow_height: 40.0,
-            edge_glow_opacity: 0.3,
-            edge_glow_fade_ms: 400,
             edge_glow_entries: Vec::new(),
-            rain_effect_enabled: false,
-            rain_effect_color: (0.5, 0.6, 0.8),
-            rain_effect_drop_count: 30,
-            rain_effect_speed: 120.0,
-            rain_effect_opacity: 0.15,
             rain_drops: Vec::new(),
             rain_last_spawn: std::time::Instant::now(),
-            cursor_ripple_wave_enabled: false,
-            cursor_ripple_wave_color: (0.4, 0.6, 1.0),
-            cursor_ripple_wave_ring_count: 3,
-            cursor_ripple_wave_max_radius: 80.0,
-            cursor_ripple_wave_duration_ms: 500,
-            cursor_ripple_wave_opacity: 0.3,
             cursor_ripple_waves: Vec::new(),
-            aurora_enabled: false,
-            aurora_color1: (0.2, 0.8, 0.4),
-            aurora_color2: (0.3, 0.4, 0.9),
-            aurora_height: 60.0,
-            aurora_speed: 1.0,
-            aurora_opacity: 0.12,
             aurora_start: std::time::Instant::now(),
         }
     }
 
     /// Update inactive window dim config
     pub fn set_inactive_dim_config(&mut self, enabled: bool, opacity: f32) {
-        self.inactive_dim_enabled = enabled;
-        self.inactive_dim_opacity = opacity;
+        self.effects.inactive_dim.enabled = enabled;
+        self.effects.inactive_dim.opacity = opacity;
     }
 
     /// Update mode-line separator config
     pub fn set_mode_line_separator(&mut self, style: u32, color: (f32, f32, f32), height: f32) {
-        self.mode_line_separator_style = style;
-        self.mode_line_separator_color = color;
-        self.mode_line_separator_height = height;
+        self.effects.mode_line_separator.style = style;
+        self.effects.mode_line_separator.color = color;
+        self.effects.mode_line_separator.height = height;
     }
 
     /// Update cursor glow config
     pub fn set_cursor_glow(&mut self, enabled: bool, color: (f32, f32, f32), radius: f32, opacity: f32) {
-        self.cursor_glow_enabled = enabled;
-        self.cursor_glow_color = color;
-        self.cursor_glow_radius = radius;
-        self.cursor_glow_opacity = opacity;
+        self.effects.cursor_glow.enabled = enabled;
+        self.effects.cursor_glow.color = color;
+        self.effects.cursor_glow.radius = radius;
+        self.effects.cursor_glow.opacity = opacity;
     }
 
     /// Update cursor pulse config
     pub fn set_cursor_pulse(&mut self, enabled: bool, speed: f32, min_opacity: f32) {
-        self.cursor_pulse_enabled = enabled;
-        self.cursor_pulse_speed = speed;
-        self.cursor_pulse_min_opacity = min_opacity;
+        self.effects.cursor_pulse.enabled = enabled;
+        self.effects.cursor_pulse.speed = speed;
+        self.effects.cursor_pulse.min_opacity = min_opacity;
     }
 
     /// Update focus mode config
     pub fn set_focus_mode(&mut self, enabled: bool, opacity: f32) {
-        self.focus_mode_enabled = enabled;
-        self.focus_mode_opacity = opacity;
+        self.effects.focus_mode.enabled = enabled;
+        self.effects.focus_mode.opacity = opacity;
     }
 
     /// Update minimap config
     pub fn set_minimap(&mut self, enabled: bool, width: f32) {
-        self.minimap_enabled = enabled;
-        self.minimap_width = width;
+        self.effects.minimap.enabled = enabled;
+        self.effects.minimap.width = width;
     }
 
     /// Update vignette config
     pub fn set_vignette(&mut self, enabled: bool, intensity: f32, radius: f32) {
-        self.vignette_enabled = enabled;
-        self.vignette_intensity = intensity;
-        self.vignette_radius = radius;
+        self.effects.vignette.enabled = enabled;
+        self.effects.vignette.intensity = intensity;
+        self.effects.vignette.radius = radius;
     }
 
     /// Update zen mode config
     pub fn set_zen_mode(&mut self, enabled: bool, content_width_pct: f32, margin_opacity: f32) {
-        self.zen_mode_enabled = enabled;
-        self.zen_mode_content_width_pct = content_width_pct;
-        self.zen_mode_margin_opacity = margin_opacity;
+        self.effects.zen_mode.enabled = enabled;
+        self.effects.zen_mode.content_width_pct = content_width_pct;
+        self.effects.zen_mode.margin_opacity = margin_opacity;
     }
 
     /// Update background pattern config
     pub fn set_background_pattern(&mut self, style: u32, spacing: f32, r: f32, g: f32, b: f32, opacity: f32) {
-        self.bg_pattern_style = style;
-        self.bg_pattern_spacing = spacing;
-        self.bg_pattern_color = (r, g, b);
-        self.bg_pattern_opacity = opacity;
+        self.effects.bg_pattern.style = style;
+        self.effects.bg_pattern.spacing = spacing;
+        self.effects.bg_pattern.color = (r, g, b);
+        self.effects.bg_pattern.opacity = opacity;
     }
 
     /// Update line animation config
     pub fn set_line_animation(&mut self, enabled: bool, duration_ms: u32) {
-        self.line_animation_enabled = enabled;
-        self.line_animation_duration_ms = duration_ms;
+        self.effects.line_animation.enabled = enabled;
+        self.effects.line_animation.duration_ms = duration_ms;
         if !enabled {
             self.active_line_anims.clear();
         }
@@ -2401,7 +986,7 @@ impl WgpuRenderer {
                     } else {
                         norm
                     };
-                    offset += self.scroll_line_spacing_max * decay * edge_factor;
+                    offset += self.effects.scroll_line_spacing.max * decay * edge_factor;
                 }
             }
         }
@@ -2410,10 +995,10 @@ impl WgpuRenderer {
 
     /// Update cursor color cycling config
     pub fn set_cursor_color_cycle(&mut self, enabled: bool, speed: f32, saturation: f32, lightness: f32) {
-        self.cursor_color_cycle_enabled = enabled;
-        self.cursor_color_cycle_speed = speed;
-        self.cursor_color_cycle_saturation = saturation;
-        self.cursor_color_cycle_lightness = lightness;
+        self.effects.cursor_color_cycle.enabled = enabled;
+        self.effects.cursor_color_cycle.speed = speed;
+        self.effects.cursor_color_cycle.saturation = saturation;
+        self.effects.cursor_color_cycle.lightness = lightness;
         if enabled {
             self.cursor_color_cycle_start = std::time::Instant::now();
         }
@@ -2421,44 +1006,44 @@ impl WgpuRenderer {
 
     /// Update window switch fade config
     pub fn set_window_switch_fade(&mut self, enabled: bool, duration_ms: u32, intensity: f32) {
-        self.window_switch_fade_enabled = enabled;
-        self.window_switch_fade_duration_ms = duration_ms;
-        self.window_switch_fade_intensity = intensity;
+        self.effects.window_switch_fade.enabled = enabled;
+        self.effects.window_switch_fade.duration_ms = duration_ms;
+        self.effects.window_switch_fade.intensity = intensity;
     }
 
     /// Update inactive window tint config
     pub fn set_inactive_tint(&mut self, enabled: bool, color: (f32, f32, f32), opacity: f32) {
-        self.inactive_tint_enabled = enabled;
-        self.inactive_tint_color = color;
-        self.inactive_tint_opacity = opacity;
+        self.effects.inactive_tint.enabled = enabled;
+        self.effects.inactive_tint.color = color;
+        self.effects.inactive_tint.opacity = opacity;
     }
 
     /// Update scroll progress indicator config
     pub fn set_scroll_progress(&mut self, enabled: bool, height: f32, color: (f32, f32, f32), opacity: f32) {
-        self.scroll_progress_enabled = enabled;
-        self.scroll_progress_height = height;
-        self.scroll_progress_color = color;
-        self.scroll_progress_opacity = opacity;
+        self.effects.scroll_progress.enabled = enabled;
+        self.effects.scroll_progress.height = height;
+        self.effects.scroll_progress.color = color;
+        self.effects.scroll_progress.opacity = opacity;
     }
 
     /// Update active window border glow config
     pub fn set_window_glow(&mut self, enabled: bool, color: (f32, f32, f32), radius: f32, intensity: f32) {
-        self.window_glow_enabled = enabled;
-        self.window_glow_color = color;
-        self.window_glow_radius = radius;
-        self.window_glow_intensity = intensity;
+        self.effects.window_glow.enabled = enabled;
+        self.effects.window_glow.color = color;
+        self.effects.window_glow.radius = radius;
+        self.effects.window_glow.intensity = intensity;
     }
 
     /// Update breadcrumb/path bar config
     pub fn set_breadcrumb(&mut self, enabled: bool, opacity: f32) {
-        self.breadcrumb_enabled = enabled;
-        self.breadcrumb_opacity = opacity;
+        self.effects.breadcrumb.enabled = enabled;
+        self.effects.breadcrumb.opacity = opacity;
     }
 
     /// Update border transition config
     pub fn set_border_transition(&mut self, enabled: bool, active_color: (f32, f32, f32), duration_ms: u32) {
-        self.border_transition_enabled = enabled;
-        self.border_transition_active_color = active_color;
+        self.effects.border_transition.enabled = enabled;
+        self.effects.border_transition.active_color = active_color;
         self.border_transition_duration = std::time::Duration::from_millis(duration_ms as u64);
         if !enabled {
             self.border_transitions.clear();
@@ -2467,23 +1052,23 @@ impl WgpuRenderer {
 
     /// Update accent strip config
     pub fn set_accent_strip(&mut self, enabled: bool, width: f32) {
-        self.accent_strip_enabled = enabled;
-        self.accent_strip_width = width;
+        self.effects.accent_strip.enabled = enabled;
+        self.effects.accent_strip.width = width;
     }
 
     /// Update cursor shadow config
     pub fn set_cursor_shadow(&mut self, enabled: bool, offset_x: f32, offset_y: f32, opacity: f32) {
-        self.cursor_shadow_enabled = enabled;
-        self.cursor_shadow_offset_x = offset_x;
-        self.cursor_shadow_offset_y = offset_y;
-        self.cursor_shadow_opacity = opacity;
+        self.effects.cursor_shadow.enabled = enabled;
+        self.effects.cursor_shadow.offset_x = offset_x;
+        self.effects.cursor_shadow.offset_y = offset_y;
+        self.effects.cursor_shadow.opacity = opacity;
     }
 
     /// Update cursor wake animation config
     pub fn set_cursor_wake(&mut self, enabled: bool, duration_ms: u32, scale: f32) {
-        self.cursor_wake_enabled = enabled;
-        self.cursor_wake_duration_ms = duration_ms;
-        self.cursor_wake_scale = scale;
+        self.effects.cursor_wake.enabled = enabled;
+        self.effects.cursor_wake.duration_ms = duration_ms;
+        self.effects.cursor_wake.scale = scale;
     }
 
     /// Trigger a cursor wake animation
@@ -2493,19 +1078,19 @@ impl WgpuRenderer {
 
     /// Get current cursor wake scale factor (1.0 = no scaling)
     fn cursor_wake_factor(&self) -> f32 {
-        if !self.cursor_wake_enabled {
+        if !self.effects.cursor_wake.enabled {
             return 1.0;
         }
         if let Some(started) = self.cursor_wake_started {
             let elapsed = started.elapsed().as_millis() as f32;
-            let duration = self.cursor_wake_duration_ms as f32;
+            let duration = self.effects.cursor_wake.duration_ms as f32;
             if elapsed >= duration {
                 return 1.0;
             }
             let t = elapsed / duration;
             // Ease-out: scale starts large and settles to 1.0
             let ease = t * (2.0 - t); // quadratic ease-out
-            1.0 + (self.cursor_wake_scale - 1.0) * (1.0 - ease)
+            1.0 + (self.effects.cursor_wake.scale - 1.0) * (1.0 - ease)
         } else {
             1.0
         }
@@ -2513,23 +1098,23 @@ impl WgpuRenderer {
 
     /// Update window content shadow config
     pub fn set_window_content_shadow(&mut self, enabled: bool, size: f32, opacity: f32) {
-        self.window_content_shadow_enabled = enabled;
-        self.window_content_shadow_size = size;
-        self.window_content_shadow_opacity = opacity;
+        self.effects.window_content_shadow.enabled = enabled;
+        self.effects.window_content_shadow.size = size;
+        self.effects.window_content_shadow.opacity = opacity;
     }
 
     /// Update minibuffer highlight config
     pub fn set_minibuffer_highlight(&mut self, enabled: bool, color: (f32, f32, f32), opacity: f32) {
-        self.minibuffer_highlight_enabled = enabled;
-        self.minibuffer_highlight_color = color;
-        self.minibuffer_highlight_opacity = opacity;
+        self.effects.minibuffer_highlight.enabled = enabled;
+        self.effects.minibuffer_highlight.color = color;
+        self.effects.minibuffer_highlight.opacity = opacity;
     }
 
     /// Update edge snap config
     pub fn set_edge_snap(&mut self, enabled: bool, color: (f32, f32, f32), duration_ms: u32) {
-        self.edge_snap_enabled = enabled;
-        self.edge_snap_color = color;
-        self.edge_snap_duration_ms = duration_ms;
+        self.effects.edge_snap.enabled = enabled;
+        self.effects.edge_snap.color = color;
+        self.effects.edge_snap.duration_ms = duration_ms;
     }
 
     /// Trigger edge snap indicator
@@ -2540,40 +1125,40 @@ impl WgpuRenderer {
             at_top,
             at_bottom,
             started: now,
-            duration: std::time::Duration::from_millis(self.edge_snap_duration_ms as u64),
+            duration: std::time::Duration::from_millis(self.effects.edge_snap.duration_ms as u64),
         });
     }
 
     /// Update cursor crosshair config
     pub fn set_cursor_crosshair(&mut self, enabled: bool, color: (f32, f32, f32), opacity: f32) {
-        self.cursor_crosshair_enabled = enabled;
-        self.cursor_crosshair_color = color;
-        self.cursor_crosshair_opacity = opacity;
+        self.effects.cursor_crosshair.enabled = enabled;
+        self.effects.cursor_crosshair.color = color;
+        self.effects.cursor_crosshair.opacity = opacity;
     }
 
     /// Update stained glass config
     pub fn set_stained_glass(&mut self, enabled: bool, opacity: f32, saturation: f32) {
-        self.stained_glass_enabled = enabled;
-        self.stained_glass_opacity = opacity;
-        self.stained_glass_saturation = saturation;
+        self.effects.stained_glass.enabled = enabled;
+        self.effects.stained_glass.opacity = opacity;
+        self.effects.stained_glass.saturation = saturation;
     }
 
     /// Update focus gradient border config
     pub fn set_focus_gradient_border(&mut self, enabled: bool, top_color: (f32, f32, f32), bot_color: (f32, f32, f32), width: f32, opacity: f32) {
-        self.focus_gradient_border_enabled = enabled;
-        self.focus_gradient_border_top_color = top_color;
-        self.focus_gradient_border_bot_color = bot_color;
-        self.focus_gradient_border_width = width;
-        self.focus_gradient_border_opacity = opacity;
+        self.effects.focus_gradient_border.enabled = enabled;
+        self.effects.focus_gradient_border.top_color = top_color;
+        self.effects.focus_gradient_border.bot_color = bot_color;
+        self.effects.focus_gradient_border.width = width;
+        self.effects.focus_gradient_border.opacity = opacity;
     }
 
     /// Update cursor magnetism config
     pub fn set_cursor_magnetism(&mut self, enabled: bool, color: (f32, f32, f32), ring_count: u32, duration_ms: u32, opacity: f32) {
-        self.cursor_magnetism_enabled = enabled;
-        self.cursor_magnetism_color = color;
-        self.cursor_magnetism_ring_count = ring_count;
-        self.cursor_magnetism_duration_ms = duration_ms;
-        self.cursor_magnetism_opacity = opacity;
+        self.effects.cursor_magnetism.enabled = enabled;
+        self.effects.cursor_magnetism.color = color;
+        self.effects.cursor_magnetism.ring_count = ring_count;
+        self.effects.cursor_magnetism.duration_ms = duration_ms;
+        self.effects.cursor_magnetism.opacity = opacity;
         if !enabled {
             self.cursor_magnetism_entries.clear();
         }
@@ -2581,69 +1166,69 @@ impl WgpuRenderer {
 
     /// Update depth shadow config
     pub fn set_depth_shadow(&mut self, enabled: bool, layers: u32, offset: f32, color: (f32, f32, f32), opacity: f32) {
-        self.depth_shadow_enabled = enabled;
-        self.depth_shadow_layers = layers;
-        self.depth_shadow_offset = offset;
-        self.depth_shadow_color = color;
-        self.depth_shadow_opacity = opacity;
+        self.effects.depth_shadow.enabled = enabled;
+        self.effects.depth_shadow.layers = layers;
+        self.effects.depth_shadow.offset = offset;
+        self.effects.depth_shadow.color = color;
+        self.effects.depth_shadow.opacity = opacity;
     }
 
     /// Update mode-line gradient config
     pub fn set_mode_line_gradient(&mut self, enabled: bool, left_color: (f32, f32, f32), right_color: (f32, f32, f32), opacity: f32) {
-        self.mode_line_gradient_enabled = enabled;
-        self.mode_line_gradient_left_color = left_color;
-        self.mode_line_gradient_right_color = right_color;
-        self.mode_line_gradient_opacity = opacity;
+        self.effects.mode_line_gradient.enabled = enabled;
+        self.effects.mode_line_gradient.left_color = left_color;
+        self.effects.mode_line_gradient.right_color = right_color;
+        self.effects.mode_line_gradient.opacity = opacity;
     }
 
     /// Update corner fold config
     pub fn set_corner_fold(&mut self, enabled: bool, size: f32, color: (f32, f32, f32), opacity: f32) {
-        self.corner_fold_enabled = enabled;
-        self.corner_fold_size = size;
-        self.corner_fold_color = color;
-        self.corner_fold_opacity = opacity;
+        self.effects.corner_fold.enabled = enabled;
+        self.effects.corner_fold.size = size;
+        self.effects.corner_fold.color = color;
+        self.effects.corner_fold.opacity = opacity;
     }
 
     /// Update frosted border config
     pub fn set_frosted_border(&mut self, enabled: bool, width: f32, opacity: f32, color: (f32, f32, f32)) {
-        self.frosted_border_enabled = enabled;
-        self.frosted_border_width = width;
-        self.frosted_border_opacity = opacity;
-        self.frosted_border_color = color;
+        self.effects.frosted_border.enabled = enabled;
+        self.effects.frosted_border.width = width;
+        self.effects.frosted_border.opacity = opacity;
+        self.effects.frosted_border.color = color;
     }
 
     /// Update line number pulse config
     pub fn set_line_number_pulse(&mut self, enabled: bool, color: (f32, f32, f32), intensity: f32, cycle_ms: u32) {
-        self.line_number_pulse_enabled = enabled;
-        self.line_number_pulse_color = color;
-        self.line_number_pulse_intensity = intensity;
-        self.line_number_pulse_cycle_ms = cycle_ms;
+        self.effects.line_number_pulse.enabled = enabled;
+        self.effects.line_number_pulse.color = color;
+        self.effects.line_number_pulse.intensity = intensity;
+        self.effects.line_number_pulse.cycle_ms = cycle_ms;
     }
 
     /// Update breathing border config
     pub fn set_breathing_border(&mut self, enabled: bool, color: (f32, f32, f32), min_opacity: f32, max_opacity: f32, cycle_ms: u32) {
-        self.breathing_border_enabled = enabled;
-        self.breathing_border_color = color;
-        self.breathing_border_min_opacity = min_opacity;
-        self.breathing_border_max_opacity = max_opacity;
-        self.breathing_border_cycle_ms = cycle_ms;
+        self.effects.breathing_border.enabled = enabled;
+        self.effects.breathing_border.color = color;
+        self.effects.breathing_border.min_opacity = min_opacity;
+        self.effects.breathing_border.max_opacity = max_opacity;
+        self.effects.breathing_border.cycle_ms = cycle_ms;
     }
 
     /// Update scanline config
     pub fn set_scanlines(&mut self, enabled: bool, spacing: u32, opacity: f32, color: (f32, f32, f32)) {
-        self.scanlines_enabled = enabled;
-        self.scanlines_spacing = spacing;
-        self.scanlines_opacity = opacity;
-        self.scanlines_color = color;
+        self.effects.scanlines.enabled = enabled;
+        self.effects.scanlines.spacing = spacing;
+        self.effects.scanlines.opacity = opacity;
+        self.effects.scanlines.color = color;
     }
 
     /// Update cursor comet tail config
     pub fn set_cursor_comet(&mut self, enabled: bool, trail_length: u32, fade_ms: u32, color: (f32, f32, f32), opacity: f32) {
-        self.cursor_comet_enabled = enabled;
-        self.cursor_comet_trail_length = trail_length;
-        self.cursor_comet_fade_ms = fade_ms;
-        self.cursor_comet_color = color;
-        self.cursor_comet_opacity = opacity;
+        self.effects.cursor_comet.enabled = enabled;
+        self.effects.cursor_comet.trail_length = trail_length;
+        self.effects.cursor_comet.fade_ms = fade_ms;
+        self.effects.cursor_comet.color = color;
+        self.effects.cursor_comet.opacity = opacity;
         if !enabled {
             self.cursor_comet_positions.clear();
         }
@@ -2651,19 +1236,19 @@ impl WgpuRenderer {
 
     /// Update cursor spotlight config
     pub fn set_cursor_spotlight(&mut self, enabled: bool, radius: f32, intensity: f32, color: (f32, f32, f32)) {
-        self.cursor_spotlight_enabled = enabled;
-        self.cursor_spotlight_radius = radius;
-        self.cursor_spotlight_intensity = intensity;
-        self.cursor_spotlight_color = color;
+        self.effects.cursor_spotlight.enabled = enabled;
+        self.effects.cursor_spotlight.radius = radius;
+        self.effects.cursor_spotlight.intensity = intensity;
+        self.effects.cursor_spotlight.color = color;
     }
 
     /// Update cursor particle trail config
     pub fn set_cursor_particles(&mut self, enabled: bool, color: (f32, f32, f32), count: u32, lifetime_ms: u32, gravity: f32) {
-        self.cursor_particles_enabled = enabled;
-        self.cursor_particles_color = color;
-        self.cursor_particles_count = count;
-        self.cursor_particles_lifetime_ms = lifetime_ms;
-        self.cursor_particles_gravity = gravity;
+        self.effects.cursor_particles.enabled = enabled;
+        self.effects.cursor_particles.color = color;
+        self.effects.cursor_particles.count = count;
+        self.effects.cursor_particles.lifetime_ms = lifetime_ms;
+        self.effects.cursor_particles.gravity = gravity;
         if !enabled {
             self.cursor_particles.clear();
             self.cursor_particles_prev_pos = None;
@@ -2672,19 +1257,19 @@ impl WgpuRenderer {
 
     /// Update per-window rounded border config
     pub fn set_window_border_radius(&mut self, enabled: bool, radius: f32, border_width: f32, color: (f32, f32, f32), opacity: f32) {
-        self.window_border_radius_enabled = enabled;
-        self.window_border_radius = radius;
-        self.window_border_width = border_width;
-        self.window_border_color = color;
-        self.window_border_opacity = opacity;
+        self.effects.window_border_radius.enabled = enabled;
+        self.effects.window_border_radius.radius = radius;
+        self.effects.window_border_radius.width = border_width;
+        self.effects.window_border_radius.color = color;
+        self.effects.window_border_radius.opacity = opacity;
     }
 
     /// Update typing heat map config
     pub fn set_typing_heatmap(&mut self, enabled: bool, color: (f32, f32, f32), fade_ms: u32, opacity: f32) {
-        self.typing_heatmap_enabled = enabled;
-        self.typing_heatmap_color = color;
-        self.typing_heatmap_fade_ms = fade_ms;
-        self.typing_heatmap_opacity = opacity;
+        self.effects.typing_heatmap.enabled = enabled;
+        self.effects.typing_heatmap.color = color;
+        self.effects.typing_heatmap.fade_ms = fade_ms;
+        self.effects.typing_heatmap.opacity = opacity;
         if !enabled {
             self.typing_heatmap_entries.clear();
             self.typing_heatmap_prev_cursor = None;
@@ -2693,18 +1278,18 @@ impl WgpuRenderer {
 
     /// Update buffer modified border indicator config
     pub fn set_modified_indicator(&mut self, enabled: bool, color: (f32, f32, f32), width: f32, opacity: f32) {
-        self.modified_indicator_enabled = enabled;
-        self.modified_indicator_color = color;
-        self.modified_indicator_width = width;
-        self.modified_indicator_opacity = opacity;
+        self.effects.modified_indicator.enabled = enabled;
+        self.effects.modified_indicator.color = color;
+        self.effects.modified_indicator.width = width;
+        self.effects.modified_indicator.opacity = opacity;
     }
 
     /// Update click halo config
     pub fn set_click_halo(&mut self, enabled: bool, color: (f32, f32, f32), duration_ms: u32, max_radius: f32) {
-        self.click_halo_enabled = enabled;
-        self.click_halo_color = color;
-        self.click_halo_duration_ms = duration_ms;
-        self.click_halo_max_radius = max_radius;
+        self.effects.click_halo.enabled = enabled;
+        self.effects.click_halo.color = color;
+        self.effects.click_halo.duration_ms = duration_ms;
+        self.effects.click_halo.max_radius = max_radius;
     }
 
     /// Trigger click halo at position
@@ -2713,15 +1298,15 @@ impl WgpuRenderer {
             x,
             y,
             started: now,
-            duration: std::time::Duration::from_millis(self.click_halo_duration_ms as u64),
+            duration: std::time::Duration::from_millis(self.effects.click_halo.duration_ms as u64),
         });
     }
 
     /// Update scroll velocity fade config
     pub fn set_scroll_velocity_fade(&mut self, enabled: bool, max_opacity: f32, fade_ms: u32) {
-        self.scroll_velocity_fade_enabled = enabled;
-        self.scroll_velocity_fade_max_opacity = max_opacity;
-        self.scroll_velocity_fade_ms = fade_ms;
+        self.effects.scroll_velocity_fade.enabled = enabled;
+        self.effects.scroll_velocity_fade.max_opacity = max_opacity;
+        self.effects.scroll_velocity_fade.ms = fade_ms;
     }
 
     /// Trigger scroll velocity fade for a window
@@ -2733,15 +1318,15 @@ impl WgpuRenderer {
             bounds,
             velocity: delta,
             started: now,
-            duration: std::time::Duration::from_millis(self.scroll_velocity_fade_ms as u64),
+            duration: std::time::Duration::from_millis(self.effects.scroll_velocity_fade.ms as u64),
         });
     }
 
     /// Update resize padding config
     pub fn set_resize_padding(&mut self, enabled: bool, duration_ms: u32, max_padding: f32) {
-        self.resize_padding_enabled = enabled;
-        self.resize_padding_duration_ms = duration_ms;
-        self.resize_padding_max = max_padding;
+        self.effects.resize_padding.enabled = enabled;
+        self.effects.resize_padding.duration_ms = duration_ms;
+        self.effects.resize_padding.max = max_padding;
     }
 
     /// Trigger resize padding animation
@@ -2753,13 +1338,13 @@ impl WgpuRenderer {
     fn resize_padding_amount(&self) -> f32 {
         if let Some(started) = self.resize_padding_started {
             let elapsed = started.elapsed().as_millis() as f32;
-            let duration = self.resize_padding_duration_ms as f32;
+            let duration = self.effects.resize_padding.duration_ms as f32;
             if elapsed >= duration {
                 return 0.0;
             }
             let t = elapsed / duration;
             let ease = t * (2.0 - t); // quadratic ease-out
-            self.resize_padding_max * (1.0 - ease)
+            self.effects.resize_padding.max * (1.0 - ease)
         } else {
             0.0
         }
@@ -2767,9 +1352,9 @@ impl WgpuRenderer {
 
     /// Update cursor error pulse config
     pub fn set_cursor_error_pulse(&mut self, enabled: bool, r: f32, g: f32, b: f32, duration_ms: u32) {
-        self.cursor_error_pulse_enabled = enabled;
-        self.cursor_error_pulse_color = (r, g, b);
-        self.cursor_error_pulse_duration_ms = duration_ms;
+        self.effects.cursor_error_pulse.enabled = enabled;
+        self.effects.cursor_error_pulse.color = (r, g, b);
+        self.effects.cursor_error_pulse.duration_ms = duration_ms;
     }
 
     /// Trigger a cursor error pulse
@@ -2779,19 +1364,19 @@ impl WgpuRenderer {
 
     /// Get the cursor error pulse color override, if active
     fn cursor_error_pulse_override(&self) -> Option<Color> {
-        if !self.cursor_error_pulse_enabled {
+        if !self.effects.cursor_error_pulse.enabled {
             return None;
         }
         if let Some(started) = self.cursor_error_pulse_started {
             let elapsed = started.elapsed().as_millis() as f32;
-            let duration = self.cursor_error_pulse_duration_ms as f32;
+            let duration = self.effects.cursor_error_pulse.duration_ms as f32;
             if elapsed >= duration {
                 return None;
             }
             let t = elapsed / duration;
             // Flash: bright at start, fade out
             let alpha = (1.0 - t) * (1.0 - t);
-            let (r, g, b) = self.cursor_error_pulse_color;
+            let (r, g, b) = self.effects.cursor_error_pulse.color;
             Some(Color::new(r, g, b, alpha))
         } else {
             None
@@ -2800,16 +1385,16 @@ impl WgpuRenderer {
 
     /// Update wrap indicator config
     pub fn set_wrap_indicator(&mut self, enabled: bool, r: f32, g: f32, b: f32, opacity: f32) {
-        self.wrap_indicator_enabled = enabled;
-        self.wrap_indicator_color = (r, g, b);
-        self.wrap_indicator_opacity = opacity;
+        self.effects.wrap_indicator.enabled = enabled;
+        self.effects.wrap_indicator.color = (r, g, b);
+        self.effects.wrap_indicator.opacity = opacity;
     }
 
     /// Update scroll momentum indicator config
     pub fn set_scroll_momentum(&mut self, enabled: bool, fade_ms: u32, width: f32) {
-        self.scroll_momentum_enabled = enabled;
-        self.scroll_momentum_fade_ms = fade_ms;
-        self.scroll_momentum_width = width;
+        self.effects.scroll_momentum.enabled = enabled;
+        self.effects.scroll_momentum.fade_ms = fade_ms;
+        self.effects.scroll_momentum.width = width;
     }
 
     /// Trigger a scroll momentum indicator for a window
@@ -2820,17 +1405,17 @@ impl WgpuRenderer {
             bounds,
             direction,
             started: now,
-            duration: std::time::Duration::from_millis(self.scroll_momentum_fade_ms as u64),
+            duration: std::time::Duration::from_millis(self.effects.scroll_momentum.fade_ms as u64),
         });
     }
 
     /// Update matrix rain config
     pub fn set_matrix_rain(&mut self, enabled: bool, color: (f32, f32, f32), column_count: u32, speed: f32, opacity: f32) {
-        self.matrix_rain_enabled = enabled;
-        self.matrix_rain_color = color;
-        self.matrix_rain_column_count = column_count;
-        self.matrix_rain_speed = speed;
-        self.matrix_rain_opacity = opacity;
+        self.effects.matrix_rain.enabled = enabled;
+        self.effects.matrix_rain.color = color;
+        self.effects.matrix_rain.column_count = column_count;
+        self.effects.matrix_rain.speed = speed;
+        self.effects.matrix_rain.opacity = opacity;
         if !enabled {
             self.matrix_rain_columns.clear();
         }
@@ -2838,36 +1423,36 @@ impl WgpuRenderer {
 
     /// Update cursor elastic snap config
     pub fn set_cursor_elastic_snap(&mut self, enabled: bool, overshoot: f32, duration_ms: u32) {
-        self.cursor_elastic_snap_enabled = enabled;
-        self.cursor_elastic_snap_overshoot = overshoot;
-        self.cursor_elastic_snap_duration_ms = duration_ms;
+        self.effects.cursor_elastic_snap.enabled = enabled;
+        self.effects.cursor_elastic_snap.overshoot = overshoot;
+        self.effects.cursor_elastic_snap.duration_ms = duration_ms;
     }
 
     /// Update frost border config
     pub fn set_frost_border_effect(&mut self, enabled: bool, color: (f32, f32, f32), width: f32, opacity: f32) {
-        self.frost_border_enabled = enabled;
-        self.frost_border_color = color;
-        self.frost_border_width = width;
-        self.frost_border_opacity = opacity;
+        self.effects.frost_border.enabled = enabled;
+        self.effects.frost_border.color = color;
+        self.effects.frost_border.width = width;
+        self.effects.frost_border.opacity = opacity;
     }
 
     /// Update cursor ghost config
     pub fn set_cursor_ghost(&mut self, enabled: bool, color: (f32, f32, f32), count: u32, fade_ms: u32, drift: f32, opacity: f32) {
-        self.cursor_ghost_enabled = enabled;
-        self.cursor_ghost_color = color;
-        self.cursor_ghost_count = count;
-        self.cursor_ghost_fade_ms = fade_ms;
-        self.cursor_ghost_drift = drift;
-        self.cursor_ghost_opacity = opacity;
+        self.effects.cursor_ghost.enabled = enabled;
+        self.effects.cursor_ghost.color = color;
+        self.effects.cursor_ghost.count = count;
+        self.effects.cursor_ghost.fade_ms = fade_ms;
+        self.effects.cursor_ghost.drift = drift;
+        self.effects.cursor_ghost.opacity = opacity;
     }
 
     /// Update edge glow config
     pub fn set_edge_glow(&mut self, enabled: bool, color: (f32, f32, f32), height: f32, opacity: f32, fade_ms: u32) {
-        self.edge_glow_enabled = enabled;
-        self.edge_glow_color = color;
-        self.edge_glow_height = height;
-        self.edge_glow_opacity = opacity;
-        self.edge_glow_fade_ms = fade_ms;
+        self.effects.edge_glow.enabled = enabled;
+        self.effects.edge_glow.color = color;
+        self.effects.edge_glow.height = height;
+        self.effects.edge_glow.opacity = opacity;
+        self.effects.edge_glow.fade_ms = fade_ms;
     }
 
     /// Trigger edge glow for a window (at_top = beginning-of-buffer)
@@ -2878,17 +1463,17 @@ impl WgpuRenderer {
             bounds,
             at_top,
             started: now,
-            duration: std::time::Duration::from_millis(self.edge_glow_fade_ms as u64),
+            duration: std::time::Duration::from_millis(self.effects.edge_glow.fade_ms as u64),
         });
     }
 
     /// Update rain effect config
     pub fn set_rain_effect(&mut self, enabled: bool, color: (f32, f32, f32), drop_count: u32, speed: f32, opacity: f32) {
-        self.rain_effect_enabled = enabled;
-        self.rain_effect_color = color;
-        self.rain_effect_drop_count = drop_count;
-        self.rain_effect_speed = speed;
-        self.rain_effect_opacity = opacity;
+        self.effects.rain_effect.enabled = enabled;
+        self.effects.rain_effect.color = color;
+        self.effects.rain_effect.drop_count = drop_count;
+        self.effects.rain_effect.speed = speed;
+        self.effects.rain_effect.opacity = opacity;
         if !enabled {
             self.rain_drops.clear();
         }
@@ -2896,61 +1481,61 @@ impl WgpuRenderer {
 
     /// Update cursor ripple wave config
     pub fn set_cursor_ripple_wave(&mut self, enabled: bool, color: (f32, f32, f32), ring_count: u32, max_radius: f32, duration_ms: u32, opacity: f32) {
-        self.cursor_ripple_wave_enabled = enabled;
-        self.cursor_ripple_wave_color = color;
-        self.cursor_ripple_wave_ring_count = ring_count;
-        self.cursor_ripple_wave_max_radius = max_radius;
-        self.cursor_ripple_wave_duration_ms = duration_ms;
-        self.cursor_ripple_wave_opacity = opacity;
+        self.effects.cursor_ripple_wave.enabled = enabled;
+        self.effects.cursor_ripple_wave.color = color;
+        self.effects.cursor_ripple_wave.ring_count = ring_count;
+        self.effects.cursor_ripple_wave.max_radius = max_radius;
+        self.effects.cursor_ripple_wave.duration_ms = duration_ms;
+        self.effects.cursor_ripple_wave.opacity = opacity;
     }
 
     /// Update aurora config
     pub fn set_aurora(&mut self, enabled: bool, color1: (f32, f32, f32), color2: (f32, f32, f32), height: f32, speed: f32, opacity: f32) {
-        self.aurora_enabled = enabled;
-        self.aurora_color1 = color1;
-        self.aurora_color2 = color2;
-        self.aurora_height = height;
-        self.aurora_speed = speed;
-        self.aurora_opacity = opacity;
+        self.effects.aurora.enabled = enabled;
+        self.effects.aurora.color1 = color1;
+        self.effects.aurora.color2 = color2;
+        self.effects.aurora.height = height;
+        self.effects.aurora.speed = speed;
+        self.effects.aurora.opacity = opacity;
     }
 
     /// Update heat distortion config
     pub fn set_heat_distortion(&mut self, enabled: bool, intensity: f32, speed: f32, edge_width: f32, opacity: f32) {
-        self.heat_distortion_enabled = enabled;
-        self.heat_distortion_intensity = intensity;
-        self.heat_distortion_speed = speed;
-        self.heat_distortion_edge_width = edge_width;
-        self.heat_distortion_opacity = opacity;
+        self.effects.heat_distortion.enabled = enabled;
+        self.effects.heat_distortion.intensity = intensity;
+        self.effects.heat_distortion.speed = speed;
+        self.effects.heat_distortion.edge_width = edge_width;
+        self.effects.heat_distortion.opacity = opacity;
     }
 
     /// Update cursor lighthouse config
     pub fn set_cursor_lighthouse(&mut self, enabled: bool, color: (f32, f32, f32), beam_width: f32, rotation_speed: f32, beam_length: f32, opacity: f32) {
-        self.cursor_lighthouse_enabled = enabled;
-        self.cursor_lighthouse_color = color;
-        self.cursor_lighthouse_beam_width = beam_width;
-        self.cursor_lighthouse_rotation_speed = rotation_speed;
-        self.cursor_lighthouse_beam_length = beam_length;
-        self.cursor_lighthouse_opacity = opacity;
+        self.effects.cursor_lighthouse.enabled = enabled;
+        self.effects.cursor_lighthouse.color = color;
+        self.effects.cursor_lighthouse.beam_width = beam_width;
+        self.effects.cursor_lighthouse.rotation_speed = rotation_speed;
+        self.effects.cursor_lighthouse.beam_length = beam_length;
+        self.effects.cursor_lighthouse.opacity = opacity;
     }
 
     /// Update neon border config
     pub fn set_neon_border(&mut self, enabled: bool, color: (f32, f32, f32), intensity: f32, flicker: f32, thickness: f32, opacity: f32) {
-        self.neon_border_enabled = enabled;
-        self.neon_border_color = color;
-        self.neon_border_intensity = intensity;
-        self.neon_border_flicker = flicker;
-        self.neon_border_thickness = thickness;
-        self.neon_border_opacity = opacity;
+        self.effects.neon_border.enabled = enabled;
+        self.effects.neon_border.color = color;
+        self.effects.neon_border.intensity = intensity;
+        self.effects.neon_border.flicker = flicker;
+        self.effects.neon_border.thickness = thickness;
+        self.effects.neon_border.opacity = opacity;
     }
 
     /// Update cursor sonar ping config
     pub fn set_cursor_sonar_ping(&mut self, enabled: bool, color: (f32, f32, f32), ring_count: u32, max_radius: f32, duration_ms: u32, opacity: f32) {
-        self.cursor_sonar_ping_enabled = enabled;
-        self.cursor_sonar_ping_color = color;
-        self.cursor_sonar_ping_ring_count = ring_count;
-        self.cursor_sonar_ping_max_radius = max_radius;
-        self.cursor_sonar_ping_duration_ms = duration_ms;
-        self.cursor_sonar_ping_opacity = opacity;
+        self.effects.cursor_sonar_ping.enabled = enabled;
+        self.effects.cursor_sonar_ping.color = color;
+        self.effects.cursor_sonar_ping.ring_count = ring_count;
+        self.effects.cursor_sonar_ping.max_radius = max_radius;
+        self.effects.cursor_sonar_ping.duration_ms = duration_ms;
+        self.effects.cursor_sonar_ping.opacity = opacity;
     }
 
     /// Trigger a sonar ping at cursor position
@@ -2959,17 +1544,17 @@ impl WgpuRenderer {
             cx,
             cy,
             started: now,
-            duration: std::time::Duration::from_millis(self.cursor_sonar_ping_duration_ms as u64),
+            duration: std::time::Duration::from_millis(self.effects.cursor_sonar_ping.duration_ms as u64),
         });
     }
 
     /// Update lightning bolt config
     pub fn set_lightning_bolt(&mut self, enabled: bool, color: (f32, f32, f32), frequency: f32, intensity: f32, opacity: f32) {
-        self.lightning_bolt_enabled = enabled;
-        self.lightning_bolt_color = color;
-        self.lightning_bolt_frequency = frequency;
-        self.lightning_bolt_intensity = intensity;
-        self.lightning_bolt_opacity = opacity;
+        self.effects.lightning_bolt.enabled = enabled;
+        self.effects.lightning_bolt.color = color;
+        self.effects.lightning_bolt.frequency = frequency;
+        self.effects.lightning_bolt.intensity = intensity;
+        self.effects.lightning_bolt.opacity = opacity;
         if !enabled {
             self.lightning_bolt_segments.clear();
         }
@@ -2977,627 +1562,627 @@ impl WgpuRenderer {
 
     /// Update cursor orbit particles config
     pub fn set_cursor_orbit_particles(&mut self, enabled: bool, color: (f32, f32, f32), count: u32, radius: f32, speed: f32, opacity: f32) {
-        self.cursor_orbit_particles_enabled = enabled;
-        self.cursor_orbit_particles_color = color;
-        self.cursor_orbit_particles_count = count;
-        self.cursor_orbit_particles_radius = radius;
-        self.cursor_orbit_particles_speed = speed;
-        self.cursor_orbit_particles_opacity = opacity;
+        self.effects.cursor_orbit_particles.enabled = enabled;
+        self.effects.cursor_orbit_particles.color = color;
+        self.effects.cursor_orbit_particles.count = count;
+        self.effects.cursor_orbit_particles.radius = radius;
+        self.effects.cursor_orbit_particles.speed = speed;
+        self.effects.cursor_orbit_particles.opacity = opacity;
     }
 
     /// Update plasma border config
     pub fn set_plasma_border(&mut self, enabled: bool, color1: (f32, f32, f32), color2: (f32, f32, f32), width: f32, speed: f32, opacity: f32) {
-        self.plasma_border_enabled = enabled;
-        self.plasma_border_color1 = color1;
-        self.plasma_border_color2 = color2;
-        self.plasma_border_width = width;
-        self.plasma_border_speed = speed;
-        self.plasma_border_opacity = opacity;
+        self.effects.plasma_border.enabled = enabled;
+        self.effects.plasma_border.color1 = color1;
+        self.effects.plasma_border.color2 = color2;
+        self.effects.plasma_border.width = width;
+        self.effects.plasma_border.speed = speed;
+        self.effects.plasma_border.opacity = opacity;
     }
 
     /// Update cursor heartbeat config
     pub fn set_cursor_heartbeat(&mut self, enabled: bool, color: (f32, f32, f32), bpm: f32, max_radius: f32, opacity: f32) {
-        self.cursor_heartbeat_enabled = enabled;
-        self.cursor_heartbeat_color = color;
-        self.cursor_heartbeat_bpm = bpm;
-        self.cursor_heartbeat_max_radius = max_radius;
-        self.cursor_heartbeat_opacity = opacity;
+        self.effects.cursor_heartbeat.enabled = enabled;
+        self.effects.cursor_heartbeat.color = color;
+        self.effects.cursor_heartbeat.bpm = bpm;
+        self.effects.cursor_heartbeat.max_radius = max_radius;
+        self.effects.cursor_heartbeat.opacity = opacity;
     }
 
     /// Update warp grid config
     pub fn set_warp_grid(&mut self, enabled: bool, color: (f32, f32, f32), density: u32, amplitude: f32, speed: f32, opacity: f32) {
-        self.warp_grid_enabled = enabled;
-        self.warp_grid_color = color;
-        self.warp_grid_density = density;
-        self.warp_grid_amplitude = amplitude;
-        self.warp_grid_speed = speed;
-        self.warp_grid_opacity = opacity;
+        self.effects.warp_grid.enabled = enabled;
+        self.effects.warp_grid.color = color;
+        self.effects.warp_grid.density = density;
+        self.effects.warp_grid.amplitude = amplitude;
+        self.effects.warp_grid.speed = speed;
+        self.effects.warp_grid.opacity = opacity;
     }
 
     /// Update cursor DNA helix config
     pub fn set_cursor_dna_helix(&mut self, enabled: bool, color1: (f32, f32, f32), color2: (f32, f32, f32), radius: f32, speed: f32, opacity: f32) {
-        self.cursor_dna_helix_enabled = enabled;
-        self.cursor_dna_helix_color1 = color1;
-        self.cursor_dna_helix_color2 = color2;
-        self.cursor_dna_helix_radius = radius;
-        self.cursor_dna_helix_speed = speed;
-        self.cursor_dna_helix_opacity = opacity;
+        self.effects.cursor_dna_helix.enabled = enabled;
+        self.effects.cursor_dna_helix.color1 = color1;
+        self.effects.cursor_dna_helix.color2 = color2;
+        self.effects.cursor_dna_helix.radius = radius;
+        self.effects.cursor_dna_helix.speed = speed;
+        self.effects.cursor_dna_helix.opacity = opacity;
     }
 
     /// Update prism edge config
     pub fn set_prism_edge(&mut self, enabled: bool, width: f32, speed: f32, saturation: f32, opacity: f32) {
-        self.prism_edge_enabled = enabled;
-        self.prism_edge_width = width;
-        self.prism_edge_speed = speed;
-        self.prism_edge_saturation = saturation;
-        self.prism_edge_opacity = opacity;
+        self.effects.prism_edge.enabled = enabled;
+        self.effects.prism_edge.width = width;
+        self.effects.prism_edge.speed = speed;
+        self.effects.prism_edge.saturation = saturation;
+        self.effects.prism_edge.opacity = opacity;
     }
 
     /// Update cursor pendulum config
     pub fn set_cursor_pendulum(&mut self, enabled: bool, color: (f32, f32, f32), arc_length: f32, damping: f32, opacity: f32) {
-        self.cursor_pendulum_enabled = enabled;
-        self.cursor_pendulum_color = color;
-        self.cursor_pendulum_arc_length = arc_length;
-        self.cursor_pendulum_damping = damping;
-        self.cursor_pendulum_opacity = opacity;
+        self.effects.cursor_pendulum.enabled = enabled;
+        self.effects.cursor_pendulum.color = color;
+        self.effects.cursor_pendulum.arc_length = arc_length;
+        self.effects.cursor_pendulum.damping = damping;
+        self.effects.cursor_pendulum.opacity = opacity;
     }
 
     /// Update topo contour config
     pub fn set_topo_contour(&mut self, enabled: bool, color: (f32, f32, f32), spacing: f32, speed: f32, opacity: f32) {
-        self.topo_contour_enabled = enabled;
-        self.topo_contour_color = color;
-        self.topo_contour_spacing = spacing;
-        self.topo_contour_speed = speed;
-        self.topo_contour_opacity = opacity;
+        self.effects.topo_contour.enabled = enabled;
+        self.effects.topo_contour.color = color;
+        self.effects.topo_contour.spacing = spacing;
+        self.effects.topo_contour.speed = speed;
+        self.effects.topo_contour.opacity = opacity;
     }
 
     /// Update cursor metronome config
     pub fn set_cursor_metronome(&mut self, enabled: bool, color: (f32, f32, f32), tick_height: f32, fade_ms: u32, opacity: f32) {
-        self.cursor_metronome_enabled = enabled;
-        self.cursor_metronome_color = color;
-        self.cursor_metronome_tick_height = tick_height;
-        self.cursor_metronome_fade_ms = fade_ms;
-        self.cursor_metronome_opacity = opacity;
+        self.effects.cursor_metronome.enabled = enabled;
+        self.effects.cursor_metronome.color = color;
+        self.effects.cursor_metronome.tick_height = tick_height;
+        self.effects.cursor_metronome.fade_ms = fade_ms;
+        self.effects.cursor_metronome.opacity = opacity;
     }
 
     /// Update constellation config
     pub fn set_constellation(&mut self, enabled: bool, color: (f32, f32, f32), star_count: u32, connect_dist: f32, twinkle_speed: f32, opacity: f32) {
-        self.constellation_enabled = enabled;
-        self.constellation_color = color;
-        self.constellation_star_count = star_count;
-        self.constellation_connect_dist = connect_dist;
-        self.constellation_twinkle_speed = twinkle_speed;
-        self.constellation_opacity = opacity;
+        self.effects.constellation.enabled = enabled;
+        self.effects.constellation.color = color;
+        self.effects.constellation.star_count = star_count;
+        self.effects.constellation.connect_dist = connect_dist;
+        self.effects.constellation.twinkle_speed = twinkle_speed;
+        self.effects.constellation.opacity = opacity;
     }
 
     /// Update cursor radar config
     pub fn set_cursor_radar(&mut self, enabled: bool, color: (f32, f32, f32), radius: f32, speed: f32, opacity: f32) {
-        self.cursor_radar_enabled = enabled;
-        self.cursor_radar_color = color;
-        self.cursor_radar_radius = radius;
-        self.cursor_radar_speed = speed;
-        self.cursor_radar_opacity = opacity;
+        self.effects.cursor_radar.enabled = enabled;
+        self.effects.cursor_radar.color = color;
+        self.effects.cursor_radar.radius = radius;
+        self.effects.cursor_radar.speed = speed;
+        self.effects.cursor_radar.opacity = opacity;
     }
 
     /// Update kaleidoscope config
     pub fn set_kaleidoscope(&mut self, enabled: bool, color: (f32, f32, f32), segments: u32, speed: f32, opacity: f32) {
-        self.kaleidoscope_enabled = enabled;
-        self.kaleidoscope_color = color;
-        self.kaleidoscope_segments = segments;
-        self.kaleidoscope_speed = speed;
-        self.kaleidoscope_opacity = opacity;
+        self.effects.kaleidoscope.enabled = enabled;
+        self.effects.kaleidoscope.color = color;
+        self.effects.kaleidoscope.segments = segments;
+        self.effects.kaleidoscope.speed = speed;
+        self.effects.kaleidoscope.opacity = opacity;
     }
 
     /// Update cursor ripple ring config
     pub fn set_cursor_ripple_ring(&mut self, enabled: bool, color: (f32, f32, f32), max_radius: f32, ring_count: u32, speed: f32, opacity: f32) {
-        self.cursor_ripple_ring_enabled = enabled;
-        self.cursor_ripple_ring_color = color;
-        self.cursor_ripple_ring_max_radius = max_radius;
-        self.cursor_ripple_ring_count = ring_count;
-        self.cursor_ripple_ring_speed = speed;
-        self.cursor_ripple_ring_opacity = opacity;
+        self.effects.cursor_ripple_ring.enabled = enabled;
+        self.effects.cursor_ripple_ring.color = color;
+        self.effects.cursor_ripple_ring.max_radius = max_radius;
+        self.effects.cursor_ripple_ring.count = ring_count;
+        self.effects.cursor_ripple_ring.speed = speed;
+        self.effects.cursor_ripple_ring.opacity = opacity;
     }
 
     /// Update noise field config
     pub fn set_noise_field(&mut self, enabled: bool, color: (f32, f32, f32), scale: f32, speed: f32, opacity: f32) {
-        self.noise_field_enabled = enabled;
-        self.noise_field_color = color;
-        self.noise_field_scale = scale;
-        self.noise_field_speed = speed;
-        self.noise_field_opacity = opacity;
+        self.effects.noise_field.enabled = enabled;
+        self.effects.noise_field.color = color;
+        self.effects.noise_field.scale = scale;
+        self.effects.noise_field.speed = speed;
+        self.effects.noise_field.opacity = opacity;
     }
 
     /// Update cursor scope config
     pub fn set_cursor_scope(&mut self, enabled: bool, color: (f32, f32, f32), thickness: f32, gap: f32, opacity: f32) {
-        self.cursor_scope_enabled = enabled;
-        self.cursor_scope_color = color;
-        self.cursor_scope_thickness = thickness;
-        self.cursor_scope_gap = gap;
-        self.cursor_scope_opacity = opacity;
+        self.effects.cursor_scope.enabled = enabled;
+        self.effects.cursor_scope.color = color;
+        self.effects.cursor_scope.thickness = thickness;
+        self.effects.cursor_scope.gap = gap;
+        self.effects.cursor_scope.opacity = opacity;
     }
 
     /// Update spiral vortex config
     pub fn set_spiral_vortex(&mut self, enabled: bool, color: (f32, f32, f32), arms: u32, speed: f32, opacity: f32) {
-        self.spiral_vortex_enabled = enabled;
-        self.spiral_vortex_color = color;
-        self.spiral_vortex_arms = arms;
-        self.spiral_vortex_speed = speed;
-        self.spiral_vortex_opacity = opacity;
+        self.effects.spiral_vortex.enabled = enabled;
+        self.effects.spiral_vortex.color = color;
+        self.effects.spiral_vortex.arms = arms;
+        self.effects.spiral_vortex.speed = speed;
+        self.effects.spiral_vortex.opacity = opacity;
     }
 
     /// Update cursor shockwave config
     pub fn set_cursor_shockwave(&mut self, enabled: bool, color: (f32, f32, f32), radius: f32, decay: f32, opacity: f32) {
-        self.cursor_shockwave_enabled = enabled;
-        self.cursor_shockwave_color = color;
-        self.cursor_shockwave_radius = radius;
-        self.cursor_shockwave_decay = decay;
-        self.cursor_shockwave_opacity = opacity;
+        self.effects.cursor_shockwave.enabled = enabled;
+        self.effects.cursor_shockwave.color = color;
+        self.effects.cursor_shockwave.radius = radius;
+        self.effects.cursor_shockwave.decay = decay;
+        self.effects.cursor_shockwave.opacity = opacity;
     }
 
     /// Update diamond lattice config
     pub fn set_diamond_lattice(&mut self, enabled: bool, color: (f32, f32, f32), cell_size: f32, shimmer_speed: f32, opacity: f32) {
-        self.diamond_lattice_enabled = enabled;
-        self.diamond_lattice_color = color;
-        self.diamond_lattice_cell_size = cell_size;
-        self.diamond_lattice_shimmer_speed = shimmer_speed;
-        self.diamond_lattice_opacity = opacity;
+        self.effects.diamond_lattice.enabled = enabled;
+        self.effects.diamond_lattice.color = color;
+        self.effects.diamond_lattice.cell_size = cell_size;
+        self.effects.diamond_lattice.shimmer_speed = shimmer_speed;
+        self.effects.diamond_lattice.opacity = opacity;
     }
 
     /// Update cursor gravity well config
     pub fn set_cursor_gravity_well(&mut self, enabled: bool, color: (f32, f32, f32), field_radius: f32, line_count: u32, opacity: f32) {
-        self.cursor_gravity_well_enabled = enabled;
-        self.cursor_gravity_well_color = color;
-        self.cursor_gravity_well_field_radius = field_radius;
-        self.cursor_gravity_well_line_count = line_count;
-        self.cursor_gravity_well_opacity = opacity;
+        self.effects.cursor_gravity_well.enabled = enabled;
+        self.effects.cursor_gravity_well.color = color;
+        self.effects.cursor_gravity_well.field_radius = field_radius;
+        self.effects.cursor_gravity_well.line_count = line_count;
+        self.effects.cursor_gravity_well.opacity = opacity;
     }
 
     /// Update wave interference config
     pub fn set_wave_interference(&mut self, enabled: bool, color: (f32, f32, f32), wavelength: f32, source_count: u32, speed: f32, opacity: f32) {
-        self.wave_interference_enabled = enabled;
-        self.wave_interference_color = color;
-        self.wave_interference_wavelength = wavelength;
-        self.wave_interference_source_count = source_count;
-        self.wave_interference_speed = speed;
-        self.wave_interference_opacity = opacity;
+        self.effects.wave_interference.enabled = enabled;
+        self.effects.wave_interference.color = color;
+        self.effects.wave_interference.wavelength = wavelength;
+        self.effects.wave_interference.source_count = source_count;
+        self.effects.wave_interference.speed = speed;
+        self.effects.wave_interference.opacity = opacity;
     }
 
     /// Update cursor portal config
     pub fn set_cursor_portal(&mut self, enabled: bool, color: (f32, f32, f32), radius: f32, speed: f32, opacity: f32) {
-        self.cursor_portal_enabled = enabled;
-        self.cursor_portal_color = color;
-        self.cursor_portal_radius = radius;
-        self.cursor_portal_speed = speed;
-        self.cursor_portal_opacity = opacity;
+        self.effects.cursor_portal.enabled = enabled;
+        self.effects.cursor_portal.color = color;
+        self.effects.cursor_portal.radius = radius;
+        self.effects.cursor_portal.speed = speed;
+        self.effects.cursor_portal.opacity = opacity;
     }
 
     /// Update chevron pattern config
     pub fn set_chevron_pattern(&mut self, enabled: bool, color: (f32, f32, f32), spacing: f32, speed: f32, opacity: f32) {
-        self.chevron_pattern_enabled = enabled;
-        self.chevron_pattern_color = color;
-        self.chevron_pattern_spacing = spacing;
-        self.chevron_pattern_speed = speed;
-        self.chevron_pattern_opacity = opacity;
+        self.effects.chevron_pattern.enabled = enabled;
+        self.effects.chevron_pattern.color = color;
+        self.effects.chevron_pattern.spacing = spacing;
+        self.effects.chevron_pattern.speed = speed;
+        self.effects.chevron_pattern.opacity = opacity;
     }
 
     /// Update cursor bubble config
     pub fn set_cursor_bubble(&mut self, enabled: bool, color: (f32, f32, f32), count: u32, rise_speed: f32, opacity: f32) {
-        self.cursor_bubble_enabled = enabled;
-        self.cursor_bubble_color = color;
-        self.cursor_bubble_count = count;
-        self.cursor_bubble_rise_speed = rise_speed;
-        self.cursor_bubble_opacity = opacity;
+        self.effects.cursor_bubble.enabled = enabled;
+        self.effects.cursor_bubble.color = color;
+        self.effects.cursor_bubble.count = count;
+        self.effects.cursor_bubble.rise_speed = rise_speed;
+        self.effects.cursor_bubble.opacity = opacity;
     }
 
     /// Update sunburst pattern config
     pub fn set_sunburst_pattern(&mut self, enabled: bool, color: (f32, f32, f32), ray_count: u32, speed: f32, opacity: f32) {
-        self.sunburst_pattern_enabled = enabled;
-        self.sunburst_pattern_color = color;
-        self.sunburst_pattern_ray_count = ray_count;
-        self.sunburst_pattern_speed = speed;
-        self.sunburst_pattern_opacity = opacity;
+        self.effects.sunburst_pattern.enabled = enabled;
+        self.effects.sunburst_pattern.color = color;
+        self.effects.sunburst_pattern.ray_count = ray_count;
+        self.effects.sunburst_pattern.speed = speed;
+        self.effects.sunburst_pattern.opacity = opacity;
     }
 
     /// Update cursor firework config
     pub fn set_cursor_firework(&mut self, enabled: bool, color: (f32, f32, f32), particle_count: u32, burst_radius: f32, opacity: f32) {
-        self.cursor_firework_enabled = enabled;
-        self.cursor_firework_color = color;
-        self.cursor_firework_particle_count = particle_count;
-        self.cursor_firework_burst_radius = burst_radius;
-        self.cursor_firework_opacity = opacity;
+        self.effects.cursor_firework.enabled = enabled;
+        self.effects.cursor_firework.color = color;
+        self.effects.cursor_firework.particle_count = particle_count;
+        self.effects.cursor_firework.burst_radius = burst_radius;
+        self.effects.cursor_firework.opacity = opacity;
     }
 
     /// Update honeycomb dissolve config
     pub fn set_honeycomb_dissolve(&mut self, enabled: bool, color: (f32, f32, f32), cell_size: f32, dissolve_speed: f32, opacity: f32) {
-        self.honeycomb_dissolve_enabled = enabled;
-        self.honeycomb_dissolve_color = color;
-        self.honeycomb_dissolve_cell_size = cell_size;
-        self.honeycomb_dissolve_speed = dissolve_speed;
-        self.honeycomb_dissolve_opacity = opacity;
+        self.effects.honeycomb_dissolve.enabled = enabled;
+        self.effects.honeycomb_dissolve.color = color;
+        self.effects.honeycomb_dissolve.cell_size = cell_size;
+        self.effects.honeycomb_dissolve.speed = dissolve_speed;
+        self.effects.honeycomb_dissolve.opacity = opacity;
     }
 
     /// Update cursor tornado config
     pub fn set_cursor_tornado(&mut self, enabled: bool, color: (f32, f32, f32), radius: f32, particle_count: u32, opacity: f32) {
-        self.cursor_tornado_enabled = enabled;
-        self.cursor_tornado_color = color;
-        self.cursor_tornado_radius = radius;
-        self.cursor_tornado_particle_count = particle_count;
-        self.cursor_tornado_opacity = opacity;
+        self.effects.cursor_tornado.enabled = enabled;
+        self.effects.cursor_tornado.color = color;
+        self.effects.cursor_tornado.radius = radius;
+        self.effects.cursor_tornado.particle_count = particle_count;
+        self.effects.cursor_tornado.opacity = opacity;
     }
 
     /// Update moiré pattern config
     pub fn set_moire_pattern(&mut self, enabled: bool, color: (f32, f32, f32), line_spacing: f32, angle_offset: f32, speed: f32, opacity: f32) {
-        self.moire_pattern_enabled = enabled;
-        self.moire_pattern_color = color;
-        self.moire_pattern_line_spacing = line_spacing;
-        self.moire_pattern_angle_offset = angle_offset;
-        self.moire_pattern_speed = speed;
-        self.moire_pattern_opacity = opacity;
+        self.effects.moire_pattern.enabled = enabled;
+        self.effects.moire_pattern.color = color;
+        self.effects.moire_pattern.line_spacing = line_spacing;
+        self.effects.moire_pattern.angle_offset = angle_offset;
+        self.effects.moire_pattern.speed = speed;
+        self.effects.moire_pattern.opacity = opacity;
     }
 
     /// Update cursor lightning config
     pub fn set_cursor_lightning(&mut self, enabled: bool, color: (f32, f32, f32), bolt_count: u32, max_length: f32, opacity: f32) {
-        self.cursor_lightning_enabled = enabled;
-        self.cursor_lightning_color = color;
-        self.cursor_lightning_bolt_count = bolt_count;
-        self.cursor_lightning_max_length = max_length;
-        self.cursor_lightning_opacity = opacity;
+        self.effects.cursor_lightning.enabled = enabled;
+        self.effects.cursor_lightning.color = color;
+        self.effects.cursor_lightning.bolt_count = bolt_count;
+        self.effects.cursor_lightning.max_length = max_length;
+        self.effects.cursor_lightning.opacity = opacity;
     }
 
     /// Update dot matrix config
     pub fn set_dot_matrix(&mut self, enabled: bool, color: (f32, f32, f32), dot_spacing: f32, pulse_speed: f32, opacity: f32) {
-        self.dot_matrix_enabled = enabled;
-        self.dot_matrix_color = color;
-        self.dot_matrix_spacing = dot_spacing;
-        self.dot_matrix_pulse_speed = pulse_speed;
-        self.dot_matrix_opacity = opacity;
+        self.effects.dot_matrix.enabled = enabled;
+        self.effects.dot_matrix.color = color;
+        self.effects.dot_matrix.spacing = dot_spacing;
+        self.effects.dot_matrix.pulse_speed = pulse_speed;
+        self.effects.dot_matrix.opacity = opacity;
     }
 
     /// Update cursor snowflake config
     pub fn set_cursor_snowflake(&mut self, enabled: bool, color: (f32, f32, f32), count: u32, fall_speed: f32, opacity: f32) {
-        self.cursor_snowflake_enabled = enabled;
-        self.cursor_snowflake_color = color;
-        self.cursor_snowflake_count = count;
-        self.cursor_snowflake_fall_speed = fall_speed;
-        self.cursor_snowflake_opacity = opacity;
+        self.effects.cursor_snowflake.enabled = enabled;
+        self.effects.cursor_snowflake.color = color;
+        self.effects.cursor_snowflake.count = count;
+        self.effects.cursor_snowflake.fall_speed = fall_speed;
+        self.effects.cursor_snowflake.opacity = opacity;
     }
 
     /// Update concentric rings config
     pub fn set_concentric_rings(&mut self, enabled: bool, color: (f32, f32, f32), ring_spacing: f32, expansion_speed: f32, opacity: f32) {
-        self.concentric_rings_enabled = enabled;
-        self.concentric_rings_color = color;
-        self.concentric_rings_spacing = ring_spacing;
-        self.concentric_rings_expansion_speed = expansion_speed;
-        self.concentric_rings_opacity = opacity;
+        self.effects.concentric_rings.enabled = enabled;
+        self.effects.concentric_rings.color = color;
+        self.effects.concentric_rings.spacing = ring_spacing;
+        self.effects.concentric_rings.expansion_speed = expansion_speed;
+        self.effects.concentric_rings.opacity = opacity;
     }
 
     /// Update cursor flame config
     pub fn set_cursor_flame(&mut self, enabled: bool, color: (f32, f32, f32), particle_count: u32, height: f32, opacity: f32) {
-        self.cursor_flame_enabled = enabled;
-        self.cursor_flame_color = color;
-        self.cursor_flame_particle_count = particle_count;
-        self.cursor_flame_height = height;
-        self.cursor_flame_opacity = opacity;
+        self.effects.cursor_flame.enabled = enabled;
+        self.effects.cursor_flame.color = color;
+        self.effects.cursor_flame.particle_count = particle_count;
+        self.effects.cursor_flame.height = height;
+        self.effects.cursor_flame.opacity = opacity;
     }
 
     /// Update zigzag pattern config
     pub fn set_zigzag_pattern(&mut self, enabled: bool, color: (f32, f32, f32), amplitude: f32, frequency: f32, speed: f32, opacity: f32) {
-        self.zigzag_pattern_enabled = enabled;
-        self.zigzag_pattern_color = color;
-        self.zigzag_pattern_amplitude = amplitude;
-        self.zigzag_pattern_frequency = frequency;
-        self.zigzag_pattern_speed = speed;
-        self.zigzag_pattern_opacity = opacity;
+        self.effects.zigzag_pattern.enabled = enabled;
+        self.effects.zigzag_pattern.color = color;
+        self.effects.zigzag_pattern.amplitude = amplitude;
+        self.effects.zigzag_pattern.frequency = frequency;
+        self.effects.zigzag_pattern.speed = speed;
+        self.effects.zigzag_pattern.opacity = opacity;
     }
 
     /// Update cursor crystal config
     pub fn set_cursor_crystal(&mut self, enabled: bool, color: (f32, f32, f32), facet_count: u32, radius: f32, opacity: f32) {
-        self.cursor_crystal_enabled = enabled;
-        self.cursor_crystal_color = color;
-        self.cursor_crystal_facet_count = facet_count;
-        self.cursor_crystal_radius = radius;
-        self.cursor_crystal_opacity = opacity;
+        self.effects.cursor_crystal.enabled = enabled;
+        self.effects.cursor_crystal.color = color;
+        self.effects.cursor_crystal.facet_count = facet_count;
+        self.effects.cursor_crystal.radius = radius;
+        self.effects.cursor_crystal.opacity = opacity;
     }
 
     /// Update tessellation config
     pub fn set_tessellation(&mut self, enabled: bool, color: (f32, f32, f32), tile_size: f32, rotation: f32, opacity: f32) {
-        self.tessellation_enabled = enabled;
-        self.tessellation_color = color;
-        self.tessellation_tile_size = tile_size;
-        self.tessellation_rotation = rotation;
-        self.tessellation_opacity = opacity;
+        self.effects.tessellation.enabled = enabled;
+        self.effects.tessellation.color = color;
+        self.effects.tessellation.tile_size = tile_size;
+        self.effects.tessellation.rotation = rotation;
+        self.effects.tessellation.opacity = opacity;
     }
 
     /// Update cursor water drop config
     pub fn set_cursor_water_drop(&mut self, enabled: bool, color: (f32, f32, f32), ripple_count: u32, expand_speed: f32, opacity: f32) {
-        self.cursor_water_drop_enabled = enabled;
-        self.cursor_water_drop_color = color;
-        self.cursor_water_drop_ripple_count = ripple_count;
-        self.cursor_water_drop_expand_speed = expand_speed;
-        self.cursor_water_drop_opacity = opacity;
+        self.effects.cursor_water_drop.enabled = enabled;
+        self.effects.cursor_water_drop.color = color;
+        self.effects.cursor_water_drop.ripple_count = ripple_count;
+        self.effects.cursor_water_drop.expand_speed = expand_speed;
+        self.effects.cursor_water_drop.opacity = opacity;
     }
 
     /// Update guilloche config
     pub fn set_guilloche(&mut self, enabled: bool, color: (f32, f32, f32), curve_count: u32, wave_freq: f32, opacity: f32) {
-        self.guilloche_enabled = enabled;
-        self.guilloche_color = color;
-        self.guilloche_curve_count = curve_count;
-        self.guilloche_wave_freq = wave_freq;
-        self.guilloche_opacity = opacity;
+        self.effects.guilloche.enabled = enabled;
+        self.effects.guilloche.color = color;
+        self.effects.guilloche.curve_count = curve_count;
+        self.effects.guilloche.wave_freq = wave_freq;
+        self.effects.guilloche.opacity = opacity;
     }
 
     /// Update cursor pixel dust config
     pub fn set_cursor_pixel_dust(&mut self, enabled: bool, color: (f32, f32, f32), dust_count: u32, scatter_speed: f32, opacity: f32) {
-        self.cursor_pixel_dust_enabled = enabled;
-        self.cursor_pixel_dust_color = color;
-        self.cursor_pixel_dust_count = dust_count;
-        self.cursor_pixel_dust_scatter_speed = scatter_speed;
-        self.cursor_pixel_dust_opacity = opacity;
+        self.effects.cursor_pixel_dust.enabled = enabled;
+        self.effects.cursor_pixel_dust.color = color;
+        self.effects.cursor_pixel_dust.count = dust_count;
+        self.effects.cursor_pixel_dust.scatter_speed = scatter_speed;
+        self.effects.cursor_pixel_dust.opacity = opacity;
     }
 
     /// Update celtic knot config
     pub fn set_celtic_knot(&mut self, enabled: bool, color: (f32, f32, f32), knot_scale: f32, weave_speed: f32, opacity: f32) {
-        self.celtic_knot_enabled = enabled;
-        self.celtic_knot_color = color;
-        self.celtic_knot_scale = knot_scale;
-        self.celtic_knot_weave_speed = weave_speed;
-        self.celtic_knot_opacity = opacity;
+        self.effects.celtic_knot.enabled = enabled;
+        self.effects.celtic_knot.color = color;
+        self.effects.celtic_knot.scale = knot_scale;
+        self.effects.celtic_knot.weave_speed = weave_speed;
+        self.effects.celtic_knot.opacity = opacity;
     }
 
     /// Update cursor candle flame config
     pub fn set_cursor_candle_flame(&mut self, enabled: bool, color: (f32, f32, f32), flame_height: u32, flicker_speed: f32, opacity: f32) {
-        self.cursor_candle_flame_enabled = enabled;
-        self.cursor_candle_flame_color = color;
-        self.cursor_candle_flame_height = flame_height;
-        self.cursor_candle_flame_flicker_speed = flicker_speed;
-        self.cursor_candle_flame_opacity = opacity;
+        self.effects.cursor_candle_flame.enabled = enabled;
+        self.effects.cursor_candle_flame.color = color;
+        self.effects.cursor_candle_flame.height = flame_height;
+        self.effects.cursor_candle_flame.flicker_speed = flicker_speed;
+        self.effects.cursor_candle_flame.opacity = opacity;
     }
 
     /// Update argyle pattern config
     pub fn set_argyle_pattern(&mut self, enabled: bool, color: (f32, f32, f32), diamond_size: f32, line_width: f32, opacity: f32) {
-        self.argyle_pattern_enabled = enabled;
-        self.argyle_pattern_color = color;
-        self.argyle_pattern_diamond_size = diamond_size;
-        self.argyle_pattern_line_width = line_width;
-        self.argyle_pattern_opacity = opacity;
+        self.effects.argyle_pattern.enabled = enabled;
+        self.effects.argyle_pattern.color = color;
+        self.effects.argyle_pattern.diamond_size = diamond_size;
+        self.effects.argyle_pattern.line_width = line_width;
+        self.effects.argyle_pattern.opacity = opacity;
     }
 
     /// Update cursor moth flame config
     pub fn set_cursor_moth_flame(&mut self, enabled: bool, color: (f32, f32, f32), moth_count: u32, orbit_speed: f32, opacity: f32) {
-        self.cursor_moth_flame_enabled = enabled;
-        self.cursor_moth_flame_color = color;
-        self.cursor_moth_flame_moth_count = moth_count;
-        self.cursor_moth_flame_orbit_speed = orbit_speed;
-        self.cursor_moth_flame_opacity = opacity;
+        self.effects.cursor_moth_flame.enabled = enabled;
+        self.effects.cursor_moth_flame.color = color;
+        self.effects.cursor_moth_flame.moth_count = moth_count;
+        self.effects.cursor_moth_flame.orbit_speed = orbit_speed;
+        self.effects.cursor_moth_flame.opacity = opacity;
     }
 
     /// Update basket weave config
     pub fn set_basket_weave(&mut self, enabled: bool, color: (f32, f32, f32), strip_width: f32, strip_spacing: f32, opacity: f32) {
-        self.basket_weave_enabled = enabled;
-        self.basket_weave_color = color;
-        self.basket_weave_strip_width = strip_width;
-        self.basket_weave_strip_spacing = strip_spacing;
-        self.basket_weave_opacity = opacity;
+        self.effects.basket_weave.enabled = enabled;
+        self.effects.basket_weave.color = color;
+        self.effects.basket_weave.strip_width = strip_width;
+        self.effects.basket_weave.strip_spacing = strip_spacing;
+        self.effects.basket_weave.opacity = opacity;
     }
 
     /// Update cursor sparkler config
     pub fn set_cursor_sparkler(&mut self, enabled: bool, color: (f32, f32, f32), spark_count: u32, burn_speed: f32, opacity: f32) {
-        self.cursor_sparkler_enabled = enabled;
-        self.cursor_sparkler_color = color;
-        self.cursor_sparkler_spark_count = spark_count;
-        self.cursor_sparkler_burn_speed = burn_speed;
-        self.cursor_sparkler_opacity = opacity;
+        self.effects.cursor_sparkler.enabled = enabled;
+        self.effects.cursor_sparkler.color = color;
+        self.effects.cursor_sparkler.spark_count = spark_count;
+        self.effects.cursor_sparkler.burn_speed = burn_speed;
+        self.effects.cursor_sparkler.opacity = opacity;
     }
 
     /// Update fish scale config
     pub fn set_fish_scale(&mut self, enabled: bool, color: (f32, f32, f32), scale_size: f32, row_offset: f32, opacity: f32) {
-        self.fish_scale_enabled = enabled;
-        self.fish_scale_color = color;
-        self.fish_scale_size = scale_size;
-        self.fish_scale_row_offset = row_offset;
-        self.fish_scale_opacity = opacity;
+        self.effects.fish_scale.enabled = enabled;
+        self.effects.fish_scale.color = color;
+        self.effects.fish_scale.size = scale_size;
+        self.effects.fish_scale.row_offset = row_offset;
+        self.effects.fish_scale.opacity = opacity;
     }
 
     /// Update cursor plasma ball config
     pub fn set_cursor_plasma_ball(&mut self, enabled: bool, color: (f32, f32, f32), tendril_count: u32, arc_speed: f32, opacity: f32) {
-        self.cursor_plasma_ball_enabled = enabled;
-        self.cursor_plasma_ball_color = color;
-        self.cursor_plasma_ball_tendril_count = tendril_count;
-        self.cursor_plasma_ball_arc_speed = arc_speed;
-        self.cursor_plasma_ball_opacity = opacity;
+        self.effects.cursor_plasma_ball.enabled = enabled;
+        self.effects.cursor_plasma_ball.color = color;
+        self.effects.cursor_plasma_ball.tendril_count = tendril_count;
+        self.effects.cursor_plasma_ball.arc_speed = arc_speed;
+        self.effects.cursor_plasma_ball.opacity = opacity;
     }
 
     /// Update trefoil knot config
     pub fn set_trefoil_knot(&mut self, enabled: bool, color: (f32, f32, f32), knot_size: f32, rotation_speed: f32, opacity: f32) {
-        self.trefoil_knot_enabled = enabled;
-        self.trefoil_knot_color = color;
-        self.trefoil_knot_size = knot_size;
-        self.trefoil_knot_rotation_speed = rotation_speed;
-        self.trefoil_knot_opacity = opacity;
+        self.effects.trefoil_knot.enabled = enabled;
+        self.effects.trefoil_knot.color = color;
+        self.effects.trefoil_knot.size = knot_size;
+        self.effects.trefoil_knot.rotation_speed = rotation_speed;
+        self.effects.trefoil_knot.opacity = opacity;
     }
 
     /// Update cursor quill pen config
     pub fn set_cursor_quill_pen(&mut self, enabled: bool, color: (f32, f32, f32), trail_length: u32, ink_speed: f32, opacity: f32) {
-        self.cursor_quill_pen_enabled = enabled;
-        self.cursor_quill_pen_color = color;
-        self.cursor_quill_pen_trail_length = trail_length;
-        self.cursor_quill_pen_ink_speed = ink_speed;
-        self.cursor_quill_pen_opacity = opacity;
+        self.effects.cursor_quill_pen.enabled = enabled;
+        self.effects.cursor_quill_pen.color = color;
+        self.effects.cursor_quill_pen.trail_length = trail_length;
+        self.effects.cursor_quill_pen.ink_speed = ink_speed;
+        self.effects.cursor_quill_pen.opacity = opacity;
     }
 
     /// Update herringbone pattern config
     pub fn set_herringbone_pattern(&mut self, enabled: bool, color: (f32, f32, f32), tile_width: f32, tile_height: f32, opacity: f32) {
-        self.herringbone_pattern_enabled = enabled;
-        self.herringbone_pattern_color = color;
-        self.herringbone_pattern_tile_width = tile_width;
-        self.herringbone_pattern_tile_height = tile_height;
-        self.herringbone_pattern_opacity = opacity;
+        self.effects.herringbone_pattern.enabled = enabled;
+        self.effects.herringbone_pattern.color = color;
+        self.effects.herringbone_pattern.tile_width = tile_width;
+        self.effects.herringbone_pattern.tile_height = tile_height;
+        self.effects.herringbone_pattern.opacity = opacity;
     }
 
     /// Update cursor aurora borealis config
     pub fn set_cursor_aurora_borealis(&mut self, enabled: bool, color: (f32, f32, f32), band_count: u32, shimmer_speed: f32, opacity: f32) {
-        self.cursor_aurora_borealis_enabled = enabled;
-        self.cursor_aurora_borealis_color = color;
-        self.cursor_aurora_borealis_band_count = band_count;
-        self.cursor_aurora_borealis_shimmer_speed = shimmer_speed;
-        self.cursor_aurora_borealis_opacity = opacity;
+        self.effects.cursor_aurora_borealis.enabled = enabled;
+        self.effects.cursor_aurora_borealis.color = color;
+        self.effects.cursor_aurora_borealis.band_count = band_count;
+        self.effects.cursor_aurora_borealis.shimmer_speed = shimmer_speed;
+        self.effects.cursor_aurora_borealis.opacity = opacity;
     }
 
     /// Update target reticle config
     pub fn set_target_reticle(&mut self, enabled: bool, color: (f32, f32, f32), ring_count: u32, pulse_speed: f32, opacity: f32) {
-        self.target_reticle_enabled = enabled;
-        self.target_reticle_color = color;
-        self.target_reticle_ring_count = ring_count;
-        self.target_reticle_pulse_speed = pulse_speed;
-        self.target_reticle_opacity = opacity;
+        self.effects.target_reticle.enabled = enabled;
+        self.effects.target_reticle.color = color;
+        self.effects.target_reticle.ring_count = ring_count;
+        self.effects.target_reticle.pulse_speed = pulse_speed;
+        self.effects.target_reticle.opacity = opacity;
     }
 
     /// Update cursor feather config
     pub fn set_cursor_feather(&mut self, enabled: bool, color: (f32, f32, f32), feather_count: u32, drift_speed: f32, opacity: f32) {
-        self.cursor_feather_enabled = enabled;
-        self.cursor_feather_color = color;
-        self.cursor_feather_count = feather_count;
-        self.cursor_feather_drift_speed = drift_speed;
-        self.cursor_feather_opacity = opacity;
+        self.effects.cursor_feather.enabled = enabled;
+        self.effects.cursor_feather.color = color;
+        self.effects.cursor_feather.count = feather_count;
+        self.effects.cursor_feather.drift_speed = drift_speed;
+        self.effects.cursor_feather.opacity = opacity;
     }
 
     /// Update plaid pattern config
     pub fn set_plaid_pattern(&mut self, enabled: bool, color: (f32, f32, f32), band_width: f32, band_spacing: f32, opacity: f32) {
-        self.plaid_pattern_enabled = enabled;
-        self.plaid_pattern_color = color;
-        self.plaid_pattern_band_width = band_width;
-        self.plaid_pattern_band_spacing = band_spacing;
-        self.plaid_pattern_opacity = opacity;
+        self.effects.plaid_pattern.enabled = enabled;
+        self.effects.plaid_pattern.color = color;
+        self.effects.plaid_pattern.band_width = band_width;
+        self.effects.plaid_pattern.band_spacing = band_spacing;
+        self.effects.plaid_pattern.opacity = opacity;
     }
 
     /// Update cursor stardust config
     pub fn set_cursor_stardust(&mut self, enabled: bool, color: (f32, f32, f32), particle_count: u32, fall_speed: f32, opacity: f32) {
-        self.cursor_stardust_enabled = enabled;
-        self.cursor_stardust_color = color;
-        self.cursor_stardust_particle_count = particle_count;
-        self.cursor_stardust_fall_speed = fall_speed;
-        self.cursor_stardust_opacity = opacity;
+        self.effects.cursor_stardust.enabled = enabled;
+        self.effects.cursor_stardust.color = color;
+        self.effects.cursor_stardust.particle_count = particle_count;
+        self.effects.cursor_stardust.fall_speed = fall_speed;
+        self.effects.cursor_stardust.opacity = opacity;
     }
 
     /// Update brick wall config
     pub fn set_brick_wall(&mut self, enabled: bool, color: (f32, f32, f32), brick_width: f32, brick_height: f32, opacity: f32) {
-        self.brick_wall_enabled = enabled;
-        self.brick_wall_color = color;
-        self.brick_wall_width = brick_width;
-        self.brick_wall_height = brick_height;
-        self.brick_wall_opacity = opacity;
+        self.effects.brick_wall.enabled = enabled;
+        self.effects.brick_wall.color = color;
+        self.effects.brick_wall.width = brick_width;
+        self.effects.brick_wall.height = brick_height;
+        self.effects.brick_wall.opacity = opacity;
     }
 
     /// Update cursor compass needle config
     pub fn set_cursor_compass_needle(&mut self, enabled: bool, color: (f32, f32, f32), needle_length: f32, spin_speed: f32, opacity: f32) {
-        self.cursor_compass_needle_enabled = enabled;
-        self.cursor_compass_needle_color = color;
-        self.cursor_compass_needle_length = needle_length;
-        self.cursor_compass_needle_spin_speed = spin_speed;
-        self.cursor_compass_needle_opacity = opacity;
+        self.effects.cursor_compass_needle.enabled = enabled;
+        self.effects.cursor_compass_needle.color = color;
+        self.effects.cursor_compass_needle.length = needle_length;
+        self.effects.cursor_compass_needle.spin_speed = spin_speed;
+        self.effects.cursor_compass_needle.opacity = opacity;
     }
 
     /// Update sine wave config
     pub fn set_sine_wave(&mut self, enabled: bool, color: (f32, f32, f32), amplitude: f32, wavelength: f32, speed: f32, opacity: f32) {
-        self.sine_wave_enabled = enabled;
-        self.sine_wave_color = color;
-        self.sine_wave_amplitude = amplitude;
-        self.sine_wave_wavelength = wavelength;
-        self.sine_wave_speed = speed;
-        self.sine_wave_opacity = opacity;
+        self.effects.sine_wave.enabled = enabled;
+        self.effects.sine_wave.color = color;
+        self.effects.sine_wave.amplitude = amplitude;
+        self.effects.sine_wave.wavelength = wavelength;
+        self.effects.sine_wave.speed = speed;
+        self.effects.sine_wave.opacity = opacity;
     }
 
     /// Update cursor galaxy config
     pub fn set_cursor_galaxy(&mut self, enabled: bool, color: (f32, f32, f32), star_count: u32, radius: f32, opacity: f32) {
-        self.cursor_galaxy_enabled = enabled;
-        self.cursor_galaxy_color = color;
-        self.cursor_galaxy_star_count = star_count;
-        self.cursor_galaxy_radius = radius;
-        self.cursor_galaxy_opacity = opacity;
+        self.effects.cursor_galaxy.enabled = enabled;
+        self.effects.cursor_galaxy.color = color;
+        self.effects.cursor_galaxy.star_count = star_count;
+        self.effects.cursor_galaxy.radius = radius;
+        self.effects.cursor_galaxy.opacity = opacity;
     }
 
     /// Update rotating gear config
     pub fn set_rotating_gear(&mut self, enabled: bool, color: (f32, f32, f32), gear_size: f32, rotation_speed: f32, opacity: f32) {
-        self.rotating_gear_enabled = enabled;
-        self.rotating_gear_color = color;
-        self.rotating_gear_size = gear_size;
-        self.rotating_gear_speed = rotation_speed;
-        self.rotating_gear_opacity = opacity;
+        self.effects.rotating_gear.enabled = enabled;
+        self.effects.rotating_gear.color = color;
+        self.effects.rotating_gear.size = gear_size;
+        self.effects.rotating_gear.speed = rotation_speed;
+        self.effects.rotating_gear.opacity = opacity;
     }
 
     /// Update cursor prism config
     pub fn set_cursor_prism(&mut self, enabled: bool, color: (f32, f32, f32), ray_count: u32, spread: f32, opacity: f32) {
-        self.cursor_prism_enabled = enabled;
-        self.cursor_prism_color = color;
-        self.cursor_prism_ray_count = ray_count;
-        self.cursor_prism_spread = spread;
-        self.cursor_prism_opacity = opacity;
+        self.effects.cursor_prism.enabled = enabled;
+        self.effects.cursor_prism.color = color;
+        self.effects.cursor_prism.ray_count = ray_count;
+        self.effects.cursor_prism.spread = spread;
+        self.effects.cursor_prism.opacity = opacity;
     }
 
     /// Update crosshatch pattern config
     pub fn set_crosshatch_pattern(&mut self, enabled: bool, color: (f32, f32, f32), line_spacing: f32, angle: f32, speed: f32, opacity: f32) {
-        self.crosshatch_pattern_enabled = enabled;
-        self.crosshatch_pattern_color = color;
-        self.crosshatch_pattern_line_spacing = line_spacing;
-        self.crosshatch_pattern_angle = angle;
-        self.crosshatch_pattern_speed = speed;
-        self.crosshatch_pattern_opacity = opacity;
+        self.effects.crosshatch_pattern.enabled = enabled;
+        self.effects.crosshatch_pattern.color = color;
+        self.effects.crosshatch_pattern.line_spacing = line_spacing;
+        self.effects.crosshatch_pattern.angle = angle;
+        self.effects.crosshatch_pattern.speed = speed;
+        self.effects.crosshatch_pattern.opacity = opacity;
     }
 
     /// Update cursor moth config
     pub fn set_cursor_moth(&mut self, enabled: bool, color: (f32, f32, f32), moth_count: u32, wing_size: f32, opacity: f32) {
-        self.cursor_moth_enabled = enabled;
-        self.cursor_moth_color = color;
-        self.cursor_moth_count = moth_count;
-        self.cursor_moth_wing_size = wing_size;
-        self.cursor_moth_opacity = opacity;
+        self.effects.cursor_moth.enabled = enabled;
+        self.effects.cursor_moth.color = color;
+        self.effects.cursor_moth.count = moth_count;
+        self.effects.cursor_moth.wing_size = wing_size;
+        self.effects.cursor_moth.opacity = opacity;
     }
 
     /// Update hex grid config
     pub fn set_hex_grid(&mut self, enabled: bool, color: (f32, f32, f32), cell_size: f32, pulse_speed: f32, opacity: f32) {
-        self.hex_grid_enabled = enabled;
-        self.hex_grid_color = color;
-        self.hex_grid_cell_size = cell_size;
-        self.hex_grid_pulse_speed = pulse_speed;
-        self.hex_grid_opacity = opacity;
+        self.effects.hex_grid.enabled = enabled;
+        self.effects.hex_grid.color = color;
+        self.effects.hex_grid.cell_size = cell_size;
+        self.effects.hex_grid.pulse_speed = pulse_speed;
+        self.effects.hex_grid.opacity = opacity;
     }
 
     /// Update cursor sparkle burst config
     pub fn set_cursor_sparkle_burst(&mut self, enabled: bool, color: (f32, f32, f32), count: u32, radius: f32, opacity: f32) {
-        self.cursor_sparkle_burst_enabled = enabled;
-        self.cursor_sparkle_burst_color = color;
-        self.cursor_sparkle_burst_count = count;
-        self.cursor_sparkle_burst_radius = radius;
-        self.cursor_sparkle_burst_opacity = opacity;
+        self.effects.cursor_sparkle_burst.enabled = enabled;
+        self.effects.cursor_sparkle_burst.color = color;
+        self.effects.cursor_sparkle_burst.count = count;
+        self.effects.cursor_sparkle_burst.radius = radius;
+        self.effects.cursor_sparkle_burst.opacity = opacity;
     }
 
     /// Update circuit trace config
     pub fn set_circuit_trace(&mut self, enabled: bool, color: (f32, f32, f32), width: f32, speed: f32, opacity: f32) {
-        self.circuit_trace_enabled = enabled;
-        self.circuit_trace_color = color;
-        self.circuit_trace_width = width;
-        self.circuit_trace_speed = speed;
-        self.circuit_trace_opacity = opacity;
+        self.effects.circuit_trace.enabled = enabled;
+        self.effects.circuit_trace.color = color;
+        self.effects.circuit_trace.width = width;
+        self.effects.circuit_trace.speed = speed;
+        self.effects.circuit_trace.opacity = opacity;
     }
 
     /// Update cursor compass config
     pub fn set_cursor_compass(&mut self, enabled: bool, color: (f32, f32, f32), size: f32, speed: f32, opacity: f32) {
-        self.cursor_compass_enabled = enabled;
-        self.cursor_compass_color = color;
-        self.cursor_compass_size = size;
-        self.cursor_compass_speed = speed;
-        self.cursor_compass_opacity = opacity;
+        self.effects.cursor_compass.enabled = enabled;
+        self.effects.cursor_compass.color = color;
+        self.effects.cursor_compass.size = size;
+        self.effects.cursor_compass.speed = speed;
+        self.effects.cursor_compass.opacity = opacity;
     }
 
     /// Update mode-line transition config
     pub fn set_mode_line_transition(&mut self, enabled: bool, duration_ms: u32) {
-        self.mode_line_transition_enabled = enabled;
-        self.mode_line_transition_duration_ms = duration_ms;
+        self.effects.mode_line_transition.enabled = enabled;
+        self.effects.mode_line_transition.duration_ms = duration_ms;
     }
 
     /// Get the mode-line transition alpha for a glyph at (x, y)
     fn mode_line_fade_alpha(&self, gx: f32, gy: f32) -> f32 {
-        if !self.mode_line_transition_enabled || self.active_mode_line_fades.is_empty() {
+        if !self.effects.mode_line_transition.enabled || self.active_mode_line_fades.is_empty() {
             return 1.0;
         }
         let now = std::time::Instant::now();
@@ -3618,8 +2203,8 @@ impl WgpuRenderer {
 
     /// Update text fade-in config
     pub fn set_text_fade_in(&mut self, enabled: bool, duration_ms: u32) {
-        self.text_fade_in_enabled = enabled;
-        self.text_fade_in_duration_ms = duration_ms;
+        self.effects.text_fade_in.enabled = enabled;
+        self.effects.text_fade_in.duration_ms = duration_ms;
     }
 
     /// Trigger a text fade-in animation for a window
@@ -3630,7 +2215,7 @@ impl WgpuRenderer {
             window_id,
             bounds,
             started: now,
-            duration: std::time::Duration::from_millis(self.text_fade_in_duration_ms as u64),
+            duration: std::time::Duration::from_millis(self.effects.text_fade_in.duration_ms as u64),
         });
         self.needs_continuous_redraw = true;
     }
@@ -3638,7 +2223,7 @@ impl WgpuRenderer {
     /// Get the text fade-in alpha multiplier for a glyph at (x, y).
     /// Returns 1.0 if no fade is active, or 0.0-1.0 during fade-in.
     fn text_fade_alpha(&self, gx: f32, gy: f32) -> f32 {
-        if !self.text_fade_in_enabled || self.active_text_fades.is_empty() {
+        if !self.effects.text_fade_in.enabled || self.active_text_fades.is_empty() {
             return 1.0;
         }
         let now = std::time::Instant::now();
@@ -3661,8 +2246,8 @@ impl WgpuRenderer {
 
     /// Update scroll line spacing config
     pub fn set_scroll_line_spacing(&mut self, enabled: bool, max_spacing: f32, duration_ms: u32) {
-        self.scroll_line_spacing_enabled = enabled;
-        self.scroll_line_spacing_max = max_spacing;
+        self.effects.scroll_line_spacing.enabled = enabled;
+        self.effects.scroll_line_spacing.max = max_spacing;
         self.scroll_line_spacing_duration_ms = duration_ms;
     }
 
@@ -3682,11 +2267,11 @@ impl WgpuRenderer {
 
     /// Update focus ring config
     pub fn set_focus_ring(&mut self, enabled: bool, color: (f32, f32, f32), opacity: f32, dash_length: f32, speed: f32) {
-        self.focus_ring_enabled = enabled;
-        self.focus_ring_color = color;
-        self.focus_ring_opacity = opacity;
-        self.focus_ring_dash_length = dash_length.max(2.0);
-        self.focus_ring_speed = speed;
+        self.effects.focus_ring.enabled = enabled;
+        self.effects.focus_ring.color = color;
+        self.effects.focus_ring.opacity = opacity;
+        self.effects.focus_ring.dash_length = dash_length.max(2.0);
+        self.effects.focus_ring.speed = speed;
         if enabled {
             self.focus_ring_start = std::time::Instant::now();
         }
@@ -3694,21 +2279,21 @@ impl WgpuRenderer {
 
     /// Update window mode tint config
     pub fn set_window_mode_tint(&mut self, enabled: bool, opacity: f32) {
-        self.window_mode_tint_enabled = enabled;
-        self.window_mode_tint_opacity = opacity;
+        self.effects.window_mode_tint.enabled = enabled;
+        self.effects.window_mode_tint.opacity = opacity;
     }
 
     /// Update window watermark config
     pub fn set_window_watermark(&mut self, enabled: bool, opacity: f32, threshold: u32) {
-        self.window_watermark_enabled = enabled;
-        self.window_watermark_opacity = opacity;
-        self.window_watermark_threshold = threshold;
+        self.effects.window_watermark.enabled = enabled;
+        self.effects.window_watermark.opacity = opacity;
+        self.effects.window_watermark.threshold = threshold;
     }
 
     /// Update cursor trail fade config
     pub fn set_cursor_trail_fade(&mut self, enabled: bool, length: usize, fade_ms: u32) {
-        self.cursor_trail_fade_enabled = enabled;
-        self.cursor_trail_fade_length = length;
+        self.effects.cursor_trail_fade.enabled = enabled;
+        self.effects.cursor_trail_fade.length = length;
         self.cursor_trail_fade_duration = std::time::Duration::from_millis(fade_ms as u64);
         if !enabled {
             self.cursor_trail_positions.clear();
@@ -3717,24 +2302,24 @@ impl WgpuRenderer {
 
     /// Record a new cursor position for the trail
     pub fn record_cursor_trail(&mut self, x: f32, y: f32, w: f32, h: f32) {
-        if !self.cursor_trail_fade_enabled { return; }
+        if !self.effects.cursor_trail_fade.enabled { return; }
         let dist = ((x - self.cursor_trail_last_pos.0).powi(2)
             + (y - self.cursor_trail_last_pos.1).powi(2)).sqrt();
         if dist < 2.0 { return; } // Skip tiny movements
         self.cursor_trail_positions.push((x, y, w, h, std::time::Instant::now()));
         self.cursor_trail_last_pos = (x, y);
         // Trim to max length
-        while self.cursor_trail_positions.len() > self.cursor_trail_fade_length {
+        while self.cursor_trail_positions.len() > self.effects.cursor_trail_fade.length {
             self.cursor_trail_positions.remove(0);
         }
     }
 
     /// Update region glow config
     pub fn set_region_glow(&mut self, enabled: bool, face_id: u32, radius: f32, opacity: f32) {
-        self.region_glow_enabled = enabled;
-        self.region_glow_face_id = face_id;
-        self.region_glow_radius = radius;
-        self.region_glow_opacity = opacity;
+        self.effects.region_glow.enabled = enabled;
+        self.effects.region_glow.face_id = face_id;
+        self.effects.region_glow.radius = radius;
+        self.effects.region_glow.opacity = opacity;
     }
 
     /// Update idle dim alpha
@@ -3744,30 +2329,30 @@ impl WgpuRenderer {
 
     /// Update noise grain config
     pub fn set_noise_grain(&mut self, enabled: bool, intensity: f32, size: f32) {
-        self.noise_grain_enabled = enabled;
-        self.noise_grain_intensity = intensity;
-        self.noise_grain_size = size;
+        self.effects.noise_grain.enabled = enabled;
+        self.effects.noise_grain.intensity = intensity;
+        self.effects.noise_grain.size = size;
     }
 
     /// Update padding gradient config
     pub fn set_padding_gradient(&mut self, enabled: bool, color: (f32, f32, f32), opacity: f32, width: f32) {
-        self.padding_gradient_enabled = enabled;
-        self.padding_gradient_color = color;
-        self.padding_gradient_opacity = opacity;
-        self.padding_gradient_width = width;
+        self.effects.padding_gradient.enabled = enabled;
+        self.effects.padding_gradient.color = color;
+        self.effects.padding_gradient.opacity = opacity;
+        self.effects.padding_gradient.width = width;
     }
 
     /// Update frosted glass config
     pub fn set_frosted_glass(&mut self, enabled: bool, opacity: f32, blur: f32) {
-        self.frosted_glass_enabled = enabled;
-        self.frosted_glass_opacity = opacity;
-        self.frosted_glass_blur = blur;
+        self.effects.frosted_glass.enabled = enabled;
+        self.effects.frosted_glass.opacity = opacity;
+        self.effects.frosted_glass.blur = blur;
     }
 
     /// Update title fade config
     pub fn set_title_fade(&mut self, enabled: bool, duration_ms: u32) {
-        self.title_fade_enabled = enabled;
-        self.title_fade_duration_ms = duration_ms;
+        self.effects.title_fade.enabled = enabled;
+        self.effects.title_fade.duration_ms = duration_ms;
         if !enabled {
             self.active_title_fades.clear();
         }
@@ -3781,8 +2366,8 @@ impl WgpuRenderer {
             window_id,
             bounds,
             started: std::time::Instant::now(),
-            duration: std::time::Duration::from_millis(self.window_switch_fade_duration_ms as u64),
-            intensity: self.window_switch_fade_intensity,
+            duration: std::time::Duration::from_millis(self.effects.window_switch_fade.duration_ms as u64),
+            intensity: self.effects.window_switch_fade.intensity,
         });
     }
 
@@ -3813,15 +2398,15 @@ impl WgpuRenderer {
 
     /// Update header/mode-line shadow config
     pub fn set_header_shadow(&mut self, enabled: bool, intensity: f32, size: f32) {
-        self.header_shadow_enabled = enabled;
-        self.header_shadow_intensity = intensity;
-        self.header_shadow_size = size;
+        self.effects.header_shadow.enabled = enabled;
+        self.effects.header_shadow.intensity = intensity;
+        self.effects.header_shadow.size = size;
     }
 
     /// Update search pulse config
     pub fn set_search_pulse(&mut self, enabled: bool, face_id: u32) {
-        self.search_pulse_enabled = enabled;
-        self.search_pulse_face_id = face_id;
+        self.effects.search_pulse.enabled = enabled;
+        self.effects.search_pulse.face_id = face_id;
         if enabled {
             self.search_pulse_start = std::time::Instant::now();
         }
@@ -3829,8 +2414,8 @@ impl WgpuRenderer {
 
     /// Update typing ripple config
     pub fn set_typing_ripple(&mut self, enabled: bool, max_radius: f32, duration_ms: u32) {
-        self.typing_ripple_enabled = enabled;
-        self.typing_ripple_max_radius = max_radius;
+        self.effects.typing_ripple.enabled = enabled;
+        self.effects.typing_ripple.max_radius = max_radius;
         self.typing_ripple_duration = duration_ms as f32 / 1000.0;
         if !enabled {
             self.active_ripples.clear();
@@ -3839,41 +2424,41 @@ impl WgpuRenderer {
 
     /// Spawn a new ripple at the given position
     pub fn spawn_ripple(&mut self, cx: f32, cy: f32) {
-        if self.typing_ripple_enabled {
+        if self.effects.typing_ripple.enabled {
             self.active_ripples.push((cx, cy, std::time::Instant::now()));
         }
     }
 
     /// Update visible whitespace config
     pub fn set_show_whitespace_config(&mut self, enabled: bool, color: (f32, f32, f32, f32)) {
-        self.show_whitespace_enabled = enabled;
-        self.show_whitespace_color = color;
+        self.effects.show_whitespace.enabled = enabled;
+        self.effects.show_whitespace.color = color;
     }
 
     /// Update line highlight config
     pub fn set_line_highlight_config(&mut self, enabled: bool, color: (f32, f32, f32, f32)) {
-        self.line_highlight_enabled = enabled;
-        self.line_highlight_color = color;
+        self.effects.line_highlight.enabled = enabled;
+        self.effects.line_highlight.color = color;
     }
 
     /// Update indent guide config
     pub fn set_indent_guide_config(&mut self, enabled: bool, color: (f32, f32, f32, f32)) {
-        self.indent_guides_enabled = enabled;
-        self.indent_guide_color = color;
+        self.effects.indent_guides.enabled = enabled;
+        self.effects.indent_guides.color = color;
     }
 
     /// Update rainbow indent guide config
     pub fn set_indent_guide_rainbow(&mut self, enabled: bool, colors: Vec<(f32, f32, f32, f32)>) {
-        self.indent_guide_rainbow_enabled = enabled;
-        self.indent_guide_rainbow_colors = colors;
+        self.effects.indent_guides.rainbow_enabled = enabled;
+        self.effects.indent_guides.rainbow_colors = colors;
     }
 
     /// Update scroll bar rendering config
     pub fn set_scroll_bar_config(&mut self, thumb_radius: f32, track_opacity: f32,
                                   hover_brightness: f32) {
-        self.scroll_bar_thumb_radius = thumb_radius;
-        self.scroll_bar_track_opacity = track_opacity;
-        self.scroll_bar_hover_brightness = hover_brightness;
+        self.effects.scroll_bar.thumb_radius = thumb_radius;
+        self.effects.scroll_bar.track_opacity = track_opacity;
+        self.effects.scroll_bar.hover_brightness = hover_brightness;
     }
 
     async fn new_async(
@@ -4611,7 +3196,7 @@ impl WgpuRenderer {
         }
 
         // Detect mode-line content changes and trigger transitions
-        if self.mode_line_transition_enabled {
+        if self.effects.mode_line_transition.enabled {
             use std::collections::hash_map::DefaultHasher;
             use std::hash::{Hash, Hasher};
             let now_ml = std::time::Instant::now();
@@ -4643,7 +3228,7 @@ impl WgpuRenderer {
                             bounds_x: info.bounds.x,
                             bounds_w: info.bounds.width,
                             started: now_ml,
-                            duration: std::time::Duration::from_millis(self.mode_line_transition_duration_ms as u64),
+                            duration: std::time::Duration::from_millis(self.effects.mode_line_transition.duration_ms as u64),
                         });
                         self.needs_continuous_redraw = true;
                     }
@@ -4668,7 +3253,7 @@ impl WgpuRenderer {
 
         // Clear expired cursor wake animation
         if let Some(started) = self.cursor_wake_started {
-            let dur = std::time::Duration::from_millis(self.cursor_wake_duration_ms as u64);
+            let dur = std::time::Duration::from_millis(self.effects.cursor_wake.duration_ms as u64);
             if started.elapsed() >= dur {
                 self.cursor_wake_started = None;
             } else {
@@ -4678,7 +3263,7 @@ impl WgpuRenderer {
 
         // Clear expired cursor error pulse
         if let Some(started) = self.cursor_error_pulse_started {
-            let dur = std::time::Duration::from_millis(self.cursor_error_pulse_duration_ms as u64);
+            let dur = std::time::Duration::from_millis(self.effects.cursor_error_pulse.duration_ms as u64);
             if started.elapsed() >= dur {
                 self.cursor_error_pulse_started = None;
             } else {
@@ -4891,8 +3476,8 @@ impl WgpuRenderer {
         }
 
         // --- Current line highlight ---
-        if self.line_highlight_enabled {
-            let (lr, lg, lb, la) = self.line_highlight_color;
+        if self.effects.line_highlight.enabled {
+            let (lr, lg, lb, la) = self.effects.line_highlight.color;
             let hl_color = Color::new(lr, lg, lb, la);
 
             // Find the active cursor (style != 3, which is hollow/inactive)
@@ -4921,8 +3506,8 @@ impl WgpuRenderer {
         }
 
         // --- Indent guides ---
-        if self.indent_guides_enabled {
-            let (ig_r, ig_g, ig_b, ig_a) = self.indent_guide_color;
+        if self.effects.indent_guides.enabled {
+            let (ig_r, ig_g, ig_b, ig_a) = self.effects.indent_guides.color;
             let guide_color = Color::new(ig_r, ig_g, ig_b, ig_a);
             let guide_width = 1.0_f32;
 
@@ -4984,15 +3569,15 @@ impl WgpuRenderer {
 
             // Draw guides at each tab-stop column within the indent region
             let tab_px = char_w * tab_w as f32;
-            let use_rainbow = self.indent_guide_rainbow_enabled
-                && !self.indent_guide_rainbow_colors.is_empty();
+            let use_rainbow = self.effects.indent_guides.rainbow_enabled
+                && !self.effects.indent_guides.rainbow_colors.is_empty();
             for row in &rows {
                 let mut col_x = row.text_start_x + tab_px;
                 let mut depth: usize = 0;
                 while col_x < row.first_non_space_x - 1.0 {
                     let color = if use_rainbow {
-                        let (r, g, b, a) = self.indent_guide_rainbow_colors
-                            [depth % self.indent_guide_rainbow_colors.len()];
+                        let (r, g, b, a) = self.effects.indent_guides.rainbow_colors
+                            [depth % self.effects.indent_guides.rainbow_colors.len()];
                         Color::new(r, g, b, a)
                     } else {
                         guide_color
@@ -5009,8 +3594,8 @@ impl WgpuRenderer {
         }
 
         // --- Visible whitespace dots ---
-        if self.show_whitespace_enabled {
-            let (wr, wg, wb, wa) = self.show_whitespace_color;
+        if self.effects.show_whitespace.enabled {
+            let (wr, wg, wb, wa) = self.effects.show_whitespace.color;
             let ws_color = Color::new(wr, wg, wb, wa);
             let dot_size = 1.5_f32;
 
@@ -5115,7 +3700,7 @@ impl WgpuRenderer {
                     // Draw scroll bar track (subtle, configurable opacity)
                     let subtle_track = Color::new(
                         track_color.r, track_color.g, track_color.b,
-                        track_color.a * self.scroll_bar_track_opacity,
+                        track_color.a * self.effects.scroll_bar.track_opacity,
                     );
                     self.add_rect(&mut cursor_vertices, *x, *y, *width, *height, &subtle_track);
 
@@ -5130,7 +3715,7 @@ impl WgpuRenderer {
                     let (mx, my) = mouse_pos;
                     let hovered = mx >= *x && mx <= *x + *width
                         && my >= *y && my <= *y + *height;
-                    let bright = self.scroll_bar_hover_brightness;
+                    let bright = self.effects.scroll_bar.hover_brightness;
                     let effective_thumb = if hovered {
                         Color::new(
                             (thumb_color.r * bright).min(1.0),
@@ -5143,7 +3728,7 @@ impl WgpuRenderer {
                     };
 
                     // Rounded thumb with configurable pill radius
-                    let radius = tw.min(th) * self.scroll_bar_thumb_radius;
+                    let radius = tw.min(th) * self.effects.scroll_bar.thumb_radius;
                     scroll_bar_thumb_vertices.push((tx, ty, tw, th, radius, effective_thumb));
                 }
                 FrameGlyph::Cursor {
@@ -5157,10 +3742,10 @@ impl WgpuRenderer {
                 } => {
                     // Compute effective cursor color (possibly overridden by color cycling)
                     let cycle_color;
-                    let effective_color = if self.cursor_color_cycle_enabled && *style != 3 {
+                    let effective_color = if self.effects.cursor_color_cycle.enabled && *style != 3 {
                         let elapsed = self.cursor_color_cycle_start.elapsed().as_secs_f32();
-                        let hue = (elapsed * self.cursor_color_cycle_speed) % 1.0;
-                        cycle_color = Self::hsl_to_color(hue, self.cursor_color_cycle_saturation, self.cursor_color_cycle_lightness);
+                        let hue = (elapsed * self.effects.cursor_color_cycle.speed) % 1.0;
+                        cycle_color = Self::hsl_to_color(hue, self.effects.cursor_color_cycle.saturation, self.effects.cursor_color_cycle.lightness);
                         self.needs_continuous_redraw = true;
                         &cycle_color
                     } else {
@@ -5192,7 +3777,7 @@ impl WgpuRenderer {
                         if cursor_visible {
                             if let Some(ref inv) = frame_glyphs.cursor_inverse {
                                 // Draw cursor bg rect at static position (inverse video background)
-                                let inv_color = if self.cursor_color_cycle_enabled {
+                                let inv_color = if self.effects.cursor_color_cycle.enabled {
                                     effective_color
                                 } else {
                                     &inv.cursor_bg
@@ -5346,16 +3931,16 @@ impl WgpuRenderer {
             }
 
             // === Step 1a: Background pattern (dots/grid/crosshatch) ===
-            if self.bg_pattern_style > 0 {
-                let spacing = self.bg_pattern_spacing.max(4.0);
-                let (pr, pg, pb) = self.bg_pattern_color;
-                let alpha = self.bg_pattern_opacity;
+            if self.effects.bg_pattern.style > 0 {
+                let spacing = self.effects.bg_pattern.spacing.max(4.0);
+                let (pr, pg, pb) = self.effects.bg_pattern.color;
+                let alpha = self.effects.bg_pattern.opacity;
                 let pat_color = Color::new(pr, pg, pb, alpha);
                 let frame_w = frame_glyphs.width;
                 let frame_h = frame_glyphs.height;
                 let mut pattern_vertices: Vec<RectVertex> = Vec::new();
 
-                match self.bg_pattern_style {
+                match self.effects.bg_pattern.style {
                     1 => {
                         // Dots: small squares at grid intersections
                         let dot_size = 1.0;
@@ -5473,7 +4058,7 @@ impl WgpuRenderer {
             }
 
             // === Step 1c: Draw cursor glow effect (behind cursor and text) ===
-            if self.cursor_glow_enabled && cursor_visible {
+            if self.effects.cursor_glow.enabled && cursor_visible {
                 // Find active cursor position (style != 3 = not hollow/inactive)
                 let mut glow_pos: Option<(f32, f32, f32, f32)> = None;
                 if let Some(ref anim) = animated_cursor {
@@ -5490,17 +4075,17 @@ impl WgpuRenderer {
                 }
 
                 if let Some((cx, cy, cw, ch)) = glow_pos {
-                    let (gr, gg, gb) = self.cursor_glow_color;
-                    let radius = self.cursor_glow_radius;
-                    let mut peak_alpha = self.cursor_glow_opacity;
+                    let (gr, gg, gb) = self.effects.cursor_glow.color;
+                    let radius = self.effects.cursor_glow.radius;
+                    let mut peak_alpha = self.effects.cursor_glow.opacity;
 
                     // Apply pulse modulation if enabled
-                    if self.cursor_pulse_enabled {
+                    if self.effects.cursor_pulse.enabled {
                         let elapsed = self.cursor_pulse_start.elapsed().as_secs_f32();
-                        let phase = elapsed * self.cursor_pulse_speed * 2.0 * std::f32::consts::PI;
+                        let phase = elapsed * self.effects.cursor_pulse.speed * 2.0 * std::f32::consts::PI;
                         // Sine wave: maps [min_opacity..1.0] range
                         let t = (phase.sin() + 1.0) / 2.0; // 0.0 to 1.0
-                        let factor = self.cursor_pulse_min_opacity + t * (1.0 - self.cursor_pulse_min_opacity);
+                        let factor = self.effects.cursor_pulse.min_opacity + t * (1.0 - self.effects.cursor_pulse.min_opacity);
                         peak_alpha *= factor;
                     }
                     let layers = (radius / 2.0).ceil() as i32;
@@ -5539,7 +4124,7 @@ impl WgpuRenderer {
             }
 
             // === Step 1d: Draw cursor crosshair guide lines ===
-            if self.cursor_crosshair_enabled && cursor_visible {
+            if self.effects.cursor_crosshair.enabled && cursor_visible {
                 let mut cross_pos: Option<(f32, f32, f32, f32)> = None;
                 if let Some(ref anim) = animated_cursor {
                     cross_pos = Some((anim.x, anim.y, anim.width, anim.height));
@@ -5560,8 +4145,8 @@ impl WgpuRenderer {
                     if let Some(win_info) = frame_glyphs.window_infos.iter()
                         .find(|w| w.selected && !w.is_minibuffer)
                     {
-                        let (cr, cg, cb) = self.cursor_crosshair_color;
-                        let alpha = self.cursor_crosshair_opacity;
+                        let (cr, cg, cb) = self.effects.cursor_crosshair.color;
+                        let alpha = self.effects.cursor_crosshair.opacity;
                         let c = Color::new(cr, cg, cb, alpha);
                         let mut cross_verts: Vec<RectVertex> = Vec::new();
                         let wb = &win_info.bounds;
@@ -5589,11 +4174,11 @@ impl WgpuRenderer {
             }
 
             // === Step 1e: Draw buffer modified border indicator ===
-            if self.modified_indicator_enabled {
-                let (mr, mg, mb) = self.modified_indicator_color;
-                let malpha = self.modified_indicator_opacity;
+            if self.effects.modified_indicator.enabled {
+                let (mr, mg, mb) = self.effects.modified_indicator.color;
+                let malpha = self.effects.modified_indicator.opacity;
                 let mc = Color::new(mr, mg, mb, malpha);
-                let mw = self.modified_indicator_width;
+                let mw = self.effects.modified_indicator.width;
                 let mut mod_verts: Vec<RectVertex> = Vec::new();
                 for win_info in &frame_glyphs.window_infos {
                     if win_info.modified && !win_info.is_minibuffer {
@@ -5622,9 +4207,9 @@ impl WgpuRenderer {
             }
 
             // === Step 1f: Typing heat map overlay ===
-            if self.typing_heatmap_enabled {
+            if self.effects.typing_heatmap.enabled {
                 let now = std::time::Instant::now();
-                let fade_dur = std::time::Duration::from_millis(self.typing_heatmap_fade_ms as u64);
+                let fade_dur = std::time::Duration::from_millis(self.effects.typing_heatmap.fade_ms as u64);
 
                 // Detect cursor movement and record heat entry
                 if let Some(ref anim) = animated_cursor {
@@ -5651,8 +4236,8 @@ impl WgpuRenderer {
 
                 // Render heat entries
                 if !self.typing_heatmap_entries.is_empty() {
-                    let (hr, hg, hb) = self.typing_heatmap_color;
-                    let max_alpha = self.typing_heatmap_opacity;
+                    let (hr, hg, hb) = self.effects.typing_heatmap.color;
+                    let max_alpha = self.effects.typing_heatmap.opacity;
                     let mut heat_verts: Vec<RectVertex> = Vec::new();
                     for entry in &self.typing_heatmap_entries {
                         let elapsed = now.duration_since(entry.started);
@@ -5685,12 +4270,12 @@ impl WgpuRenderer {
             }
 
             // === Step 1g: Per-window rounded border ===
-            if self.window_border_radius_enabled {
-                let (wr, wg, wb) = self.window_border_color;
-                let walpha = self.window_border_opacity;
+            if self.effects.window_border_radius.enabled {
+                let (wr, wg, wb) = self.effects.window_border_radius.color;
+                let walpha = self.effects.window_border_radius.opacity;
                 let wc = Color::new(wr, wg, wb, walpha);
-                let radius = self.window_border_radius;
-                let bw = self.window_border_width;
+                let radius = self.effects.window_border_radius.radius;
+                let bw = self.effects.window_border_radius.width;
                 let mut border_verts: Vec<RoundedRectVertex> = Vec::new();
                 for win_info in &frame_glyphs.window_infos {
                     if !win_info.is_minibuffer {
@@ -5723,9 +4308,9 @@ impl WgpuRenderer {
             }
 
             // === Step 1h: Inactive window stained glass effect ===
-            if self.stained_glass_enabled {
-                let sg_opacity = self.stained_glass_opacity;
-                let sg_sat = self.stained_glass_saturation;
+            if self.effects.stained_glass.enabled {
+                let sg_opacity = self.effects.stained_glass.opacity;
+                let sg_sat = self.effects.stained_glass.saturation;
                 let mut sg_verts: Vec<RectVertex> = Vec::new();
                 for win_info in &frame_glyphs.window_infos {
                     if !win_info.selected && !win_info.is_minibuffer {
@@ -5770,11 +4355,11 @@ impl WgpuRenderer {
             }
 
             // === Step 1i_focus: Focus gradient border ===
-            if self.focus_gradient_border_enabled {
-                let bw = self.focus_gradient_border_width;
-                let (tr, tg, tb) = self.focus_gradient_border_top_color;
-                let (br2, bg2, bb2) = self.focus_gradient_border_bot_color;
-                let alpha = self.focus_gradient_border_opacity;
+            if self.effects.focus_gradient_border.enabled {
+                let bw = self.effects.focus_gradient_border.width;
+                let (tr, tg, tb) = self.effects.focus_gradient_border.top_color;
+                let (br2, bg2, bb2) = self.effects.focus_gradient_border.bot_color;
+                let alpha = self.effects.focus_gradient_border.opacity;
                 let mut grad_verts: Vec<RectVertex> = Vec::new();
                 for win_info in &frame_glyphs.window_infos {
                     if !win_info.selected || win_info.is_minibuffer { continue; }
@@ -5816,15 +4401,15 @@ impl WgpuRenderer {
             }
 
             // === Step 1i_depth: Window depth shadow layers ===
-            if self.depth_shadow_enabled {
-                let (dr, dg, db) = self.depth_shadow_color;
+            if self.effects.depth_shadow.enabled {
+                let (dr, dg, db) = self.effects.depth_shadow.color;
                 let mut shadow_verts: Vec<RectVertex> = Vec::new();
                 for win_info in &frame_glyphs.window_infos {
                     if win_info.is_minibuffer { continue; }
                     let b = &win_info.bounds;
-                    for layer in (1..=self.depth_shadow_layers).rev() {
-                        let off = layer as f32 * self.depth_shadow_offset;
-                        let alpha = self.depth_shadow_opacity * (1.0 - (layer - 1) as f32 / self.depth_shadow_layers as f32);
+                    for layer in (1..=self.effects.depth_shadow.layers).rev() {
+                        let off = layer as f32 * self.effects.depth_shadow.offset;
+                        let alpha = self.effects.depth_shadow.opacity * (1.0 - (layer - 1) as f32 / self.effects.depth_shadow.layers as f32);
                         let c = Color::new(dr, dg, db, alpha);
                         // Bottom edge shadow
                         self.add_rect(&mut shadow_verts, b.x + off, b.y + b.height, b.width, off, &c);
@@ -5848,10 +4433,10 @@ impl WgpuRenderer {
             }
 
             // === Step 1i_modeline_grad: Mode-line gradient background ===
-            if self.mode_line_gradient_enabled {
-                let (lr, lg, lb) = self.mode_line_gradient_left_color;
-                let (rr, rg, rb) = self.mode_line_gradient_right_color;
-                let alpha = self.mode_line_gradient_opacity;
+            if self.effects.mode_line_gradient.enabled {
+                let (lr, lg, lb) = self.effects.mode_line_gradient.left_color;
+                let (rr, rg, rb) = self.effects.mode_line_gradient.right_color;
+                let alpha = self.effects.mode_line_gradient.opacity;
                 let mut ml_verts: Vec<RectVertex> = Vec::new();
                 for win_info in &frame_glyphs.window_infos {
                     if win_info.is_minibuffer { continue; }
@@ -5888,9 +4473,9 @@ impl WgpuRenderer {
             }
 
             // === Step 1i_magnetism: Cursor magnetism effect ===
-            if self.cursor_magnetism_enabled {
+            if self.effects.cursor_magnetism.enabled {
                 let now = std::time::Instant::now();
-                let dur = std::time::Duration::from_millis(self.cursor_magnetism_duration_ms as u64);
+                let dur = std::time::Duration::from_millis(self.effects.cursor_magnetism.duration_ms as u64);
 
                 // Detect cursor jump (large movement) and record
                 if let Some(ref anim) = animated_cursor {
@@ -5917,9 +4502,9 @@ impl WgpuRenderer {
 
                 // Render collapsing rings
                 if !self.cursor_magnetism_entries.is_empty() {
-                    let (mr, mg, mb) = self.cursor_magnetism_color;
-                    let max_alpha = self.cursor_magnetism_opacity;
-                    let ring_count = self.cursor_magnetism_ring_count;
+                    let (mr, mg, mb) = self.effects.cursor_magnetism.color;
+                    let max_alpha = self.effects.cursor_magnetism.opacity;
+                    let ring_count = self.effects.cursor_magnetism.ring_count;
                     let mut mag_verts: Vec<RectVertex> = Vec::new();
                     for &(cx, cy, started) in &self.cursor_magnetism_entries {
                         let t = now.duration_since(started).as_secs_f32() / dur.as_secs_f32();
@@ -5955,10 +4540,10 @@ impl WgpuRenderer {
             }
 
             // === Step 1i2: Window corner fold effect ===
-            if self.corner_fold_enabled {
-                let fold_size = self.corner_fold_size;
-                let (fr, fg, fb) = self.corner_fold_color;
-                let fold_alpha = self.corner_fold_opacity;
+            if self.effects.corner_fold.enabled {
+                let fold_size = self.effects.corner_fold.size;
+                let (fr, fg, fb) = self.effects.corner_fold.color;
+                let fold_alpha = self.effects.corner_fold.opacity;
                 let mut fold_verts: Vec<RectVertex> = Vec::new();
                 for win_info in &frame_glyphs.window_infos {
                     if win_info.is_minibuffer { continue; }
@@ -5992,9 +4577,9 @@ impl WgpuRenderer {
             }
 
             // === Step 1i2: Frosted window border effect ===
-            if self.frosted_border_enabled {
-                let bw = self.frosted_border_width;
-                let (fbr, fbg, fbb) = self.frosted_border_color;
+            if self.effects.frosted_border.enabled {
+                let bw = self.effects.frosted_border.width;
+                let (fbr, fbg, fbb) = self.effects.frosted_border.color;
                 let layers = 4u32;
                 let mut frost_verts: Vec<RectVertex> = Vec::new();
                 for win_info in &frame_glyphs.window_infos {
@@ -6003,7 +4588,7 @@ impl WgpuRenderer {
                     for layer in 0..layers {
                         let t = layer as f32 / layers as f32;
                         let layer_w = bw * (1.0 - t * 0.5);
-                        let alpha = self.frosted_border_opacity * (1.0 - t * 0.7);
+                        let alpha = self.effects.frosted_border.opacity * (1.0 - t * 0.7);
                         let c = Color::new(fbr, fbg, fbb, alpha);
                         let inset = layer as f32 * (bw / layers as f32);
                         // Top
@@ -6032,15 +4617,15 @@ impl WgpuRenderer {
             }
 
             // === Step 1i3: Line number pulse on cursor line ===
-            if self.line_number_pulse_enabled {
+            if self.effects.line_number_pulse.enabled {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now();
-                    let cycle = self.line_number_pulse_cycle_ms as f64 / 1000.0;
+                    let cycle = self.effects.line_number_pulse.cycle_ms as f64 / 1000.0;
                     let elapsed = now.elapsed().as_secs_f64();
                     let phase = (elapsed % cycle) / cycle;
                     let pulse = ((phase * std::f64::consts::TAU).sin() * 0.5 + 0.5) as f32;
-                    let alpha = self.line_number_pulse_intensity * pulse;
-                    let (pr, pg, pb) = self.line_number_pulse_color;
+                    let alpha = self.effects.line_number_pulse.intensity * pulse;
+                    let (pr, pg, pb) = self.effects.line_number_pulse.color;
                     if alpha > 0.001 {
                         for win_info in &frame_glyphs.window_infos {
                             if !win_info.selected { continue; }
@@ -6069,14 +4654,14 @@ impl WgpuRenderer {
             }
 
             // === Step 1i4: Window breathing border animation ===
-            if self.breathing_border_enabled {
+            if self.effects.breathing_border.enabled {
                 let now = std::time::Instant::now();
-                let cycle = self.breathing_border_cycle_ms as f64 / 1000.0;
+                let cycle = self.effects.breathing_border.cycle_ms as f64 / 1000.0;
                 let elapsed = now.elapsed().as_secs_f64();
                 let phase = (elapsed % cycle) / cycle;
                 let breath = ((phase * std::f64::consts::TAU).sin() * 0.5 + 0.5) as f32;
-                let alpha = self.breathing_border_min_opacity + breath * (self.breathing_border_max_opacity - self.breathing_border_min_opacity);
-                let (br, bg, bb) = self.breathing_border_color;
+                let alpha = self.effects.breathing_border.min_opacity + breath * (self.effects.breathing_border.max_opacity - self.effects.breathing_border.min_opacity);
+                let (br, bg, bb) = self.effects.breathing_border.color;
                 let c = Color::new(br, bg, bb, alpha);
                 let border_w = 2.0_f32;
                 let mut breath_verts: Vec<RectVertex> = Vec::new();
@@ -6105,10 +4690,10 @@ impl WgpuRenderer {
             }
 
             // === Step 1i5: Window scanline (CRT) effect ===
-            if self.scanlines_enabled {
-                let spacing = self.scanlines_spacing.max(1) as f32;
-                let (sr, sg, sb) = self.scanlines_color;
-                let sa = self.scanlines_opacity;
+            if self.effects.scanlines.enabled {
+                let spacing = self.effects.scanlines.spacing.max(1) as f32;
+                let (sr, sg, sb) = self.effects.scanlines.color;
+                let sa = self.effects.scanlines.opacity;
                 let mut sl_verts: Vec<RectVertex> = Vec::new();
                 let c = Color::new(sr, sg, sb, sa);
                 let mut y = 0.0_f32;
@@ -6134,13 +4719,13 @@ impl WgpuRenderer {
             }
 
             // === Step 1j: Cursor spotlight/radial gradient effect ===
-            if self.cursor_spotlight_enabled {
+            if self.effects.cursor_spotlight.enabled {
                 if let Some(ref anim) = animated_cursor {
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
-                    let radius = self.cursor_spotlight_radius;
-                    let intensity = self.cursor_spotlight_intensity;
-                    let (spr, spg, spb) = self.cursor_spotlight_color;
+                    let radius = self.effects.cursor_spotlight.radius;
+                    let intensity = self.effects.cursor_spotlight.intensity;
+                    let (spr, spg, spb) = self.effects.cursor_spotlight.color;
                     // Approximate radial gradient with concentric rings
                     let rings = 20u32;
                     let mut spot_verts: Vec<RectVertex> = Vec::new();
@@ -6170,9 +4755,9 @@ impl WgpuRenderer {
             }
 
             // === Step 1k: Cursor comet tail effect ===
-            if self.cursor_comet_enabled {
+            if self.effects.cursor_comet.enabled {
                 let now = std::time::Instant::now();
-                let fade_dur = std::time::Duration::from_millis(self.cursor_comet_fade_ms as u64);
+                let fade_dur = std::time::Duration::from_millis(self.effects.cursor_comet.fade_ms as u64);
 
                 // Record cursor position
                 if let Some(ref anim) = animated_cursor {
@@ -6191,7 +4776,7 @@ impl WgpuRenderer {
                 self.cursor_comet_positions.retain(|&(_, _, _, _, t)| now.duration_since(t) < fade_dur);
 
                 // Keep only trail_length most recent
-                let max = self.cursor_comet_trail_length as usize;
+                let max = self.effects.cursor_comet.trail_length as usize;
                 if self.cursor_comet_positions.len() > max {
                     let drain_count = self.cursor_comet_positions.len() - max;
                     self.cursor_comet_positions.drain(0..drain_count);
@@ -6199,8 +4784,8 @@ impl WgpuRenderer {
 
                 // Render ghost cursors
                 if !self.cursor_comet_positions.is_empty() {
-                    let (cr, cg, cb) = self.cursor_comet_color;
-                    let max_alpha = self.cursor_comet_opacity;
+                    let (cr, cg, cb) = self.effects.cursor_comet.color;
+                    let max_alpha = self.effects.cursor_comet.opacity;
                     let count = self.cursor_comet_positions.len();
                     let mut comet_verts: Vec<RectVertex> = Vec::new();
                     for (i, &(px, py, pw, ph, t)) in self.cursor_comet_positions.iter().enumerate() {
@@ -6231,9 +4816,9 @@ impl WgpuRenderer {
             }
 
             // === Step 1l: Cursor particle trail effect ===
-            if self.cursor_particles_enabled {
+            if self.effects.cursor_particles.enabled {
                 let now = std::time::Instant::now();
-                let lifetime = std::time::Duration::from_millis(self.cursor_particles_lifetime_ms as u64);
+                let lifetime = std::time::Duration::from_millis(self.effects.cursor_particles.lifetime_ms as u64);
 
                 // Detect cursor movement and emit particles
                 if let Some(ref anim) = animated_cursor {
@@ -6244,7 +4829,7 @@ impl WgpuRenderer {
                         if dx > 1.0 || dy > 1.0 {
                             // Emit particles from cursor center
                             let seed = (now.elapsed().subsec_nanos() as u64).wrapping_mul(2654435761);
-                            for i in 0..self.cursor_particles_count {
+                            for i in 0..self.effects.cursor_particles.count {
                                 // Simple hash-based pseudo-random
                                 let h = seed.wrapping_add(i as u64).wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
                                 let rx = ((h >> 16) & 0xFFFF) as f32 / 65535.0 - 0.5; // -0.5..0.5
@@ -6268,8 +4853,8 @@ impl WgpuRenderer {
 
                 // Render particles
                 if !self.cursor_particles.is_empty() {
-                    let (pr, pg, pb) = self.cursor_particles_color;
-                    let gravity = self.cursor_particles_gravity;
+                    let (pr, pg, pb) = self.effects.cursor_particles.color;
+                    let gravity = self.effects.cursor_particles.gravity;
                     let mut part_verts: Vec<RectVertex> = Vec::new();
                     for p in &self.cursor_particles {
                         let elapsed = now.duration_since(p.started).as_secs_f32();
@@ -6303,23 +4888,23 @@ impl WgpuRenderer {
             }
 
             // Matrix/digital rain effect
-            if self.matrix_rain_enabled {
+            if self.effects.matrix_rain.enabled {
                 let fw = self.width as f32 / self.scale_factor;
                 let fh = self.height as f32 / self.scale_factor;
                 let dt = 1.0 / 60.0_f32;
                 let now_ns = std::time::Instant::now().elapsed().subsec_nanos() as u64;
 
                 // Spawn columns if needed
-                while self.matrix_rain_columns.len() < self.matrix_rain_column_count as usize {
+                while self.matrix_rain_columns.len() < self.effects.matrix_rain.column_count as usize {
                     let i = self.matrix_rain_columns.len() as u64;
                     let h = now_ns.wrapping_mul(2654435761).wrapping_add(i * 6364136223846793005);
-                    let x = (i as f32 / self.matrix_rain_column_count as f32) * fw;
+                    let x = (i as f32 / self.effects.matrix_rain.column_count as f32) * fw;
                     let y = -(((h >> 16) & 0xFFFF) as f32 / 65535.0) * fh;
                     let speed_var = 0.6 + ((h >> 32) & 0xFFFF) as f32 / 65535.0 * 0.8;
                     let length = 30.0 + ((h >> 48) & 0xFF) as f32 / 255.0 * 80.0;
                     self.matrix_rain_columns.push(MatrixColumn {
                         x, y,
-                        speed: self.matrix_rain_speed * speed_var,
+                        speed: self.effects.matrix_rain.speed * speed_var,
                         length,
                     });
                 }
@@ -6331,13 +4916,13 @@ impl WgpuRenderer {
                         let h = now_ns.wrapping_mul(6364136223846793005).wrapping_add((col.x * 1000.0) as u64);
                         col.y = -(((h >> 16) & 0xFFFF) as f32 / 65535.0) * 50.0;
                         let speed_var = 0.6 + ((h >> 32) & 0xFFFF) as f32 / 65535.0 * 0.8;
-                        col.speed = self.matrix_rain_speed * speed_var;
+                        col.speed = self.effects.matrix_rain.speed * speed_var;
                         col.length = 30.0 + ((h >> 48) & 0xFF) as f32 / 255.0 * 80.0;
                     }
                 }
 
                 // Render columns as vertical gradient strips
-                let (mr, mg, mb) = self.matrix_rain_color;
+                let (mr, mg, mb) = self.effects.matrix_rain.color;
                 let mut matrix_verts: Vec<RectVertex> = Vec::new();
                 for col in &self.matrix_rain_columns {
                     let segments = 10u32;
@@ -6346,7 +4931,7 @@ impl WgpuRenderer {
                         let y = col.y - col.length + s as f32 * seg_h;
                         if y + seg_h < 0.0 || y > fh { continue; }
                         let frac = s as f32 / segments as f32;
-                        let alpha = self.matrix_rain_opacity * frac; // brighter at bottom (head)
+                        let alpha = self.effects.matrix_rain.opacity * frac; // brighter at bottom (head)
                         if alpha < 0.001 { continue; }
                         let c = Color::new(mr, mg, mb, alpha);
                         self.add_rect(&mut matrix_verts, col.x, y, 2.0, seg_h, &c);
@@ -6369,10 +4954,10 @@ impl WgpuRenderer {
             }
 
             // Frost/ice border effect
-            if self.frost_border_enabled {
-                let (fr, fg, fb) = self.frost_border_color;
-                let bw = self.frost_border_width;
-                let base_alpha = self.frost_border_opacity;
+            if self.effects.frost_border.enabled {
+                let (fr, fg, fb) = self.effects.frost_border.color;
+                let bw = self.effects.frost_border.width;
+                let base_alpha = self.effects.frost_border.opacity;
                 let now_ns = std::time::Instant::now().elapsed().subsec_nanos();
                 let mut frost_verts: Vec<RectVertex> = Vec::new();
                 for info in &frame_glyphs.window_infos {
@@ -6441,9 +5026,9 @@ impl WgpuRenderer {
             }
 
             // Cursor ghost afterimage effect
-            if self.cursor_ghost_enabled {
+            if self.effects.cursor_ghost.enabled {
                 let now = std::time::Instant::now();
-                let fade_dur = std::time::Duration::from_millis(self.cursor_ghost_fade_ms as u64);
+                let fade_dur = std::time::Duration::from_millis(self.effects.cursor_ghost.fade_ms as u64);
 
                 // Detect cursor movement and spawn ghost
                 if let Some(ref anim) = animated_cursor {
@@ -6460,7 +5045,7 @@ impl WgpuRenderer {
                             started: now,
                         });
                         // Trim to max count
-                        while self.cursor_ghost_entries.len() > self.cursor_ghost_count as usize * 2 {
+                        while self.cursor_ghost_entries.len() > self.effects.cursor_ghost.count as usize * 2 {
                             self.cursor_ghost_entries.remove(0);
                         }
                     }
@@ -6470,13 +5055,13 @@ impl WgpuRenderer {
                 self.cursor_ghost_entries.retain(|e| now.duration_since(e.started) < fade_dur);
 
                 if !self.cursor_ghost_entries.is_empty() {
-                    let (gr, gg, gb) = self.cursor_ghost_color;
-                    let drift = self.cursor_ghost_drift;
+                    let (gr, gg, gb) = self.effects.cursor_ghost.color;
+                    let drift = self.effects.cursor_ghost.drift;
                     let mut ghost_verts: Vec<RectVertex> = Vec::new();
                     for entry in &self.cursor_ghost_entries {
                         let elapsed = now.duration_since(entry.started).as_secs_f32();
                         let t = (elapsed / fade_dur.as_secs_f32()).min(1.0);
-                        let alpha = self.cursor_ghost_opacity * (1.0 - t) * (1.0 - t);
+                        let alpha = self.effects.cursor_ghost.opacity * (1.0 - t) * (1.0 - t);
                         if alpha < 0.001 { continue; }
                         // Drift upward and slightly expand
                         let dy = -drift * t;
@@ -6506,17 +5091,17 @@ impl WgpuRenderer {
             }
 
             // Edge glow on scroll boundaries
-            if self.edge_glow_enabled {
+            if self.effects.edge_glow.enabled {
                 let now = std::time::Instant::now();
                 self.edge_glow_entries.retain(|e| now.duration_since(e.started) < e.duration);
                 if !self.edge_glow_entries.is_empty() {
-                    let (gr, gg, gb) = self.edge_glow_color;
-                    let gh = self.edge_glow_height;
+                    let (gr, gg, gb) = self.effects.edge_glow.color;
+                    let gh = self.effects.edge_glow.height;
                     let mut glow_verts: Vec<RectVertex> = Vec::new();
                     for entry in &self.edge_glow_entries {
                         let t = now.duration_since(entry.started).as_secs_f32() / entry.duration.as_secs_f32();
                         let fade = (1.0 - t) * (1.0 - t);
-                        let base_alpha = self.edge_glow_opacity * fade;
+                        let base_alpha = self.effects.edge_glow.opacity * fade;
                         let steps = 20u32;
                         for i in 0..steps {
                             let frac = i as f32 / steps as f32;
@@ -6550,24 +5135,24 @@ impl WgpuRenderer {
             }
 
             // Rain/drip ambient effect
-            if self.rain_effect_enabled {
+            if self.effects.rain_effect.enabled {
                 let now = std::time::Instant::now();
                 let fw = self.width as f32 / self.scale_factor;
                 let fh = self.height as f32 / self.scale_factor;
                 let dt = 1.0 / 60.0_f32; // approximate frame delta
 
                 // Spawn drops if needed
-                while self.rain_drops.len() < self.rain_effect_drop_count as usize {
+                while self.rain_drops.len() < self.effects.rain_effect.drop_count as usize {
                     let seed = now.elapsed().subsec_nanos() as u64;
                     let h = seed.wrapping_mul(2654435761).wrapping_add(self.rain_drops.len() as u64 * 6364136223846793005);
                     let x = ((h >> 16) & 0xFFFF) as f32 / 65535.0 * fw;
                     let y = -(((h >> 32) & 0xFFFF) as f32) / 65535.0 * fh * 0.5; // start above screen
                     let speed_var = 0.7 + ((h >> 48) & 0xFFFF) as f32 / 65535.0 * 0.6;
                     let length = 8.0 + ((h >> 8) & 0xFF) as f32 / 255.0 * 16.0;
-                    let op = self.rain_effect_opacity * (0.5 + ((h >> 4) & 0xFF) as f32 / 255.0 * 0.5);
+                    let op = self.effects.rain_effect.opacity * (0.5 + ((h >> 4) & 0xFF) as f32 / 255.0 * 0.5);
                     self.rain_drops.push(RainDrop {
                         x, y,
-                        speed: self.rain_effect_speed * speed_var,
+                        speed: self.effects.rain_effect.speed * speed_var,
                         length,
                         opacity: op,
                     });
@@ -6582,12 +5167,12 @@ impl WgpuRenderer {
                         drop.x = ((h >> 16) & 0xFFFF) as f32 / 65535.0 * fw;
                         drop.y = -drop.length;
                         let speed_var = 0.7 + ((h >> 48) & 0xFFFF) as f32 / 65535.0 * 0.6;
-                        drop.speed = self.rain_effect_speed * speed_var;
+                        drop.speed = self.effects.rain_effect.speed * speed_var;
                     }
                 }
 
                 // Render drops
-                let (dr, dg, db) = self.rain_effect_color;
+                let (dr, dg, db) = self.effects.rain_effect.color;
                 let mut rain_verts: Vec<RectVertex> = Vec::new();
                 for drop in &self.rain_drops {
                     let c = Color::new(dr, dg, db, drop.opacity);
@@ -6610,7 +5195,7 @@ impl WgpuRenderer {
             }
 
             // Cursor ripple wave effect
-            if self.cursor_ripple_wave_enabled {
+            if self.effects.cursor_ripple_wave.enabled {
                 let now = std::time::Instant::now();
 
                 // Detect cursor movement and spawn ripple
@@ -6629,7 +5214,7 @@ impl WgpuRenderer {
                             x: cx,
                             y: cy,
                             started: now,
-                            duration: std::time::Duration::from_millis(self.cursor_ripple_wave_duration_ms as u64),
+                            duration: std::time::Duration::from_millis(self.effects.cursor_ripple_wave.duration_ms as u64),
                         });
                     }
                 }
@@ -6638,9 +5223,9 @@ impl WgpuRenderer {
                 self.cursor_ripple_waves.retain(|e| now.duration_since(e.started) < e.duration);
 
                 if !self.cursor_ripple_waves.is_empty() {
-                    let (rr, rg, rb) = self.cursor_ripple_wave_color;
-                    let max_r = self.cursor_ripple_wave_max_radius;
-                    let ring_count = self.cursor_ripple_wave_ring_count;
+                    let (rr, rg, rb) = self.effects.cursor_ripple_wave.color;
+                    let max_r = self.effects.cursor_ripple_wave.max_radius;
+                    let ring_count = self.effects.cursor_ripple_wave.ring_count;
                     let mut ripple_verts: Vec<RectVertex> = Vec::new();
                     for entry in &self.cursor_ripple_waves {
                         let t = now.duration_since(entry.started).as_secs_f32() / entry.duration.as_secs_f32();
@@ -6649,7 +5234,7 @@ impl WgpuRenderer {
                         for ring in 0..ring_count {
                             let ring_r = current_r * (1.0 - ring as f32 * 0.2);
                             if ring_r < 1.0 { continue; }
-                            let ring_alpha = self.cursor_ripple_wave_opacity * fade * (1.0 - ring as f32 / ring_count as f32);
+                            let ring_alpha = self.effects.cursor_ripple_wave.opacity * fade * (1.0 - ring as f32 / ring_count as f32);
                             if ring_alpha < 0.001 { continue; }
                             // Approximate circle with rect strips
                             let segments = 32u32;
@@ -6687,13 +5272,13 @@ impl WgpuRenderer {
             }
 
             // Aurora/northern lights effect
-            if self.aurora_enabled {
+            if self.effects.aurora.enabled {
                 let now = std::time::Instant::now();
-                let elapsed = now.duration_since(self.aurora_start).as_secs_f64() * self.aurora_speed as f64;
+                let elapsed = now.duration_since(self.aurora_start).as_secs_f64() * self.effects.aurora.speed as f64;
                 let fw = self.width as f32 / self.scale_factor;
-                let ah = self.aurora_height;
-                let (r1, g1, b1) = self.aurora_color1;
-                let (r2, g2, b2) = self.aurora_color2;
+                let ah = self.effects.aurora.height;
+                let (r1, g1, b1) = self.effects.aurora.color1;
+                let (r2, g2, b2) = self.effects.aurora.color2;
                 let mut aurora_verts: Vec<RectVertex> = Vec::new();
                 let strips = 60u32;
                 let strip_w = fw / strips as f32;
@@ -6707,7 +5292,7 @@ impl WgpuRenderer {
                     let cg = g1 * (1.0 - blend) + g2 * blend;
                     let cb = b1 * (1.0 - blend) + b2 * blend;
                     let height = ah * (0.3 + 0.7 * wave1);
-                    let alpha = self.aurora_opacity * (0.3 + 0.7 * wave2);
+                    let alpha = self.effects.aurora.opacity * (0.3 + 0.7 * wave2);
                     // Vertical gradient for each strip
                     let sub_strips = 8u32;
                     let sub_h = height / sub_strips as f32;
@@ -6737,12 +5322,12 @@ impl WgpuRenderer {
             }
 
             // === Heat distortion effect ===
-            if self.heat_distortion_enabled {
+            if self.effects.heat_distortion.enabled {
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let ew = self.heat_distortion_edge_width;
-                let intensity = self.heat_distortion_intensity;
-                let spd = self.heat_distortion_speed;
-                let op = self.heat_distortion_opacity;
+                let ew = self.effects.heat_distortion.edge_width;
+                let intensity = self.effects.heat_distortion.intensity;
+                let spd = self.effects.heat_distortion.speed;
+                let op = self.effects.heat_distortion.opacity;
                 let fw = self.width() as f32;
                 let fh = self.height() as f32;
                 let mut heat_verts: Vec<RectVertex> = Vec::new();
@@ -6783,16 +5368,16 @@ impl WgpuRenderer {
             }
 
             // === Cursor lighthouse beam effect ===
-            if self.cursor_lighthouse_enabled && cursor_visible {
+            if self.effects.cursor_lighthouse.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
                     let center_x = anim.x + anim.width / 2.0;
                     let center_y = anim.y + anim.height / 2.0;
-                    let angle = now * self.cursor_lighthouse_rotation_speed * std::f32::consts::PI * 2.0;
-                    let beam_half = (self.cursor_lighthouse_beam_width / 2.0).to_radians();
-                    let beam_len = self.cursor_lighthouse_beam_length;
-                    let (lr, lg, lb) = self.cursor_lighthouse_color;
-                    let lop = self.cursor_lighthouse_opacity;
+                    let angle = now * self.effects.cursor_lighthouse.rotation_speed * std::f32::consts::PI * 2.0;
+                    let beam_half = (self.effects.cursor_lighthouse.beam_width / 2.0).to_radians();
+                    let beam_len = self.effects.cursor_lighthouse.beam_length;
+                    let (lr, lg, lb) = self.effects.cursor_lighthouse.color;
+                    let lop = self.effects.cursor_lighthouse.opacity;
                     let mut beam_verts: Vec<RectVertex> = Vec::new();
                     let segments = 20;
                     for seg in 0..segments {
@@ -6826,13 +5411,13 @@ impl WgpuRenderer {
             }
 
             // === Neon border effect ===
-            if self.neon_border_enabled {
+            if self.effects.neon_border.enabled {
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (nr, ng, nb) = self.neon_border_color;
-                let thick = self.neon_border_thickness;
-                let intensity = self.neon_border_intensity;
-                let flicker = self.neon_border_flicker;
-                let nop = self.neon_border_opacity;
+                let (nr, ng, nb) = self.effects.neon_border.color;
+                let thick = self.effects.neon_border.thickness;
+                let intensity = self.effects.neon_border.intensity;
+                let flicker = self.effects.neon_border.flicker;
+                let nop = self.effects.neon_border.opacity;
                 let fw = self.width() as f32;
                 let fh = self.height() as f32;
                 let flicker_val = if flicker > 0.0 {
@@ -6872,13 +5457,13 @@ impl WgpuRenderer {
             }
 
             // === Cursor sonar ping effect ===
-            if self.cursor_sonar_ping_enabled {
+            if self.effects.cursor_sonar_ping.enabled {
                 let now = std::time::Instant::now();
                 self.cursor_sonar_ping_entries.retain(|e| now.duration_since(e.started) < e.duration);
-                let (pr, pg, pb) = self.cursor_sonar_ping_color;
-                let ring_count = self.cursor_sonar_ping_ring_count;
-                let max_r = self.cursor_sonar_ping_max_radius;
-                let pop = self.cursor_sonar_ping_opacity;
+                let (pr, pg, pb) = self.effects.cursor_sonar_ping.color;
+                let ring_count = self.effects.cursor_sonar_ping.ring_count;
+                let max_r = self.effects.cursor_sonar_ping.max_radius;
+                let pop = self.effects.cursor_sonar_ping.opacity;
                 let mut ping_verts: Vec<RectVertex> = Vec::new();
                 for entry in &self.cursor_sonar_ping_entries {
                     let elapsed = now.duration_since(entry.started).as_secs_f32();
@@ -6926,12 +5511,12 @@ impl WgpuRenderer {
             }
 
             // === Lightning bolt effect ===
-            if self.lightning_bolt_enabled {
+            if self.effects.lightning_bolt.enabled {
                 let now = std::time::Instant::now();
                 let dt = now.duration_since(self.lightning_bolt_last).as_secs_f32();
                 self.lightning_bolt_last = now;
                 self.lightning_bolt_age += dt;
-                let bolt_interval = 1.0 / self.lightning_bolt_frequency;
+                let bolt_interval = 1.0 / self.effects.lightning_bolt.frequency;
                 let fw = self.width() as f32;
                 let fh = self.height() as f32;
                 // Generate new bolt if timer expired
@@ -6957,8 +5542,8 @@ impl WgpuRenderer {
                     }
                 }
                 // Render bolt segments
-                let (lr, lg, lb) = self.lightning_bolt_color;
-                let bolt_op = self.lightning_bolt_opacity * self.lightning_bolt_intensity;
+                let (lr, lg, lb) = self.effects.lightning_bolt.color;
+                let bolt_op = self.effects.lightning_bolt.opacity * self.effects.lightning_bolt.intensity;
                 let fade = (1.0 - self.lightning_bolt_age / (bolt_interval * 0.8)).max(0.0);
                 let mut bolt_verts: Vec<RectVertex> = Vec::new();
                 for &(x1, y1, x2, y2) in &self.lightning_bolt_segments {
@@ -6994,16 +5579,16 @@ impl WgpuRenderer {
             }
 
             // === Cursor orbit particles effect ===
-            if self.cursor_orbit_particles_enabled && cursor_visible {
+            if self.effects.cursor_orbit_particles.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
-                    let (pr, pg, pb) = self.cursor_orbit_particles_color;
-                    let pop = self.cursor_orbit_particles_opacity;
-                    let count = self.cursor_orbit_particles_count;
-                    let radius = self.cursor_orbit_particles_radius;
-                    let speed = self.cursor_orbit_particles_speed;
+                    let (pr, pg, pb) = self.effects.cursor_orbit_particles.color;
+                    let pop = self.effects.cursor_orbit_particles.opacity;
+                    let count = self.effects.cursor_orbit_particles.count;
+                    let radius = self.effects.cursor_orbit_particles.radius;
+                    let speed = self.effects.cursor_orbit_particles.speed;
                     let mut orbit_verts: Vec<RectVertex> = Vec::new();
                     for i in 0..count {
                         let phase = i as f32 / count as f32 * std::f32::consts::PI * 2.0;
@@ -7036,13 +5621,13 @@ impl WgpuRenderer {
             }
 
             // === Plasma border effect ===
-            if self.plasma_border_enabled {
+            if self.effects.plasma_border.enabled {
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (r1, g1, b1) = self.plasma_border_color1;
-                let (r2, g2, b2) = self.plasma_border_color2;
-                let bw = self.plasma_border_width;
-                let spd = self.plasma_border_speed;
-                let pop = self.plasma_border_opacity;
+                let (r1, g1, b1) = self.effects.plasma_border.color1;
+                let (r2, g2, b2) = self.effects.plasma_border.color2;
+                let bw = self.effects.plasma_border.width;
+                let spd = self.effects.plasma_border.speed;
+                let pop = self.effects.plasma_border.opacity;
                 let fw = self.width() as f32;
                 let fh = self.height() as f32;
                 let perimeter = 2.0 * (fw + fh);
@@ -7094,15 +5679,15 @@ impl WgpuRenderer {
             }
 
             // === Cursor heartbeat pulse effect ===
-            if self.cursor_heartbeat_enabled && cursor_visible {
+            if self.effects.cursor_heartbeat.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
-                    let (hr, hg, hb) = self.cursor_heartbeat_color;
-                    let hop = self.cursor_heartbeat_opacity;
-                    let max_r = self.cursor_heartbeat_max_radius;
-                    let beat_period = 60.0 / self.cursor_heartbeat_bpm;
+                    let (hr, hg, hb) = self.effects.cursor_heartbeat.color;
+                    let hop = self.effects.cursor_heartbeat.opacity;
+                    let max_r = self.effects.cursor_heartbeat.max_radius;
+                    let beat_period = 60.0 / self.effects.cursor_heartbeat.bpm;
                     let t_in_beat = (now % beat_period) / beat_period;
                     let mut heartbeat_verts: Vec<RectVertex> = Vec::new();
                     // Double pulse: first at t=0.0-0.15, second at t=0.2-0.35
@@ -7148,12 +5733,12 @@ impl WgpuRenderer {
             }
 
             // === Topographic contour effect ===
-            if self.topo_contour_enabled {
+            if self.effects.topo_contour.enabled {
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (tr, tg, tb) = self.topo_contour_color;
-                let top = self.topo_contour_opacity;
-                let spacing = self.topo_contour_spacing.max(5.0);
-                let spd = self.topo_contour_speed;
+                let (tr, tg, tb) = self.effects.topo_contour.color;
+                let top = self.effects.topo_contour.opacity;
+                let spacing = self.effects.topo_contour.spacing.max(5.0);
+                let spd = self.effects.topo_contour.speed;
                 let fw = self.width() as f32;
                 let fh = self.height() as f32;
                 let mut topo_verts: Vec<RectVertex> = Vec::new();
@@ -7192,7 +5777,7 @@ impl WgpuRenderer {
             }
 
             // === Cursor metronome tick effect ===
-            if self.cursor_metronome_enabled && cursor_visible {
+            if self.effects.cursor_metronome.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y;
@@ -7204,13 +5789,13 @@ impl WgpuRenderer {
                     }
                     if let Some(start) = self.cursor_metronome_tick_start {
                         let elapsed = start.elapsed().as_secs_f32();
-                        let duration = self.cursor_metronome_fade_ms as f32 / 1000.0;
+                        let duration = self.effects.cursor_metronome.fade_ms as f32 / 1000.0;
                         if elapsed < duration {
                             let t = elapsed / duration;
                             let fade = 1.0 - t;
-                            let (mr, mg, mb) = self.cursor_metronome_color;
-                            let mop = self.cursor_metronome_opacity;
-                            let th = self.cursor_metronome_tick_height;
+                            let (mr, mg, mb) = self.effects.cursor_metronome.color;
+                            let mop = self.effects.cursor_metronome.opacity;
+                            let th = self.effects.cursor_metronome.tick_height;
                             let mut tick_verts: Vec<RectVertex> = Vec::new();
                             // Vertical tick line above cursor
                             let tick_w = 2.0;
@@ -7241,13 +5826,13 @@ impl WgpuRenderer {
             }
 
             // === Constellation overlay effect ===
-            if self.constellation_enabled {
+            if self.effects.constellation.enabled {
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (sr, sg, sb) = self.constellation_color;
-                let sop = self.constellation_opacity;
-                let count = self.constellation_star_count.min(200);
-                let conn_dist = self.constellation_connect_dist;
-                let tspd = self.constellation_twinkle_speed;
+                let (sr, sg, sb) = self.effects.constellation.color;
+                let sop = self.effects.constellation.opacity;
+                let count = self.effects.constellation.star_count.min(200);
+                let conn_dist = self.effects.constellation.connect_dist;
+                let tspd = self.effects.constellation.twinkle_speed;
                 let fw = self.width() as f32;
                 let fh = self.height() as f32;
                 let mut star_verts: Vec<RectVertex> = Vec::new();
@@ -7301,15 +5886,15 @@ impl WgpuRenderer {
             }
 
             // === Cursor radar sweep effect ===
-            if self.cursor_radar_enabled && cursor_visible {
+            if self.effects.cursor_radar.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
-                    let (rr, rg, rb) = self.cursor_radar_color;
-                    let rop = self.cursor_radar_opacity;
-                    let radius = self.cursor_radar_radius;
-                    let spd = self.cursor_radar_speed;
+                    let (rr, rg, rb) = self.effects.cursor_radar.color;
+                    let rop = self.effects.cursor_radar.opacity;
+                    let radius = self.effects.cursor_radar.radius;
+                    let spd = self.effects.cursor_radar.speed;
                     let sweep_angle = now * spd * std::f32::consts::PI * 2.0;
                     let mut radar_verts: Vec<RectVertex> = Vec::new();
                     // Sweep beam line
@@ -7369,12 +5954,12 @@ impl WgpuRenderer {
             }
 
             // === Kaleidoscope overlay effect ===
-            if self.kaleidoscope_enabled {
+            if self.effects.kaleidoscope.enabled {
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (kr, kg, kb) = self.kaleidoscope_color;
-                let kop = self.kaleidoscope_opacity;
-                let segs = self.kaleidoscope_segments.max(3).min(12);
-                let spd = self.kaleidoscope_speed;
+                let (kr, kg, kb) = self.effects.kaleidoscope.color;
+                let kop = self.effects.kaleidoscope.opacity;
+                let segs = self.effects.kaleidoscope.segments.max(3).min(12);
+                let spd = self.effects.kaleidoscope.speed;
                 let fw = self.width() as f32;
                 let fh = self.height() as f32;
                 let cx = fw / 2.0;
@@ -7414,7 +5999,7 @@ impl WgpuRenderer {
             }
 
             // === Cursor ripple ring effect ===
-            if self.cursor_ripple_ring_enabled && cursor_visible {
+            if self.effects.cursor_ripple_ring.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
@@ -7426,13 +6011,13 @@ impl WgpuRenderer {
                     }
                     if let Some(start) = self.cursor_ripple_ring_start {
                         let elapsed = start.elapsed().as_secs_f32();
-                        let max_r = self.cursor_ripple_ring_max_radius;
-                        let duration = max_r / (self.cursor_ripple_ring_speed * 60.0);
+                        let max_r = self.effects.cursor_ripple_ring.max_radius;
+                        let duration = max_r / (self.effects.cursor_ripple_ring.speed * 60.0);
                         if elapsed < duration {
                             let t = elapsed / duration;
-                            let (rr, rg, rb) = self.cursor_ripple_ring_color;
-                            let rop = self.cursor_ripple_ring_opacity;
-                            let count = self.cursor_ripple_ring_count.max(1).min(8);
+                            let (rr, rg, rb) = self.effects.cursor_ripple_ring.color;
+                            let rop = self.effects.cursor_ripple_ring.opacity;
+                            let count = self.effects.cursor_ripple_ring.count.max(1).min(8);
                             let mut ring_verts: Vec<RectVertex> = Vec::new();
                             for ring in 0..count {
                                 let ring_t = (t - ring as f32 * 0.15).max(0.0).min(1.0);
@@ -7471,12 +6056,12 @@ impl WgpuRenderer {
             }
 
             // === Noise field overlay effect ===
-            if self.noise_field_enabled {
+            if self.effects.noise_field.enabled {
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (nr, ng, nb) = self.noise_field_color;
-                let nop = self.noise_field_opacity;
-                let scale = self.noise_field_scale.max(10.0);
-                let spd = self.noise_field_speed;
+                let (nr, ng, nb) = self.effects.noise_field.color;
+                let nop = self.effects.noise_field.opacity;
+                let scale = self.effects.noise_field.scale.max(10.0);
+                let spd = self.effects.noise_field.speed;
                 let fw = self.width() as f32;
                 let fh = self.height() as f32;
                 let mut noise_verts: Vec<RectVertex> = Vec::new();
@@ -7516,14 +6101,14 @@ impl WgpuRenderer {
             }
 
             // === Cursor scope effect ===
-            if self.cursor_scope_enabled && cursor_visible {
+            if self.effects.cursor_scope.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
-                    let (chr, chg, chb) = self.cursor_scope_color;
-                    let chop = self.cursor_scope_opacity;
-                    let thick = self.cursor_scope_thickness;
-                    let gap = self.cursor_scope_gap;
+                    let (chr, chg, chb) = self.effects.cursor_scope.color;
+                    let chop = self.effects.cursor_scope.opacity;
+                    let thick = self.effects.cursor_scope.thickness;
+                    let gap = self.effects.cursor_scope.gap;
                     let fw = self.width() as f32;
                     let fh = self.height() as f32;
                     let mut ch_verts: Vec<RectVertex> = Vec::new();
@@ -7562,12 +6147,12 @@ impl WgpuRenderer {
             }
 
             // === Spiral vortex overlay effect ===
-            if self.spiral_vortex_enabled {
+            if self.effects.spiral_vortex.enabled {
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (vr, vg, vb) = self.spiral_vortex_color;
-                let vop = self.spiral_vortex_opacity;
-                let arms = self.spiral_vortex_arms.max(2).min(12);
-                let spd = self.spiral_vortex_speed;
+                let (vr, vg, vb) = self.effects.spiral_vortex.color;
+                let vop = self.effects.spiral_vortex.opacity;
+                let arms = self.effects.spiral_vortex.arms.max(2).min(12);
+                let spd = self.effects.spiral_vortex.speed;
                 let fw = self.width() as f32;
                 let fh = self.height() as f32;
                 let cx = fw / 2.0;
@@ -7606,7 +6191,7 @@ impl WgpuRenderer {
             }
 
             // === Cursor shockwave effect ===
-            if self.cursor_shockwave_enabled && cursor_visible {
+            if self.effects.cursor_shockwave.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
@@ -7618,13 +6203,13 @@ impl WgpuRenderer {
                     }
                     if let Some(start) = self.cursor_shockwave_start {
                         let elapsed = start.elapsed().as_secs_f32();
-                        let max_r = self.cursor_shockwave_radius;
-                        let duration = 1.0 / self.cursor_shockwave_decay;
+                        let max_r = self.effects.cursor_shockwave.radius;
+                        let duration = 1.0 / self.effects.cursor_shockwave.decay;
                         if elapsed < duration {
                             let t = elapsed / duration;
                             let radius = t * max_r;
-                            let (sr, sg, sb) = self.cursor_shockwave_color;
-                            let sop = self.cursor_shockwave_opacity;
+                            let (sr, sg, sb) = self.effects.cursor_shockwave.color;
+                            let sop = self.effects.cursor_shockwave.opacity;
                             let fade = (1.0 - t) * (1.0 - t);
                             let mut sw_verts: Vec<RectVertex> = Vec::new();
                             // Ring at current radius
@@ -7668,12 +6253,12 @@ impl WgpuRenderer {
             }
 
             // === Diamond lattice overlay effect ===
-            if self.diamond_lattice_enabled {
+            if self.effects.diamond_lattice.enabled {
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (dr, dg, db) = self.diamond_lattice_color;
-                let dop = self.diamond_lattice_opacity;
-                let cell = self.diamond_lattice_cell_size.max(10.0);
-                let shspd = self.diamond_lattice_shimmer_speed;
+                let (dr, dg, db) = self.effects.diamond_lattice.color;
+                let dop = self.effects.diamond_lattice.opacity;
+                let cell = self.effects.diamond_lattice.cell_size.max(10.0);
+                let shspd = self.effects.diamond_lattice.shimmer_speed;
                 let fw = self.width() as f32;
                 let fh = self.height() as f32;
                 let mut dl_verts: Vec<RectVertex> = Vec::new();
@@ -7723,14 +6308,14 @@ impl WgpuRenderer {
             }
 
             // === Cursor gravity well effect ===
-            if self.cursor_gravity_well_enabled && cursor_visible {
+            if self.effects.cursor_gravity_well.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
-                    let (gr, gg, gb) = self.cursor_gravity_well_color;
-                    let gop = self.cursor_gravity_well_opacity;
-                    let field_r = self.cursor_gravity_well_field_radius;
-                    let lines = self.cursor_gravity_well_line_count.max(4).min(24);
+                    let (gr, gg, gb) = self.effects.cursor_gravity_well.color;
+                    let gop = self.effects.cursor_gravity_well.opacity;
+                    let field_r = self.effects.cursor_gravity_well.field_radius;
+                    let lines = self.effects.cursor_gravity_well.line_count.max(4).min(24);
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
                     let mut gw_verts: Vec<RectVertex> = Vec::new();
                     for line in 0..lines {
@@ -7768,13 +6353,13 @@ impl WgpuRenderer {
             }
 
             // === Wave interference overlay effect ===
-            if self.wave_interference_enabled {
+            if self.effects.wave_interference.enabled {
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (wr, wg, wb) = self.wave_interference_color;
-                let wop = self.wave_interference_opacity;
-                let wl = self.wave_interference_wavelength.max(10.0);
-                let sources = self.wave_interference_source_count.max(2).min(6);
-                let spd = self.wave_interference_speed;
+                let (wr, wg, wb) = self.effects.wave_interference.color;
+                let wop = self.effects.wave_interference.opacity;
+                let wl = self.effects.wave_interference.wavelength.max(10.0);
+                let sources = self.effects.wave_interference.source_count.max(2).min(6);
+                let spd = self.effects.wave_interference.speed;
                 let fw = self.width() as f32;
                 let fh = self.height() as f32;
                 let mut wave_verts: Vec<RectVertex> = Vec::new();
@@ -7828,15 +6413,15 @@ impl WgpuRenderer {
             }
 
             // === Cursor portal effect ===
-            if self.cursor_portal_enabled && cursor_visible {
+            if self.effects.cursor_portal.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
-                    let (pr, pg, pb) = self.cursor_portal_color;
-                    let pop = self.cursor_portal_opacity;
-                    let radius = self.cursor_portal_radius;
-                    let spd = self.cursor_portal_speed;
+                    let (pr, pg, pb) = self.effects.cursor_portal.color;
+                    let pop = self.effects.cursor_portal.opacity;
+                    let radius = self.effects.cursor_portal.radius;
+                    let spd = self.effects.cursor_portal.speed;
                     let mut portal_verts: Vec<RectVertex> = Vec::new();
                     // Outer swirling ring
                     let ring_segs = 36;
@@ -7881,12 +6466,12 @@ impl WgpuRenderer {
             }
 
             // === Chevron pattern overlay effect ===
-            if self.chevron_pattern_enabled {
+            if self.effects.chevron_pattern.enabled {
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (cr, cg, cb) = self.chevron_pattern_color;
-                let cop = self.chevron_pattern_opacity;
-                let spacing = self.chevron_pattern_spacing.max(15.0);
-                let spd = self.chevron_pattern_speed;
+                let (cr, cg, cb) = self.effects.chevron_pattern.color;
+                let cop = self.effects.chevron_pattern.opacity;
+                let spacing = self.effects.chevron_pattern.spacing.max(15.0);
+                let spd = self.effects.chevron_pattern.speed;
                 let fw = self.width() as f32;
                 let fh = self.height() as f32;
                 let mut chev_verts: Vec<RectVertex> = Vec::new();
@@ -7935,7 +6520,7 @@ impl WgpuRenderer {
             }
 
             // === Cursor bubble effect ===
-            if self.cursor_bubble_enabled && cursor_visible {
+            if self.effects.cursor_bubble.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
@@ -7949,10 +6534,10 @@ impl WgpuRenderer {
                         let elapsed = spawn.elapsed().as_secs_f32();
                         let duration = 1.5;
                         if elapsed < duration {
-                            let (br, bg, bb) = self.cursor_bubble_color;
-                            let bop = self.cursor_bubble_opacity;
-                            let count = self.cursor_bubble_count.max(2).min(12);
-                            let rspd = self.cursor_bubble_rise_speed;
+                            let (br, bg, bb) = self.effects.cursor_bubble.color;
+                            let bop = self.effects.cursor_bubble.opacity;
+                            let count = self.effects.cursor_bubble.count.max(2).min(12);
+                            let rspd = self.effects.cursor_bubble.rise_speed;
                             let mut bub_verts: Vec<RectVertex> = Vec::new();
                             for i in 0..count {
                                 let mut h = i.wrapping_mul(2654435761);
@@ -8000,12 +6585,12 @@ impl WgpuRenderer {
             }
 
             // === Sunburst pattern overlay effect ===
-            if self.sunburst_pattern_enabled {
+            if self.effects.sunburst_pattern.enabled {
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (cr, cg, cb) = self.sunburst_pattern_color;
-                let ray_count = self.sunburst_pattern_ray_count.max(4) as f32;
-                let speed = self.sunburst_pattern_speed;
-                let opacity = self.sunburst_pattern_opacity;
+                let (cr, cg, cb) = self.effects.sunburst_pattern.color;
+                let ray_count = self.effects.sunburst_pattern.ray_count.max(4) as f32;
+                let speed = self.effects.sunburst_pattern.speed;
+                let opacity = self.effects.sunburst_pattern.opacity;
                 let mut sb_verts: Vec<RectVertex> = Vec::new();
                 let width = self.width() as f32;
                 let height = self.height() as f32;
@@ -8014,7 +6599,7 @@ impl WgpuRenderer {
                 let max_radius = (cx * cx + cy * cy).sqrt();
                 let rotation = now * speed;
                 // Draw rays as thin triangular wedges from center
-                for i in 0..self.sunburst_pattern_ray_count {
+                for i in 0..self.effects.sunburst_pattern.ray_count {
                     let angle = rotation + (i as f32 / ray_count) * std::f32::consts::TAU;
                     let half_width = std::f32::consts::PI / ray_count * 0.4;
                     let a1 = angle - half_width;
@@ -8056,7 +6641,7 @@ impl WgpuRenderer {
             }
 
             // === Cursor firework effect ===
-            if self.cursor_firework_enabled && cursor_visible {
+            if self.effects.cursor_firework.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
@@ -8073,12 +6658,12 @@ impl WgpuRenderer {
                         let duration = 0.6;
                         if elapsed < duration {
                             let t = elapsed / duration;
-                            let (cr, cg, cb) = self.cursor_firework_color;
-                            let opacity = self.cursor_firework_opacity;
-                            let radius = self.cursor_firework_burst_radius;
+                            let (cr, cg, cb) = self.effects.cursor_firework.color;
+                            let opacity = self.effects.cursor_firework.opacity;
+                            let radius = self.effects.cursor_firework.burst_radius;
                             let mut fw_verts: Vec<RectVertex> = Vec::new();
-                            for i in 0..self.cursor_firework_particle_count {
-                                let angle = (i as f32 / self.cursor_firework_particle_count as f32) * std::f32::consts::TAU;
+                            for i in 0..self.effects.cursor_firework.particle_count {
+                                let angle = (i as f32 / self.effects.cursor_firework.particle_count as f32) * std::f32::consts::TAU;
                                 // Add some variation using deterministic hash
                                 let mut h = i.wrapping_mul(2654435761);
                                 h ^= h >> 16;
@@ -8111,12 +6696,12 @@ impl WgpuRenderer {
             }
 
             // === Honeycomb dissolve overlay effect ===
-            if self.honeycomb_dissolve_enabled {
+            if self.effects.honeycomb_dissolve.enabled {
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (cr, cg, cb) = self.honeycomb_dissolve_color;
-                let cell = self.honeycomb_dissolve_cell_size.max(8.0);
-                let speed = self.honeycomb_dissolve_speed;
-                let opacity = self.honeycomb_dissolve_opacity;
+                let (cr, cg, cb) = self.effects.honeycomb_dissolve.color;
+                let cell = self.effects.honeycomb_dissolve.cell_size.max(8.0);
+                let speed = self.effects.honeycomb_dissolve.speed;
+                let opacity = self.effects.honeycomb_dissolve.opacity;
                 let mut hc_verts: Vec<RectVertex> = Vec::new();
                 let width = self.width() as f32;
                 let height = self.height() as f32;
@@ -8157,17 +6742,17 @@ impl WgpuRenderer {
             }
 
             // === Cursor tornado effect ===
-            if self.cursor_tornado_enabled && cursor_visible {
+            if self.effects.cursor_tornado.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                    let (cr, cg, cb) = self.cursor_tornado_color;
-                    let radius = self.cursor_tornado_radius;
-                    let opacity = self.cursor_tornado_opacity;
+                    let (cr, cg, cb) = self.effects.cursor_tornado.color;
+                    let radius = self.effects.cursor_tornado.radius;
+                    let opacity = self.effects.cursor_tornado.opacity;
                     let mut tn_verts: Vec<RectVertex> = Vec::new();
-                    for i in 0..self.cursor_tornado_particle_count {
-                        let t = i as f32 / self.cursor_tornado_particle_count as f32;
+                    for i in 0..self.effects.cursor_tornado.particle_count {
+                        let t = i as f32 / self.effects.cursor_tornado.particle_count as f32;
                         // Particles spiral inward at different heights
                         let angle = now * 3.0 + t * std::f32::consts::TAU * 2.0;
                         let r = radius * (1.0 - t * 0.7);
@@ -8210,13 +6795,13 @@ impl WgpuRenderer {
             }
 
             // === Moiré pattern overlay effect ===
-            if self.moire_pattern_enabled {
+            if self.effects.moire_pattern.enabled {
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (cr, cg, cb) = self.moire_pattern_color;
-                let spacing = self.moire_pattern_line_spacing.max(4.0);
-                let angle_off = self.moire_pattern_angle_offset * std::f32::consts::PI / 180.0;
-                let speed = self.moire_pattern_speed;
-                let opacity = self.moire_pattern_opacity;
+                let (cr, cg, cb) = self.effects.moire_pattern.color;
+                let spacing = self.effects.moire_pattern.line_spacing.max(4.0);
+                let angle_off = self.effects.moire_pattern.angle_offset * std::f32::consts::PI / 180.0;
+                let speed = self.effects.moire_pattern.speed;
+                let opacity = self.effects.moire_pattern.opacity;
                 let width = self.width() as f32;
                 let height = self.height() as f32;
                 let mut mo_verts: Vec<RectVertex> = Vec::new();
@@ -8259,7 +6844,7 @@ impl WgpuRenderer {
             }
 
             // === Cursor lightning effect ===
-            if self.cursor_lightning_enabled && cursor_visible {
+            if self.effects.cursor_lightning.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
@@ -8275,11 +6860,11 @@ impl WgpuRenderer {
                         let duration = 0.4;
                         if elapsed < duration {
                             let t = elapsed / duration;
-                            let (cr, cg, cb) = self.cursor_lightning_color;
-                            let opacity = self.cursor_lightning_opacity;
-                            let max_len = self.cursor_lightning_max_length;
+                            let (cr, cg, cb) = self.effects.cursor_lightning.color;
+                            let opacity = self.effects.cursor_lightning.opacity;
+                            let max_len = self.effects.cursor_lightning.max_length;
                             let mut lt_verts: Vec<RectVertex> = Vec::new();
-                            for bolt in 0..self.cursor_lightning_bolt_count {
+                            for bolt in 0..self.effects.cursor_lightning.bolt_count {
                                 let mut h = bolt.wrapping_mul(2654435761);
                                 h ^= h >> 16;
                                 let angle = (h % 360) as f32 * std::f32::consts::PI / 180.0;
@@ -8323,12 +6908,12 @@ impl WgpuRenderer {
             }
 
             // === Dot matrix overlay effect ===
-            if self.dot_matrix_enabled {
+            if self.effects.dot_matrix.enabled {
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (cr, cg, cb) = self.dot_matrix_color;
-                let spacing = self.dot_matrix_spacing.max(4.0);
-                let pulse = self.dot_matrix_pulse_speed;
-                let opacity = self.dot_matrix_opacity;
+                let (cr, cg, cb) = self.effects.dot_matrix.color;
+                let spacing = self.effects.dot_matrix.spacing.max(4.0);
+                let pulse = self.effects.dot_matrix.pulse_speed;
+                let opacity = self.effects.dot_matrix.opacity;
                 let width = self.width() as f32;
                 let height = self.height() as f32;
                 let mut dm_verts: Vec<RectVertex> = Vec::new();
@@ -8360,7 +6945,7 @@ impl WgpuRenderer {
             }
 
             // === Cursor snowflake effect ===
-            if self.cursor_snowflake_enabled && cursor_visible {
+            if self.effects.cursor_snowflake.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
@@ -8376,11 +6961,11 @@ impl WgpuRenderer {
                         let duration = 2.0;
                         if elapsed < duration {
                             let t = elapsed / duration;
-                            let (cr, cg, cb) = self.cursor_snowflake_color;
-                            let opacity = self.cursor_snowflake_opacity;
-                            let fall_speed = self.cursor_snowflake_fall_speed;
+                            let (cr, cg, cb) = self.effects.cursor_snowflake.color;
+                            let opacity = self.effects.cursor_snowflake.opacity;
+                            let fall_speed = self.effects.cursor_snowflake.fall_speed;
                             let mut sf_verts: Vec<RectVertex> = Vec::new();
-                            for i in 0..self.cursor_snowflake_count {
+                            for i in 0..self.effects.cursor_snowflake.count {
                                 let mut h = i.wrapping_mul(2654435761);
                                 h ^= h >> 16;
                                 let offset_x = ((h % 60) as f32 - 30.0);
@@ -8419,12 +7004,12 @@ impl WgpuRenderer {
             }
 
             // === Concentric rings overlay effect ===
-            if self.concentric_rings_enabled {
+            if self.effects.concentric_rings.enabled {
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (cr, cg, cb) = self.concentric_rings_color;
-                let spacing = self.concentric_rings_spacing.max(10.0);
-                let speed = self.concentric_rings_expansion_speed;
-                let opacity = self.concentric_rings_opacity;
+                let (cr, cg, cb) = self.effects.concentric_rings.color;
+                let spacing = self.effects.concentric_rings.spacing.max(10.0);
+                let speed = self.effects.concentric_rings.expansion_speed;
+                let opacity = self.effects.concentric_rings.opacity;
                 let width = self.width() as f32;
                 let height = self.height() as f32;
                 let cx = width / 2.0;
@@ -8464,16 +7049,16 @@ impl WgpuRenderer {
             }
 
             // === Cursor flame effect ===
-            if self.cursor_flame_enabled && cursor_visible {
+            if self.effects.cursor_flame.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y;
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                    let (cr, cg, cb) = self.cursor_flame_color;
-                    let opacity = self.cursor_flame_opacity;
-                    let flame_h = self.cursor_flame_height;
+                    let (cr, cg, cb) = self.effects.cursor_flame.color;
+                    let opacity = self.effects.cursor_flame.opacity;
+                    let flame_h = self.effects.cursor_flame.height;
                     let mut fl_verts: Vec<RectVertex> = Vec::new();
-                    for i in 0..self.cursor_flame_particle_count {
+                    for i in 0..self.effects.cursor_flame.particle_count {
                         let mut h = i.wrapping_mul(2654435761);
                         h ^= h >> 16;
                         let t_offset = (h % 100) as f32 / 100.0;
@@ -8506,13 +7091,13 @@ impl WgpuRenderer {
             }
 
             // === Zigzag pattern overlay effect ===
-            if self.zigzag_pattern_enabled {
+            if self.effects.zigzag_pattern.enabled {
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (cr, cg, cb) = self.zigzag_pattern_color;
-                let amplitude = self.zigzag_pattern_amplitude;
-                let freq = self.zigzag_pattern_frequency;
-                let speed = self.zigzag_pattern_speed;
-                let opacity = self.zigzag_pattern_opacity;
+                let (cr, cg, cb) = self.effects.zigzag_pattern.color;
+                let amplitude = self.effects.zigzag_pattern.amplitude;
+                let freq = self.effects.zigzag_pattern.frequency;
+                let speed = self.effects.zigzag_pattern.speed;
+                let opacity = self.effects.zigzag_pattern.opacity;
                 let width = self.width() as f32;
                 let height = self.height() as f32;
                 let mut zz_verts: Vec<RectVertex> = Vec::new();
@@ -8545,15 +7130,15 @@ impl WgpuRenderer {
             }
 
             // === Cursor crystal effect ===
-            if self.cursor_crystal_enabled && cursor_visible {
+            if self.effects.cursor_crystal.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                    let (cr, cg, cb) = self.cursor_crystal_color;
-                    let opacity = self.cursor_crystal_opacity;
-                    let radius = self.cursor_crystal_radius;
-                    let facets = self.cursor_crystal_facet_count.max(3);
+                    let (cr, cg, cb) = self.effects.cursor_crystal.color;
+                    let opacity = self.effects.cursor_crystal.opacity;
+                    let radius = self.effects.cursor_crystal.radius;
+                    let facets = self.effects.cursor_crystal.facet_count.max(3);
                     let mut ct_verts: Vec<RectVertex> = Vec::new();
                     // Draw faceted crystal shape
                     for i in 0..facets {
@@ -8598,13 +7183,13 @@ impl WgpuRenderer {
             }
 
             // === Tessellation overlay effect ===
-            if self.tessellation_enabled {
+            if self.effects.tessellation.enabled {
                 let width = self.width() as f32;
                 let height = self.height() as f32;
-                let (tr, tg, tb) = self.tessellation_color;
-                let size = self.tessellation_tile_size;
-                let rot = self.tessellation_rotation;
-                let alpha = self.tessellation_opacity;
+                let (tr, tg, tb) = self.effects.tessellation.color;
+                let size = self.effects.tessellation.tile_size;
+                let rot = self.effects.tessellation.rotation;
+                let alpha = self.effects.tessellation.opacity;
                 let mut overlay_verts = Vec::new();
 
                 let cols = (width / size) as i32 + 2;
@@ -8670,13 +7255,13 @@ impl WgpuRenderer {
             }
 
             // === Cursor water drop effect ===
-            if self.cursor_water_drop_enabled && cursor_visible {
+            if self.effects.cursor_water_drop.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                    let (wr, wg, wb) = self.cursor_water_drop_color;
-                    let ripple_count = self.cursor_water_drop_ripple_count;
-                    let speed = self.cursor_water_drop_expand_speed;
-                    let alpha = self.cursor_water_drop_opacity;
+                    let (wr, wg, wb) = self.effects.cursor_water_drop.color;
+                    let ripple_count = self.effects.cursor_water_drop.ripple_count;
+                    let speed = self.effects.cursor_water_drop.expand_speed;
+                    let alpha = self.effects.cursor_water_drop.opacity;
                     let mut overlay_verts = Vec::new();
 
                     let cx = anim.x + anim.width / 2.0;
@@ -8713,14 +7298,14 @@ impl WgpuRenderer {
             }
 
             // === Guilloche overlay effect ===
-            if self.guilloche_enabled {
+            if self.effects.guilloche.enabled {
                 let width = self.width() as f32;
                 let height = self.height() as f32;
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (gr, gg, gb) = self.guilloche_color;
-                let curves = self.guilloche_curve_count;
-                let freq = self.guilloche_wave_freq;
-                let alpha = self.guilloche_opacity;
+                let (gr, gg, gb) = self.effects.guilloche.color;
+                let curves = self.effects.guilloche.curve_count;
+                let freq = self.effects.guilloche.wave_freq;
+                let alpha = self.effects.guilloche.opacity;
                 let mut overlay_verts = Vec::new();
 
                 let cx = width / 2.0;
@@ -8760,13 +7345,13 @@ impl WgpuRenderer {
             }
 
             // === Cursor pixel dust effect ===
-            if self.cursor_pixel_dust_enabled && cursor_visible {
+            if self.effects.cursor_pixel_dust.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                    let (pr, pg, pb) = self.cursor_pixel_dust_color;
-                    let dust_count = self.cursor_pixel_dust_count;
-                    let scatter = self.cursor_pixel_dust_scatter_speed;
-                    let alpha = self.cursor_pixel_dust_opacity;
+                    let (pr, pg, pb) = self.effects.cursor_pixel_dust.color;
+                    let dust_count = self.effects.cursor_pixel_dust.count;
+                    let scatter = self.effects.cursor_pixel_dust.scatter_speed;
+                    let alpha = self.effects.cursor_pixel_dust.opacity;
                     let mut overlay_verts = Vec::new();
 
                     let cx = anim.x + anim.width / 2.0;
@@ -8806,14 +7391,14 @@ impl WgpuRenderer {
             }
 
             // === Celtic knot overlay effect ===
-            if self.celtic_knot_enabled {
+            if self.effects.celtic_knot.enabled {
                 let width = self.width() as f32;
                 let height = self.height() as f32;
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (kr, kg, kb) = self.celtic_knot_color;
-                let scale = self.celtic_knot_scale;
-                let speed = self.celtic_knot_weave_speed;
-                let alpha = self.celtic_knot_opacity;
+                let (kr, kg, kb) = self.effects.celtic_knot.color;
+                let scale = self.effects.celtic_knot.scale;
+                let speed = self.effects.celtic_knot.weave_speed;
+                let alpha = self.effects.celtic_knot.opacity;
                 let mut overlay_verts = Vec::new();
 
                 // Draw interlocking loops in a grid
@@ -8866,13 +7451,13 @@ impl WgpuRenderer {
             }
 
             // === Cursor candle flame effect ===
-            if self.cursor_candle_flame_enabled && cursor_visible {
+            if self.effects.cursor_candle_flame.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                    let (fr, fg, fb) = self.cursor_candle_flame_color;
-                    let flame_h = self.cursor_candle_flame_height as f32;
-                    let flicker = self.cursor_candle_flame_flicker_speed;
-                    let alpha = self.cursor_candle_flame_opacity;
+                    let (fr, fg, fb) = self.effects.cursor_candle_flame.color;
+                    let flame_h = self.effects.cursor_candle_flame.height as f32;
+                    let flicker = self.effects.cursor_candle_flame.flicker_speed;
+                    let alpha = self.effects.cursor_candle_flame.opacity;
                     let mut overlay_verts = Vec::new();
 
                     let cx = anim.x + anim.width / 2.0;
@@ -8924,13 +7509,13 @@ impl WgpuRenderer {
             }
 
             // === Argyle pattern overlay effect ===
-            if self.argyle_pattern_enabled {
+            if self.effects.argyle_pattern.enabled {
                 let width = self.width() as f32;
                 let height = self.height() as f32;
-                let (ar, ag, ab) = self.argyle_pattern_color;
-                let ds = self.argyle_pattern_diamond_size;
-                let lw = self.argyle_pattern_line_width;
-                let alpha = self.argyle_pattern_opacity;
+                let (ar, ag, ab) = self.effects.argyle_pattern.color;
+                let ds = self.effects.argyle_pattern.diamond_size;
+                let lw = self.effects.argyle_pattern.line_width;
+                let alpha = self.effects.argyle_pattern.opacity;
                 let mut overlay_verts = Vec::new();
 
                 let cols = (width / ds) as i32 + 2;
@@ -8991,13 +7576,13 @@ impl WgpuRenderer {
             }
 
             // === Cursor moth flame effect ===
-            if self.cursor_moth_flame_enabled && cursor_visible {
+            if self.effects.cursor_moth_flame.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                    let (mr, mg, mb) = self.cursor_moth_flame_color;
-                    let moth_count = self.cursor_moth_flame_moth_count;
-                    let orbit = self.cursor_moth_flame_orbit_speed;
-                    let alpha = self.cursor_moth_flame_opacity;
+                    let (mr, mg, mb) = self.effects.cursor_moth_flame.color;
+                    let moth_count = self.effects.cursor_moth_flame.moth_count;
+                    let orbit = self.effects.cursor_moth_flame.orbit_speed;
+                    let alpha = self.effects.cursor_moth_flame.opacity;
                     let mut overlay_verts = Vec::new();
 
                     let cx = anim.x + anim.width / 2.0;
@@ -9039,13 +7624,13 @@ impl WgpuRenderer {
             }
 
             // === Basket weave overlay effect ===
-            if self.basket_weave_enabled {
+            if self.effects.basket_weave.enabled {
                 let width = self.width() as f32;
                 let height = self.height() as f32;
-                let (wr, wg, wb) = self.basket_weave_color;
-                let sw = self.basket_weave_strip_width;
-                let spacing = self.basket_weave_strip_spacing;
-                let alpha = self.basket_weave_opacity;
+                let (wr, wg, wb) = self.effects.basket_weave.color;
+                let sw = self.effects.basket_weave.strip_width;
+                let spacing = self.effects.basket_weave.strip_spacing;
+                let alpha = self.effects.basket_weave.opacity;
                 let mut overlay_verts = Vec::new();
 
                 // Horizontal strips
@@ -9088,13 +7673,13 @@ impl WgpuRenderer {
             }
 
             // === Cursor sparkler effect ===
-            if self.cursor_sparkler_enabled && cursor_visible {
+            if self.effects.cursor_sparkler.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                    let (sr, sg, sb) = self.cursor_sparkler_color;
-                    let spark_count = self.cursor_sparkler_spark_count;
-                    let burn = self.cursor_sparkler_burn_speed;
-                    let alpha = self.cursor_sparkler_opacity;
+                    let (sr, sg, sb) = self.effects.cursor_sparkler.color;
+                    let spark_count = self.effects.cursor_sparkler.spark_count;
+                    let burn = self.effects.cursor_sparkler.burn_speed;
+                    let alpha = self.effects.cursor_sparkler.opacity;
                     let mut overlay_verts = Vec::new();
 
                     let cx = anim.x + anim.width / 2.0;
@@ -9134,13 +7719,13 @@ impl WgpuRenderer {
             }
 
             // === Fish scale overlay effect ===
-            if self.fish_scale_enabled {
+            if self.effects.fish_scale.enabled {
                 let width = self.width() as f32;
                 let height = self.height() as f32;
-                let (fr, fg, fb) = self.fish_scale_color;
-                let size = self.fish_scale_size;
-                let offset = self.fish_scale_row_offset;
-                let alpha = self.fish_scale_opacity;
+                let (fr, fg, fb) = self.effects.fish_scale.color;
+                let size = self.effects.fish_scale.size;
+                let offset = self.effects.fish_scale.row_offset;
+                let alpha = self.effects.fish_scale.opacity;
                 let mut overlay_verts = Vec::new();
 
                 let rows = (height / (size * 0.75)) as i32 + 2;
@@ -9180,13 +7765,13 @@ impl WgpuRenderer {
             }
 
             // === Cursor plasma ball effect ===
-            if self.cursor_plasma_ball_enabled && cursor_visible {
+            if self.effects.cursor_plasma_ball.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                    let (pr, pg, pb) = self.cursor_plasma_ball_color;
-                    let tendril_count = self.cursor_plasma_ball_tendril_count;
-                    let arc_speed = self.cursor_plasma_ball_arc_speed;
-                    let alpha = self.cursor_plasma_ball_opacity;
+                    let (pr, pg, pb) = self.effects.cursor_plasma_ball.color;
+                    let tendril_count = self.effects.cursor_plasma_ball.tendril_count;
+                    let arc_speed = self.effects.cursor_plasma_ball.arc_speed;
+                    let alpha = self.effects.cursor_plasma_ball.opacity;
                     let mut overlay_verts = Vec::new();
 
                     let cx = anim.x + anim.width / 2.0;
@@ -9234,14 +7819,14 @@ impl WgpuRenderer {
             }
 
             // === Trefoil knot overlay effect ===
-            if self.trefoil_knot_enabled {
+            if self.effects.trefoil_knot.enabled {
                 let width = self.width() as f32;
                 let height = self.height() as f32;
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (kr, kg, kb) = self.trefoil_knot_color;
-                let knot_size = self.trefoil_knot_size;
-                let rot_speed = self.trefoil_knot_rotation_speed;
-                let alpha = self.trefoil_knot_opacity;
+                let (kr, kg, kb) = self.effects.trefoil_knot.color;
+                let knot_size = self.effects.trefoil_knot.size;
+                let rot_speed = self.effects.trefoil_knot.rotation_speed;
+                let alpha = self.effects.trefoil_knot.opacity;
                 let mut overlay_verts = Vec::new();
 
                 let cx = width / 2.0;
@@ -9279,13 +7864,13 @@ impl WgpuRenderer {
             }
 
             // === Cursor quill pen effect ===
-            if self.cursor_quill_pen_enabled && cursor_visible {
+            if self.effects.cursor_quill_pen.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                    let (qr, qg, qb) = self.cursor_quill_pen_color;
-                    let trail_len = self.cursor_quill_pen_trail_length;
-                    let ink_speed = self.cursor_quill_pen_ink_speed;
-                    let alpha = self.cursor_quill_pen_opacity;
+                    let (qr, qg, qb) = self.effects.cursor_quill_pen.color;
+                    let trail_len = self.effects.cursor_quill_pen.trail_length;
+                    let ink_speed = self.effects.cursor_quill_pen.ink_speed;
+                    let alpha = self.effects.cursor_quill_pen.opacity;
                     let mut overlay_verts = Vec::new();
 
                     let cx = anim.x + anim.width / 2.0;
@@ -9335,13 +7920,13 @@ impl WgpuRenderer {
             }
 
             // === Herringbone pattern overlay effect ===
-            if self.herringbone_pattern_enabled {
+            if self.effects.herringbone_pattern.enabled {
                 let width = self.width() as f32;
                 let height = self.height() as f32;
-                let (hr, hg, hb) = self.herringbone_pattern_color;
-                let tw = self.herringbone_pattern_tile_width;
-                let th = self.herringbone_pattern_tile_height;
-                let alpha = self.herringbone_pattern_opacity;
+                let (hr, hg, hb) = self.effects.herringbone_pattern.color;
+                let tw = self.effects.herringbone_pattern.tile_width;
+                let th = self.effects.herringbone_pattern.tile_height;
+                let alpha = self.effects.herringbone_pattern.opacity;
                 let mut overlay_verts = Vec::new();
 
                 let line_w = 1.0;
@@ -9409,13 +7994,13 @@ impl WgpuRenderer {
             }
 
             // === Cursor aurora borealis effect ===
-            if self.cursor_aurora_borealis_enabled && cursor_visible {
+            if self.effects.cursor_aurora_borealis.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                    let (ar, ag, ab) = self.cursor_aurora_borealis_color;
-                    let band_count = self.cursor_aurora_borealis_band_count;
-                    let shimmer = self.cursor_aurora_borealis_shimmer_speed;
-                    let alpha = self.cursor_aurora_borealis_opacity;
+                    let (ar, ag, ab) = self.effects.cursor_aurora_borealis.color;
+                    let band_count = self.effects.cursor_aurora_borealis.band_count;
+                    let shimmer = self.effects.cursor_aurora_borealis.shimmer_speed;
+                    let alpha = self.effects.cursor_aurora_borealis.opacity;
                     let mut overlay_verts = Vec::new();
 
                     let cx = anim.x + anim.width / 2.0;
@@ -9462,14 +8047,14 @@ impl WgpuRenderer {
             }
 
             // === Target reticle overlay effect ===
-            if self.target_reticle_enabled {
+            if self.effects.target_reticle.enabled {
                 let width = self.width() as f32;
                 let height = self.height() as f32;
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (tr, tg, tb) = self.target_reticle_color;
-                let ring_count = self.target_reticle_ring_count;
-                let pulse = self.target_reticle_pulse_speed;
-                let opacity = self.target_reticle_opacity;
+                let (tr, tg, tb) = self.effects.target_reticle.color;
+                let ring_count = self.effects.target_reticle.ring_count;
+                let pulse = self.effects.target_reticle.pulse_speed;
+                let opacity = self.effects.target_reticle.opacity;
                 let cx = width / 2.0;
                 let cy = height / 2.0;
                 let mut overlay_verts = Vec::new();
@@ -9505,15 +8090,15 @@ impl WgpuRenderer {
             }
 
             // === Cursor feather effect ===
-            if self.cursor_feather_enabled && cursor_visible {
+            if self.effects.cursor_feather.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
-                    let (fr, fg, fb) = self.cursor_feather_color;
-                    let count = self.cursor_feather_count;
-                    let drift = self.cursor_feather_drift_speed;
-                    let opacity = self.cursor_feather_opacity;
+                    let (fr, fg, fb) = self.effects.cursor_feather.color;
+                    let count = self.effects.cursor_feather.count;
+                    let drift = self.effects.cursor_feather.drift_speed;
+                    let opacity = self.effects.cursor_feather.opacity;
                     let mut overlay_verts = Vec::new();
                     for i in 0..count {
                         let phase = i as f32 * std::f32::consts::TAU / count as f32;
@@ -9559,13 +8144,13 @@ impl WgpuRenderer {
             }
 
             // === Plaid pattern overlay effect ===
-            if self.plaid_pattern_enabled {
+            if self.effects.plaid_pattern.enabled {
                 let width = self.width() as f32;
                 let height = self.height() as f32;
-                let (pr, pg, pb) = self.plaid_pattern_color;
-                let band_w = self.plaid_pattern_band_width;
-                let spacing = self.plaid_pattern_band_spacing;
-                let opacity = self.plaid_pattern_opacity;
+                let (pr, pg, pb) = self.effects.plaid_pattern.color;
+                let band_w = self.effects.plaid_pattern.band_width;
+                let spacing = self.effects.plaid_pattern.band_spacing;
+                let opacity = self.effects.plaid_pattern.opacity;
                 let mut overlay_verts = Vec::new();
                 // Horizontal bands
                 let h_count = (height / spacing) as i32 + 1;
@@ -9595,15 +8180,15 @@ impl WgpuRenderer {
             }
 
             // === Cursor stardust effect ===
-            if self.cursor_stardust_enabled && cursor_visible {
+            if self.effects.cursor_stardust.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
-                    let (sr, sg, sb) = self.cursor_stardust_color;
-                    let count = self.cursor_stardust_particle_count;
-                    let fall = self.cursor_stardust_fall_speed;
-                    let opacity = self.cursor_stardust_opacity;
+                    let (sr, sg, sb) = self.effects.cursor_stardust.color;
+                    let count = self.effects.cursor_stardust.particle_count;
+                    let fall = self.effects.cursor_stardust.fall_speed;
+                    let opacity = self.effects.cursor_stardust.opacity;
                     let mut overlay_verts = Vec::new();
                     for i in 0..count {
                         let phase = i as f32 * 2.71828;
@@ -9633,13 +8218,13 @@ impl WgpuRenderer {
             }
 
             // === Brick wall overlay effect ===
-            if self.brick_wall_enabled {
+            if self.effects.brick_wall.enabled {
                 let width = self.width() as f32;
                 let height = self.height() as f32;
-                let (br, bg, bb) = self.brick_wall_color;
-                let bw = self.brick_wall_width;
-                let bh = self.brick_wall_height;
-                let opacity = self.brick_wall_opacity;
+                let (br, bg, bb) = self.effects.brick_wall.color;
+                let bw = self.effects.brick_wall.width;
+                let bh = self.effects.brick_wall.height;
+                let opacity = self.effects.brick_wall.opacity;
                 let mut overlay_verts = Vec::new();
                 let rows = (height / bh) as i32 + 1;
                 let cols = (width / bw) as i32 + 2;
@@ -9670,15 +8255,15 @@ impl WgpuRenderer {
             }
 
             // === Cursor compass needle effect ===
-            if self.cursor_compass_needle_enabled && cursor_visible {
+            if self.effects.cursor_compass_needle.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
-                    let (nr, ng, nb) = self.cursor_compass_needle_color;
-                    let length = self.cursor_compass_needle_length;
-                    let spin = self.cursor_compass_needle_spin_speed;
-                    let opacity = self.cursor_compass_needle_opacity;
+                    let (nr, ng, nb) = self.effects.cursor_compass_needle.color;
+                    let length = self.effects.cursor_compass_needle.length;
+                    let spin = self.effects.cursor_compass_needle.spin_speed;
+                    let opacity = self.effects.cursor_compass_needle.opacity;
                     let angle = now * spin;
                     let mut overlay_verts = Vec::new();
                     // Needle segments (north half - colored)
@@ -9718,15 +8303,15 @@ impl WgpuRenderer {
             }
 
             // === Sine wave overlay effect ===
-            if self.sine_wave_enabled {
+            if self.effects.sine_wave.enabled {
                 let width = self.width() as f32;
                 let height = self.height() as f32;
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (sr, sg, sb) = self.sine_wave_color;
-                let amplitude = self.sine_wave_amplitude;
-                let wavelength = self.sine_wave_wavelength;
-                let speed = self.sine_wave_speed;
-                let opacity = self.sine_wave_opacity;
+                let (sr, sg, sb) = self.effects.sine_wave.color;
+                let amplitude = self.effects.sine_wave.amplitude;
+                let wavelength = self.effects.sine_wave.wavelength;
+                let speed = self.effects.sine_wave.speed;
+                let opacity = self.effects.sine_wave.opacity;
                 let mut overlay_verts = Vec::new();
                 let wave_count = (height / 40.0) as i32 + 1;
                 for w in 0..wave_count {
@@ -9757,15 +8342,15 @@ impl WgpuRenderer {
             }
 
             // === Cursor galaxy effect ===
-            if self.cursor_galaxy_enabled && cursor_visible {
+            if self.effects.cursor_galaxy.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
-                    let (gr, gg, gb) = self.cursor_galaxy_color;
-                    let star_count = self.cursor_galaxy_star_count;
-                    let radius = self.cursor_galaxy_radius;
-                    let opacity = self.cursor_galaxy_opacity;
+                    let (gr, gg, gb) = self.effects.cursor_galaxy.color;
+                    let star_count = self.effects.cursor_galaxy.star_count;
+                    let radius = self.effects.cursor_galaxy.radius;
+                    let opacity = self.effects.cursor_galaxy.opacity;
                     let mut overlay_verts = Vec::new();
                     for i in 0..star_count {
                         let phase = i as f32 * std::f32::consts::TAU / star_count as f32;
@@ -9797,14 +8382,14 @@ impl WgpuRenderer {
             }
 
             // === Rotating gear overlay effect ===
-            if self.rotating_gear_enabled {
+            if self.effects.rotating_gear.enabled {
                 let width = self.width() as f32;
                 let height = self.height() as f32;
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (gr, gg, gb) = self.rotating_gear_color;
-                let gear_size = self.rotating_gear_size;
-                let speed = self.rotating_gear_speed;
-                let opacity = self.rotating_gear_opacity;
+                let (gr, gg, gb) = self.effects.rotating_gear.color;
+                let gear_size = self.effects.rotating_gear.size;
+                let speed = self.effects.rotating_gear.speed;
+                let opacity = self.effects.rotating_gear.opacity;
                 let cols = (width / (gear_size * 2.5)) as i32 + 1;
                 let rows = (height / (gear_size * 2.5)) as i32 + 1;
                 let mut overlay_verts = Vec::new();
@@ -9851,14 +8436,14 @@ impl WgpuRenderer {
             }
 
             // === Cursor prism effect ===
-            if self.cursor_prism_enabled && cursor_visible {
+            if self.effects.cursor_prism.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
-                    let ray_count = self.cursor_prism_ray_count;
-                    let spread = self.cursor_prism_spread;
-                    let opacity = self.cursor_prism_opacity;
+                    let ray_count = self.effects.cursor_prism.ray_count;
+                    let spread = self.effects.cursor_prism.spread;
+                    let opacity = self.effects.cursor_prism.opacity;
                     let mut overlay_verts = Vec::new();
                     let rainbow: [(f32, f32, f32); 7] = [
                         (1.0, 0.0, 0.0), (1.0, 0.5, 0.0), (1.0, 1.0, 0.0),
@@ -9893,15 +8478,15 @@ impl WgpuRenderer {
             }
 
             // === Crosshatch pattern overlay effect ===
-            if self.crosshatch_pattern_enabled {
+            if self.effects.crosshatch_pattern.enabled {
                 let width = self.width() as f32;
                 let height = self.height() as f32;
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (cr, cg, cb) = self.crosshatch_pattern_color;
-                let spacing = self.crosshatch_pattern_line_spacing;
-                let angle_deg = self.crosshatch_pattern_angle;
-                let speed = self.crosshatch_pattern_speed;
-                let opacity = self.crosshatch_pattern_opacity;
+                let (cr, cg, cb) = self.effects.crosshatch_pattern.color;
+                let spacing = self.effects.crosshatch_pattern.line_spacing;
+                let angle_deg = self.effects.crosshatch_pattern.angle;
+                let speed = self.effects.crosshatch_pattern.speed;
+                let opacity = self.effects.crosshatch_pattern.opacity;
                 let angle_rad = angle_deg * std::f32::consts::PI / 180.0;
                 let offset = now * speed * 20.0;
                 let mut overlay_verts = Vec::new();
@@ -9963,15 +8548,15 @@ impl WgpuRenderer {
             }
 
             // === Cursor moth effect ===
-            if self.cursor_moth_enabled && cursor_visible {
+            if self.effects.cursor_moth.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
-                    let moth_count = self.cursor_moth_count;
-                    let wing_size = self.cursor_moth_wing_size;
-                    let (mr, mg, mb) = self.cursor_moth_color;
-                    let opacity = self.cursor_moth_opacity;
+                    let moth_count = self.effects.cursor_moth.count;
+                    let wing_size = self.effects.cursor_moth.wing_size;
+                    let (mr, mg, mb) = self.effects.cursor_moth.color;
+                    let opacity = self.effects.cursor_moth.opacity;
                     let mut overlay_verts = Vec::new();
                     for i in 0..moth_count {
                         let phase = i as f32 * std::f32::consts::TAU / moth_count as f32;
@@ -10008,12 +8593,12 @@ impl WgpuRenderer {
             }
 
             // === Hex grid overlay effect ===
-            if self.hex_grid_enabled {
+            if self.effects.hex_grid.enabled {
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (hr, hg, hb) = self.hex_grid_color;
-                let hop = self.hex_grid_opacity;
-                let cell = self.hex_grid_cell_size.max(10.0);
-                let pspd = self.hex_grid_pulse_speed;
+                let (hr, hg, hb) = self.effects.hex_grid.color;
+                let hop = self.effects.hex_grid.opacity;
+                let cell = self.effects.hex_grid.cell_size.max(10.0);
+                let pspd = self.effects.hex_grid.pulse_speed;
                 let fw = self.width() as f32;
                 let fh = self.height() as f32;
                 let mut hex_verts: Vec<RectVertex> = Vec::new();
@@ -10063,7 +8648,7 @@ impl WgpuRenderer {
             }
 
             // === Cursor sparkle burst effect ===
-            if self.cursor_sparkle_burst_enabled && cursor_visible {
+            if self.effects.cursor_sparkle_burst.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
@@ -10089,10 +8674,10 @@ impl WgpuRenderer {
                             }
                         }
                     }
-                    let (sr, sg, sb) = self.cursor_sparkle_burst_color;
-                    let sop = self.cursor_sparkle_burst_opacity;
-                    let count = self.cursor_sparkle_burst_count;
-                    let radius = self.cursor_sparkle_burst_radius;
+                    let (sr, sg, sb) = self.effects.cursor_sparkle_burst.color;
+                    let sop = self.effects.cursor_sparkle_burst.opacity;
+                    let count = self.effects.cursor_sparkle_burst.count;
+                    let radius = self.effects.cursor_sparkle_burst.radius;
                     let mut sparkle_verts: Vec<RectVertex> = Vec::new();
                     let duration = 0.4_f32;
                     self.cursor_sparkle_burst_entries.retain(|e| e.started.elapsed().as_secs_f32() < duration);
@@ -10132,12 +8717,12 @@ impl WgpuRenderer {
             }
 
             // === Circuit board trace effect ===
-            if self.circuit_trace_enabled {
+            if self.effects.circuit_trace.enabled {
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (cr, cg, cb) = self.circuit_trace_color;
-                let cop = self.circuit_trace_opacity;
-                let tw = self.circuit_trace_width;
-                let spd = self.circuit_trace_speed;
+                let (cr, cg, cb) = self.effects.circuit_trace.color;
+                let cop = self.effects.circuit_trace.opacity;
+                let tw = self.effects.circuit_trace.width;
+                let spd = self.effects.circuit_trace.speed;
                 let fw = self.width() as f32;
                 let fh = self.height() as f32;
                 let mut trace_verts: Vec<RectVertex> = Vec::new();
@@ -10203,15 +8788,15 @@ impl WgpuRenderer {
             }
 
             // === Cursor compass rose effect ===
-            if self.cursor_compass_enabled && cursor_visible {
+            if self.effects.cursor_compass.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
-                    let (cr, cg, cb) = self.cursor_compass_color;
-                    let cop = self.cursor_compass_opacity;
-                    let size = self.cursor_compass_size;
-                    let spd = self.cursor_compass_speed;
+                    let (cr, cg, cb) = self.effects.cursor_compass.color;
+                    let cop = self.effects.cursor_compass.opacity;
+                    let size = self.effects.cursor_compass.size;
+                    let spd = self.effects.cursor_compass.speed;
                     let rotation = now * spd;
                     let mut compass_verts: Vec<RectVertex> = Vec::new();
                     // 4 cardinal lines + 4 intermediate lines
@@ -10267,13 +8852,13 @@ impl WgpuRenderer {
             }
 
             // === Warp/distortion grid effect ===
-            if self.warp_grid_enabled {
+            if self.effects.warp_grid.enabled {
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let (wr, wg, wb) = self.warp_grid_color;
-                let wop = self.warp_grid_opacity;
-                let density = self.warp_grid_density.max(2) as f32;
-                let amp = self.warp_grid_amplitude;
-                let spd = self.warp_grid_speed;
+                let (wr, wg, wb) = self.effects.warp_grid.color;
+                let wop = self.effects.warp_grid.opacity;
+                let density = self.effects.warp_grid.density.max(2) as f32;
+                let amp = self.effects.warp_grid.amplitude;
+                let spd = self.effects.warp_grid.speed;
                 let fw = self.width() as f32;
                 let fh = self.height() as f32;
                 let cell_w = fw / density;
@@ -10319,16 +8904,16 @@ impl WgpuRenderer {
             }
 
             // === Cursor DNA helix trail effect ===
-            if self.cursor_dna_helix_enabled && cursor_visible {
+            if self.effects.cursor_dna_helix.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
-                    let (c1r, c1g, c1b) = self.cursor_dna_helix_color1;
-                    let (c2r, c2g, c2b) = self.cursor_dna_helix_color2;
-                    let dop = self.cursor_dna_helix_opacity;
-                    let radius = self.cursor_dna_helix_radius;
-                    let spd = self.cursor_dna_helix_speed;
+                    let (c1r, c1g, c1b) = self.effects.cursor_dna_helix.color1;
+                    let (c2r, c2g, c2b) = self.effects.cursor_dna_helix.color2;
+                    let dop = self.effects.cursor_dna_helix.opacity;
+                    let radius = self.effects.cursor_dna_helix.radius;
+                    let spd = self.effects.cursor_dna_helix.speed;
                     let mut dna_verts: Vec<RectVertex> = Vec::new();
                     let num_nodes = 16;
                     let dot_size = 3.0;
@@ -10373,12 +8958,12 @@ impl WgpuRenderer {
             }
 
             // === Prism/rainbow edge effect ===
-            if self.prism_edge_enabled {
+            if self.effects.prism_edge.enabled {
                 let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
-                let pw = self.prism_edge_width;
-                let pop = self.prism_edge_opacity;
-                let sat = self.prism_edge_saturation;
-                let spd = self.prism_edge_speed;
+                let pw = self.effects.prism_edge.width;
+                let pop = self.effects.prism_edge.opacity;
+                let sat = self.effects.prism_edge.saturation;
+                let spd = self.effects.prism_edge.speed;
                 let fw = self.width() as f32;
                 let fh = self.height() as f32;
                 let mut prism_verts: Vec<RectVertex> = Vec::new();
@@ -10457,7 +9042,7 @@ impl WgpuRenderer {
             }
 
             // === Cursor pendulum swing effect ===
-            if self.cursor_pendulum_enabled && cursor_visible {
+            if self.effects.cursor_pendulum.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
                     let cx = anim.x + anim.width / 2.0;
                     let cy = anim.y + anim.height / 2.0;
@@ -10469,10 +9054,10 @@ impl WgpuRenderer {
                     }
                     if let Some(start) = self.cursor_pendulum_swing_start {
                         let elapsed = start.elapsed().as_secs_f32();
-                        let (pr, pg, pb) = self.cursor_pendulum_color;
-                        let pop = self.cursor_pendulum_opacity;
-                        let arc_len = self.cursor_pendulum_arc_length;
-                        let damping = self.cursor_pendulum_damping;
+                        let (pr, pg, pb) = self.effects.cursor_pendulum.color;
+                        let pop = self.effects.cursor_pendulum.opacity;
+                        let arc_len = self.effects.cursor_pendulum.arc_length;
+                        let damping = self.effects.cursor_pendulum.damping;
                         let decay = (-elapsed * damping * 5.0).exp();
                         if decay > 0.01 {
                             let swing_angle = (elapsed * 8.0).sin() * decay * std::f32::consts::PI * 0.4;
@@ -10523,11 +9108,11 @@ impl WgpuRenderer {
             // Drawn after window/char backgrounds but before text, so the cursor
             // background color is visible behind the inverse-video character.
             // === Cursor drop shadow (drawn before cursor bg) ===
-            if self.cursor_shadow_enabled && cursor_visible {
+            if self.effects.cursor_shadow.enabled && cursor_visible {
                 if let Some(ref anim) = animated_cursor {
-                    let sx = anim.x + self.cursor_shadow_offset_x;
-                    let sy = anim.y + self.cursor_shadow_offset_y;
-                    let shadow_alpha = self.cursor_shadow_opacity.clamp(0.0, 1.0);
+                    let sx = anim.x + self.effects.cursor_shadow.offset_x;
+                    let sy = anim.y + self.effects.cursor_shadow.offset_y;
+                    let shadow_alpha = self.effects.cursor_shadow.opacity.clamp(0.0, 1.0);
                     let shadow_c = Color::new(0.0, 0.0, 0.0, shadow_alpha);
                     let mut shadow_verts: Vec<RectVertex> = Vec::new();
                     self.add_rect(&mut shadow_verts, sx, sy, anim.width, anim.height, &shadow_c);
@@ -11251,10 +9836,10 @@ impl WgpuRenderer {
             }
 
             // === Draw mode-line separators ===
-            if self.mode_line_separator_style > 0 {
-                let (cr, cg, cb) = self.mode_line_separator_color;
-                let sep_h = self.mode_line_separator_height;
-                let style = self.mode_line_separator_style;
+            if self.effects.mode_line_separator.style > 0 {
+                let (cr, cg, cb) = self.effects.mode_line_separator.color;
+                let sep_h = self.effects.mode_line_separator.height;
+                let style = self.effects.mode_line_separator.style;
                 let mut sep_vertices: Vec<RectVertex> = Vec::new();
 
                 for info in &frame_glyphs.window_infos {
@@ -11309,8 +9894,8 @@ impl WgpuRenderer {
             }
 
             // === Buffer-local accent color strip ===
-            if self.accent_strip_enabled {
-                let strip_w = self.accent_strip_width.max(1.0);
+            if self.effects.accent_strip.enabled {
+                let strip_w = self.effects.accent_strip.width.max(1.0);
                 let mut strip_vertices: Vec<RectVertex> = Vec::new();
 
                 for info in &frame_glyphs.window_infos {
@@ -11343,8 +9928,8 @@ impl WgpuRenderer {
             }
 
             // === Window background tint based on file type ===
-            if self.window_mode_tint_enabled {
-                let tint_alpha = self.window_mode_tint_opacity.clamp(0.0, 1.0);
+            if self.effects.window_mode_tint.enabled {
+                let tint_alpha = self.effects.window_mode_tint.opacity.clamp(0.0, 1.0);
                 let mut tint_vertices: Vec<RectVertex> = Vec::new();
 
                 for info in &frame_glyphs.window_infos {
@@ -11376,14 +9961,14 @@ impl WgpuRenderer {
             }
 
             // === Animated focus ring (marching ants) around selected window ===
-            if self.focus_ring_enabled {
+            if self.effects.focus_ring.enabled {
                 let elapsed = self.focus_ring_start.elapsed().as_secs_f32();
-                let offset = (elapsed * self.focus_ring_speed) % (self.focus_ring_dash_length * 2.0);
-                let dash = self.focus_ring_dash_length;
+                let offset = (elapsed * self.effects.focus_ring.speed) % (self.effects.focus_ring.dash_length * 2.0);
+                let dash = self.effects.focus_ring.dash_length;
                 let period = dash * 2.0;
                 let thickness = 2.0_f32;
-                let (cr, cg, cb) = self.focus_ring_color;
-                let alpha = self.focus_ring_opacity.clamp(0.0, 1.0);
+                let (cr, cg, cb) = self.effects.focus_ring.color;
+                let alpha = self.effects.focus_ring.opacity.clamp(0.0, 1.0);
                 let c = Color::new(cr, cg, cb, alpha);
 
                 let mut ring_vertices: Vec<RectVertex> = Vec::new();
@@ -11443,10 +10028,10 @@ impl WgpuRenderer {
             }
 
             // === Window padding gradient (inner edge shading for depth) ===
-            if self.padding_gradient_enabled {
-                let grad_w = self.padding_gradient_width.max(1.0);
-                let peak_alpha = self.padding_gradient_opacity.clamp(0.0, 1.0);
-                let (cr, cg, cb) = self.padding_gradient_color;
+            if self.effects.padding_gradient.enabled {
+                let grad_w = self.effects.padding_gradient.width.max(1.0);
+                let peak_alpha = self.effects.padding_gradient.opacity.clamp(0.0, 1.0);
+                let (cr, cg, cb) = self.effects.padding_gradient.color;
                 let steps = (grad_w as i32).max(2);
                 let mut grad_vertices: Vec<RectVertex> = Vec::new();
 
@@ -11497,9 +10082,9 @@ impl WgpuRenderer {
             }
 
             // === Smooth border color transition on focus ===
-            if self.border_transition_enabled && frame_glyphs.window_infos.len() > 1 {
+            if self.effects.border_transition.enabled && frame_glyphs.window_infos.len() > 1 {
                 let now = std::time::Instant::now();
-                let (ar, ag, ab) = self.border_transition_active_color;
+                let (ar, ag, ab) = self.effects.border_transition.active_color;
                 let duration = self.border_transition_duration;
 
                 // Detect selection change
@@ -11574,9 +10159,9 @@ impl WgpuRenderer {
             }
 
             // === Frosted glass effect on mode-lines ===
-            if self.frosted_glass_enabled {
-                let frost_opacity = self.frosted_glass_opacity.clamp(0.0, 1.0);
-                let blur_r = self.frosted_glass_blur.max(1.0);
+            if self.effects.frosted_glass.enabled {
+                let frost_opacity = self.effects.frosted_glass.opacity.clamp(0.0, 1.0);
+                let blur_r = self.effects.frosted_glass.blur.max(1.0);
                 let mut frost_vertices: Vec<RectVertex> = Vec::new();
 
                 for info in &frame_glyphs.window_infos {
@@ -11649,9 +10234,9 @@ impl WgpuRenderer {
             }
 
             // === Noise/film grain texture overlay ===
-            if self.noise_grain_enabled {
-                let grain_size = self.noise_grain_size.max(1.0);
-                let intensity = self.noise_grain_intensity.clamp(0.0, 1.0);
+            if self.effects.noise_grain.enabled {
+                let grain_size = self.effects.noise_grain.size.max(1.0);
+                let intensity = self.effects.noise_grain.intensity.clamp(0.0, 1.0);
                 let frame_w = surface_width as f32 / self.scale_factor;
                 let frame_h = surface_height as f32 / self.scale_factor;
                 let cols = (frame_w / grain_size) as i32;
@@ -11715,7 +10300,7 @@ impl WgpuRenderer {
             }
 
             // === Focus mode: dim lines outside current paragraph ===
-            if self.focus_mode_enabled {
+            if self.effects.focus_mode.enabled {
                 // Find active cursor Y position (style != 3)
                 let mut cursor_y: Option<f32> = None;
                 let mut cursor_h: f32 = 0.0;
@@ -11798,7 +10383,7 @@ impl WgpuRenderer {
                             }
 
                             // Draw dim overlays above and below the paragraph
-                            let dim_color = Color::new(0.0, 0.0, 0.0, self.focus_mode_opacity);
+                            let dim_color = Color::new(0.0, 0.0, 0.0, self.effects.focus_mode.opacity);
                             let mut focus_vertices: Vec<RectVertex> = Vec::new();
 
                             // Above paragraph
@@ -11833,7 +10418,7 @@ impl WgpuRenderer {
             }
 
             // === Draw inactive window dimming overlays (with smooth fade) ===
-            if self.inactive_dim_enabled && frame_glyphs.window_infos.len() > 1 {
+            if self.effects.inactive_dim.enabled && frame_glyphs.window_infos.len() > 1 {
                 let now = std::time::Instant::now();
                 let dt = now.duration_since(self.last_dim_tick).as_secs_f32().min(0.1);
                 self.last_dim_tick = now;
@@ -11843,7 +10428,7 @@ impl WgpuRenderer {
                 let mut dim_vertices: Vec<RectVertex> = Vec::new();
                 let mut any_transitioning = false;
                 for info in &frame_glyphs.window_infos {
-                    let target = if info.selected { 0.0 } else { self.inactive_dim_opacity };
+                    let target = if info.selected { 0.0 } else { self.effects.inactive_dim.opacity };
                     let current = self.per_window_dim.get(&info.window_id).copied().unwrap_or(target);
                     // Exponential interpolation toward target
                     let new_opacity = current + (target - current) * (1.0 - (-fade_speed * dt).exp());
@@ -11884,9 +10469,9 @@ impl WgpuRenderer {
             }
 
             // === Inactive window color tint ===
-            if self.inactive_tint_enabled && frame_glyphs.window_infos.len() > 1 {
-                let (tr, tg, tb) = self.inactive_tint_color;
-                let opacity = self.inactive_tint_opacity.clamp(0.0, 1.0);
+            if self.effects.inactive_tint.enabled && frame_glyphs.window_infos.len() > 1 {
+                let (tr, tg, tb) = self.effects.inactive_tint.color;
+                let opacity = self.effects.inactive_tint.opacity.clamp(0.0, 1.0);
                 let mut tint_vertices: Vec<RectVertex> = Vec::new();
 
                 for info in &frame_glyphs.window_infos {
@@ -11912,9 +10497,9 @@ impl WgpuRenderer {
             }
 
             // === Zen mode: draw margin overlays for centered content ===
-            if self.zen_mode_enabled {
-                let content_pct = self.zen_mode_content_width_pct.clamp(20.0, 100.0) / 100.0;
-                let margin_alpha = self.zen_mode_margin_opacity;
+            if self.effects.zen_mode.enabled {
+                let content_pct = self.effects.zen_mode.content_width_pct.clamp(20.0, 100.0) / 100.0;
+                let margin_alpha = self.effects.zen_mode.margin_opacity;
                 let dim_color = Color::new(0.0, 0.0, 0.0, margin_alpha);
                 let mut zen_vertices: Vec<RectVertex> = Vec::new();
 
@@ -11960,7 +10545,7 @@ impl WgpuRenderer {
             }
 
             // === Cursor trail fade (afterimage ghost) ===
-            if self.cursor_trail_fade_enabled && !self.cursor_trail_positions.is_empty() {
+            if self.effects.cursor_trail_fade.enabled && !self.cursor_trail_positions.is_empty() {
                 let now = std::time::Instant::now();
                 let fade_dur = self.cursor_trail_fade_duration;
                 let mut trail_vertices: Vec<RectVertex> = Vec::new();
@@ -11996,8 +10581,8 @@ impl WgpuRenderer {
             }
 
             // === Search highlight pulse (glow on isearch face glyphs) ===
-            if self.search_pulse_enabled && self.search_pulse_face_id > 0 {
-                let target_face = self.search_pulse_face_id;
+            if self.effects.search_pulse.enabled && self.effects.search_pulse.face_id > 0 {
+                let target_face = self.effects.search_pulse.face_id;
                 // Find bounding box of all glyphs with the isearch face
                 let mut min_x = f32::MAX;
                 let mut min_y = f32::MAX;
@@ -12062,10 +10647,10 @@ impl WgpuRenderer {
             }
 
             // === Selection region glow highlight ===
-            if self.region_glow_enabled && self.region_glow_face_id > 0 {
-                let target_face = self.region_glow_face_id;
-                let glow_radius = self.region_glow_radius.max(1.0);
-                let glow_opacity = self.region_glow_opacity.clamp(0.0, 1.0);
+            if self.effects.region_glow.enabled && self.effects.region_glow.face_id > 0 {
+                let target_face = self.effects.region_glow.face_id;
+                let glow_radius = self.effects.region_glow.radius.max(1.0);
+                let glow_opacity = self.effects.region_glow.opacity.clamp(0.0, 1.0);
 
                 // Collect per-row bounding boxes for region glyphs
                 let mut row_bounds: Vec<(f32, f32, f32, f32)> = Vec::new(); // (x, y, w, h)
@@ -12139,10 +10724,10 @@ impl WgpuRenderer {
             }
 
             // === Typing ripple effect ===
-            if self.typing_ripple_enabled && !self.active_ripples.is_empty() {
+            if self.effects.typing_ripple.enabled && !self.active_ripples.is_empty() {
                 let now = std::time::Instant::now();
                 let duration = self.typing_ripple_duration;
-                let max_r = self.typing_ripple_max_radius;
+                let max_r = self.effects.typing_ripple.max_radius;
 
                 // Remove expired ripples
                 self.active_ripples.retain(|&(_, _, t)| now.duration_since(t).as_secs_f32() < duration);
@@ -12197,8 +10782,8 @@ impl WgpuRenderer {
             }
 
             // === Minimap: code overview column on right side of each window ===
-            if self.minimap_enabled {
-                let minimap_w = self.minimap_width;
+            if self.effects.minimap.enabled {
+                let minimap_w = self.effects.minimap.width;
                 let char_w = frame_glyphs.char_width.max(1.0);
                 let char_h = frame_glyphs.char_height.max(1.0);
                 // Scale factor: each source char maps to this many pixels in minimap
@@ -12281,9 +10866,9 @@ impl WgpuRenderer {
             }
 
             // === Header/mode-line shadow depth effect ===
-            if self.header_shadow_enabled {
-                let shadow_size = self.header_shadow_size.max(1.0);
-                let intensity = self.header_shadow_intensity.clamp(0.0, 1.0);
+            if self.effects.header_shadow.enabled {
+                let shadow_size = self.effects.header_shadow.size.max(1.0);
+                let intensity = self.effects.header_shadow.intensity.clamp(0.0, 1.0);
                 let steps = 8;
                 let mut shadow_vertices: Vec<RectVertex> = Vec::new();
 
@@ -12365,10 +10950,10 @@ impl WgpuRenderer {
             }
 
             // === Active window border glow ===
-            if self.window_glow_enabled {
-                let glow_radius = self.window_glow_radius.max(1.0);
-                let intensity = self.window_glow_intensity.clamp(0.0, 1.0);
-                let (cr, cg, cb) = self.window_glow_color;
+            if self.effects.window_glow.enabled {
+                let glow_radius = self.effects.window_glow.radius.max(1.0);
+                let intensity = self.effects.window_glow.intensity.clamp(0.0, 1.0);
+                let (cr, cg, cb) = self.effects.window_glow.color;
                 let steps = 10;
                 let mut glow_vertices: Vec<RectVertex> = Vec::new();
 
@@ -12418,10 +11003,10 @@ impl WgpuRenderer {
             }
 
             // === Scroll progress indicator bar ===
-            if self.scroll_progress_enabled {
-                let bar_h = self.scroll_progress_height.max(1.0);
-                let (cr, cg, cb) = self.scroll_progress_color;
-                let opacity = self.scroll_progress_opacity.clamp(0.0, 1.0);
+            if self.effects.scroll_progress.enabled {
+                let bar_h = self.effects.scroll_progress.height.max(1.0);
+                let (cr, cg, cb) = self.effects.scroll_progress.color;
+                let opacity = self.effects.scroll_progress.opacity.clamp(0.0, 1.0);
                 let mut progress_vertices: Vec<RectVertex> = Vec::new();
 
                 for info in &frame_glyphs.window_infos {
@@ -12461,9 +11046,9 @@ impl WgpuRenderer {
             }
 
             // === Window content shadow/depth effect ===
-            if self.window_content_shadow_enabled && frame_glyphs.window_infos.len() > 1 {
-                let shadow_size = self.window_content_shadow_size.max(1.0);
-                let shadow_opacity = self.window_content_shadow_opacity.clamp(0.0, 1.0);
+            if self.effects.window_content_shadow.enabled && frame_glyphs.window_infos.len() > 1 {
+                let shadow_size = self.effects.window_content_shadow.size.max(1.0);
+                let shadow_opacity = self.effects.window_content_shadow.opacity.clamp(0.0, 1.0);
                 let mut shadow_vertices: Vec<RectVertex> = Vec::new();
                 let steps = 4;
 
@@ -12549,9 +11134,9 @@ impl WgpuRenderer {
             }
 
             // === Mini-buffer completion highlight ===
-            if self.minibuffer_highlight_enabled {
-                let (hr, hg, hb) = self.minibuffer_highlight_color;
-                let h_opacity = self.minibuffer_highlight_opacity.clamp(0.0, 1.0);
+            if self.effects.minibuffer_highlight.enabled {
+                let (hr, hg, hb) = self.effects.minibuffer_highlight.color;
+                let h_opacity = self.effects.minibuffer_highlight.opacity.clamp(0.0, 1.0);
                 let mut highlight_vertices: Vec<RectVertex> = Vec::new();
 
                 // Find minibuffer window
@@ -12620,7 +11205,7 @@ impl WgpuRenderer {
 
             // === Scroll velocity fade overlay ===
             if !self.scroll_velocity_fades.is_empty() {
-                let max_op = self.scroll_velocity_fade_max_opacity.clamp(0.0, 1.0);
+                let max_op = self.effects.scroll_velocity_fade.max_opacity.clamp(0.0, 1.0);
                 let mut fade_vertices: Vec<RectVertex> = Vec::new();
 
                 for entry in &self.scroll_velocity_fades {
@@ -12663,8 +11248,8 @@ impl WgpuRenderer {
 
             // === Click halo effect ===
             if !self.click_halos.is_empty() {
-                let (hr, hg, hb) = self.click_halo_color;
-                let max_r = self.click_halo_max_radius;
+                let (hr, hg, hb) = self.effects.click_halo.color;
+                let max_r = self.effects.click_halo.max_radius;
                 let mut halo_vertices: Vec<RectVertex> = Vec::new();
                 let ring_steps = 8;
 
@@ -12709,7 +11294,7 @@ impl WgpuRenderer {
 
             // === Window edge snap indicator ===
             if !self.edge_snaps.is_empty() {
-                let (er, eg, eb) = self.edge_snap_color;
+                let (er, eg, eb) = self.effects.edge_snap.color;
                 let mut snap_vertices: Vec<RectVertex> = Vec::new();
                 let bar_h = 4.0_f32;
                 let steps = 3;
@@ -12769,9 +11354,9 @@ impl WgpuRenderer {
             }
 
             // === Line wrap indicator overlay ===
-            if self.wrap_indicator_enabled {
-                let (wr, wg, wb) = self.wrap_indicator_color;
-                let w_opacity = self.wrap_indicator_opacity.clamp(0.0, 1.0);
+            if self.effects.wrap_indicator.enabled {
+                let (wr, wg, wb) = self.effects.wrap_indicator.color;
+                let w_opacity = self.effects.wrap_indicator.opacity.clamp(0.0, 1.0);
                 let mut wrap_vertices: Vec<RectVertex> = Vec::new();
 
                 // Detect right fringe wrap indicators (↵ U+21B5) and draw gradient
@@ -12820,7 +11405,7 @@ impl WgpuRenderer {
 
             // === Scroll momentum indicator ===
             if !self.active_scroll_momentums.is_empty() {
-                let bar_w = self.scroll_momentum_width.max(1.0);
+                let bar_w = self.effects.scroll_momentum.width.max(1.0);
                 let mut momentum_vertices: Vec<RectVertex> = Vec::new();
                 let now = std::time::Instant::now();
 
@@ -12877,11 +11462,11 @@ impl WgpuRenderer {
             }
 
             // === Vignette effect: darken edges of the frame ===
-            if self.vignette_enabled {
+            if self.effects.vignette.enabled {
                 let frame_w = frame_glyphs.width;
                 let frame_h = frame_glyphs.height;
-                let intensity = self.vignette_intensity.clamp(0.0, 1.0);
-                let radius_pct = self.vignette_radius.clamp(10.0, 100.0) / 100.0;
+                let intensity = self.effects.vignette.intensity.clamp(0.0, 1.0);
+                let radius_pct = self.effects.vignette.radius.clamp(10.0, 100.0) / 100.0;
 
                 // Number of gradient steps from edge inward
                 let steps = 16;
@@ -14994,20 +13579,20 @@ impl WgpuRenderer {
     ) {
         use wgpu::util::DeviceExt;
 
-        if !self.window_watermark_enabled { return; }
+        if !self.effects.window_watermark.enabled { return; }
 
         let font_size = glyph_atlas.default_font_size();
         let scale = 3.0_f32;
         let char_width = font_size * 0.6 * scale;
         let char_height = font_size * scale;
         let font_size_bits = 0.0_f32.to_bits();
-        let alpha = self.window_watermark_opacity.clamp(0.0, 1.0);
+        let alpha = self.effects.window_watermark.opacity.clamp(0.0, 1.0);
 
         let mut overlay_glyphs: Vec<(GlyphKey, f32, f32, [f32; 4], f32)> = Vec::new();
 
         for info in &frame_glyphs.window_infos {
             if info.is_minibuffer { continue; }
-            if info.buffer_size > self.window_watermark_threshold as i64 { continue; }
+            if info.buffer_size > self.effects.window_watermark.threshold as i64 { continue; }
 
             let b = &info.bounds;
             let content_h = b.height - info.mode_line_height;
@@ -15806,7 +14391,7 @@ impl WgpuRenderer {
     ) {
         use wgpu::util::DeviceExt;
 
-        if !self.breadcrumb_enabled {
+        if !self.effects.breadcrumb.enabled {
             return;
         }
 
@@ -15814,10 +14399,10 @@ impl WgpuRenderer {
         let line_height = glyph_atlas.default_line_height();
         let bar_height = line_height + 4.0;
         let padding_x = 6.0_f32;
-        let opacity = self.breadcrumb_opacity.clamp(0.0, 1.0);
+        let opacity = self.effects.breadcrumb.opacity.clamp(0.0, 1.0);
 
         // Detect title changes and start fade animations
-        if self.title_fade_enabled {
+        if self.effects.title_fade.enabled {
             for info in &frame_glyphs.window_infos {
                 if info.is_minibuffer || info.buffer_file_name.is_empty() {
                     continue;
@@ -15838,7 +14423,7 @@ impl WgpuRenderer {
                         old_text,
                         new_text: new_text.clone(),
                         started: std::time::Instant::now(),
-                        duration: std::time::Duration::from_millis(self.title_fade_duration_ms as u64),
+                        duration: std::time::Duration::from_millis(self.effects.title_fade.duration_ms as u64),
                     });
                 }
                 self.prev_breadcrumb_text.insert(wid, new_text.clone());
