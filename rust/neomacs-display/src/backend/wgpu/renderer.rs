@@ -868,71 +868,6 @@ impl WgpuRenderer {
         self.effects.inactive_dim.opacity = opacity;
     }
 
-    /// Update mode-line separator config
-    pub fn set_mode_line_separator(&mut self, style: u32, color: (f32, f32, f32), height: f32) {
-        self.effects.mode_line_separator.style = style;
-        self.effects.mode_line_separator.color = color;
-        self.effects.mode_line_separator.height = height;
-    }
-
-    /// Update cursor glow config
-    pub fn set_cursor_glow(&mut self, enabled: bool, color: (f32, f32, f32), radius: f32, opacity: f32) {
-        self.effects.cursor_glow.enabled = enabled;
-        self.effects.cursor_glow.color = color;
-        self.effects.cursor_glow.radius = radius;
-        self.effects.cursor_glow.opacity = opacity;
-    }
-
-    /// Update cursor pulse config
-    pub fn set_cursor_pulse(&mut self, enabled: bool, speed: f32, min_opacity: f32) {
-        self.effects.cursor_pulse.enabled = enabled;
-        self.effects.cursor_pulse.speed = speed;
-        self.effects.cursor_pulse.min_opacity = min_opacity;
-    }
-
-    /// Update focus mode config
-    pub fn set_focus_mode(&mut self, enabled: bool, opacity: f32) {
-        self.effects.focus_mode.enabled = enabled;
-        self.effects.focus_mode.opacity = opacity;
-    }
-
-    /// Update minimap config
-    pub fn set_minimap(&mut self, enabled: bool, width: f32) {
-        self.effects.minimap.enabled = enabled;
-        self.effects.minimap.width = width;
-    }
-
-    /// Update vignette config
-    pub fn set_vignette(&mut self, enabled: bool, intensity: f32, radius: f32) {
-        self.effects.vignette.enabled = enabled;
-        self.effects.vignette.intensity = intensity;
-        self.effects.vignette.radius = radius;
-    }
-
-    /// Update zen mode config
-    pub fn set_zen_mode(&mut self, enabled: bool, content_width_pct: f32, margin_opacity: f32) {
-        self.effects.zen_mode.enabled = enabled;
-        self.effects.zen_mode.content_width_pct = content_width_pct;
-        self.effects.zen_mode.margin_opacity = margin_opacity;
-    }
-
-    /// Update background pattern config
-    pub fn set_background_pattern(&mut self, style: u32, spacing: f32, r: f32, g: f32, b: f32, opacity: f32) {
-        self.effects.bg_pattern.style = style;
-        self.effects.bg_pattern.spacing = spacing;
-        self.effects.bg_pattern.color = (r, g, b);
-        self.effects.bg_pattern.opacity = opacity;
-    }
-
-    /// Update line animation config
-    pub fn set_line_animation(&mut self, enabled: bool, duration_ms: u32) {
-        self.effects.line_animation.enabled = enabled;
-        self.effects.line_animation.duration_ms = duration_ms;
-        if !enabled {
-            self.active_line_anims.clear();
-        }
-    }
-
     /// Start a line animation for a window
     pub fn start_line_animation(&mut self, window_bounds: Rect, edit_y: f32, offset: f32, duration_ms: u32) {
         // Remove any existing animation for this window region
@@ -993,84 +928,6 @@ impl WgpuRenderer {
         offset
     }
 
-    /// Update cursor color cycling config
-    pub fn set_cursor_color_cycle(&mut self, enabled: bool, speed: f32, saturation: f32, lightness: f32) {
-        self.effects.cursor_color_cycle.enabled = enabled;
-        self.effects.cursor_color_cycle.speed = speed;
-        self.effects.cursor_color_cycle.saturation = saturation;
-        self.effects.cursor_color_cycle.lightness = lightness;
-        if enabled {
-            self.cursor_color_cycle_start = std::time::Instant::now();
-        }
-    }
-
-    /// Update window switch fade config
-    pub fn set_window_switch_fade(&mut self, enabled: bool, duration_ms: u32, intensity: f32) {
-        self.effects.window_switch_fade.enabled = enabled;
-        self.effects.window_switch_fade.duration_ms = duration_ms;
-        self.effects.window_switch_fade.intensity = intensity;
-    }
-
-    /// Update inactive window tint config
-    pub fn set_inactive_tint(&mut self, enabled: bool, color: (f32, f32, f32), opacity: f32) {
-        self.effects.inactive_tint.enabled = enabled;
-        self.effects.inactive_tint.color = color;
-        self.effects.inactive_tint.opacity = opacity;
-    }
-
-    /// Update scroll progress indicator config
-    pub fn set_scroll_progress(&mut self, enabled: bool, height: f32, color: (f32, f32, f32), opacity: f32) {
-        self.effects.scroll_progress.enabled = enabled;
-        self.effects.scroll_progress.height = height;
-        self.effects.scroll_progress.color = color;
-        self.effects.scroll_progress.opacity = opacity;
-    }
-
-    /// Update active window border glow config
-    pub fn set_window_glow(&mut self, enabled: bool, color: (f32, f32, f32), radius: f32, intensity: f32) {
-        self.effects.window_glow.enabled = enabled;
-        self.effects.window_glow.color = color;
-        self.effects.window_glow.radius = radius;
-        self.effects.window_glow.intensity = intensity;
-    }
-
-    /// Update breadcrumb/path bar config
-    pub fn set_breadcrumb(&mut self, enabled: bool, opacity: f32) {
-        self.effects.breadcrumb.enabled = enabled;
-        self.effects.breadcrumb.opacity = opacity;
-    }
-
-    /// Update border transition config
-    pub fn set_border_transition(&mut self, enabled: bool, active_color: (f32, f32, f32), duration_ms: u32) {
-        self.effects.border_transition.enabled = enabled;
-        self.effects.border_transition.active_color = active_color;
-        self.border_transition_duration = std::time::Duration::from_millis(duration_ms as u64);
-        if !enabled {
-            self.border_transitions.clear();
-        }
-    }
-
-    /// Update accent strip config
-    pub fn set_accent_strip(&mut self, enabled: bool, width: f32) {
-        self.effects.accent_strip.enabled = enabled;
-        self.effects.accent_strip.width = width;
-    }
-
-    /// Update cursor shadow config
-    pub fn set_cursor_shadow(&mut self, enabled: bool, offset_x: f32, offset_y: f32, opacity: f32) {
-        self.effects.cursor_shadow.enabled = enabled;
-        self.effects.cursor_shadow.offset_x = offset_x;
-        self.effects.cursor_shadow.offset_y = offset_y;
-        self.effects.cursor_shadow.opacity = opacity;
-    }
-
-    /// Update cursor wake animation config
-    pub fn set_cursor_wake(&mut self, enabled: bool, duration_ms: u32, scale: f32) {
-        self.effects.cursor_wake.enabled = enabled;
-        self.effects.cursor_wake.duration_ms = duration_ms;
-        self.effects.cursor_wake.scale = scale;
-    }
-
     /// Trigger a cursor wake animation
     pub fn trigger_cursor_wake(&mut self, now: std::time::Instant) {
         self.cursor_wake_started = Some(now);
@@ -1096,27 +953,6 @@ impl WgpuRenderer {
         }
     }
 
-    /// Update window content shadow config
-    pub fn set_window_content_shadow(&mut self, enabled: bool, size: f32, opacity: f32) {
-        self.effects.window_content_shadow.enabled = enabled;
-        self.effects.window_content_shadow.size = size;
-        self.effects.window_content_shadow.opacity = opacity;
-    }
-
-    /// Update minibuffer highlight config
-    pub fn set_minibuffer_highlight(&mut self, enabled: bool, color: (f32, f32, f32), opacity: f32) {
-        self.effects.minibuffer_highlight.enabled = enabled;
-        self.effects.minibuffer_highlight.color = color;
-        self.effects.minibuffer_highlight.opacity = opacity;
-    }
-
-    /// Update edge snap config
-    pub fn set_edge_snap(&mut self, enabled: bool, color: (f32, f32, f32), duration_ms: u32) {
-        self.effects.edge_snap.enabled = enabled;
-        self.effects.edge_snap.color = color;
-        self.effects.edge_snap.duration_ms = duration_ms;
-    }
-
     /// Trigger edge snap indicator
     pub fn trigger_edge_snap(&mut self, bounds: Rect, mode_line_height: f32, at_top: bool, at_bottom: bool, now: std::time::Instant) {
         self.edge_snaps.push(EdgeSnapEntry {
@@ -1127,141 +963,6 @@ impl WgpuRenderer {
             started: now,
             duration: std::time::Duration::from_millis(self.effects.edge_snap.duration_ms as u64),
         });
-    }
-
-    /// Update cursor crosshair config
-    pub fn set_cursor_crosshair(&mut self, enabled: bool, color: (f32, f32, f32), opacity: f32) {
-        self.effects.cursor_crosshair.enabled = enabled;
-        self.effects.cursor_crosshair.color = color;
-        self.effects.cursor_crosshair.opacity = opacity;
-    }
-
-    /// Update stained glass config
-    pub fn set_stained_glass(&mut self, enabled: bool, opacity: f32, saturation: f32) {
-        self.effects.stained_glass.enabled = enabled;
-        self.effects.stained_glass.opacity = opacity;
-        self.effects.stained_glass.saturation = saturation;
-    }
-
-    /// Update focus gradient border config
-    pub fn set_focus_gradient_border(&mut self, enabled: bool, top_color: (f32, f32, f32), bot_color: (f32, f32, f32), width: f32, opacity: f32) {
-        self.effects.focus_gradient_border.enabled = enabled;
-        self.effects.focus_gradient_border.top_color = top_color;
-        self.effects.focus_gradient_border.bot_color = bot_color;
-        self.effects.focus_gradient_border.width = width;
-        self.effects.focus_gradient_border.opacity = opacity;
-    }
-
-    /// Update cursor magnetism config
-    pub fn set_cursor_magnetism(&mut self, enabled: bool, color: (f32, f32, f32), ring_count: u32, duration_ms: u32, opacity: f32) {
-        self.effects.cursor_magnetism.enabled = enabled;
-        self.effects.cursor_magnetism.color = color;
-        self.effects.cursor_magnetism.ring_count = ring_count;
-        self.effects.cursor_magnetism.duration_ms = duration_ms;
-        self.effects.cursor_magnetism.opacity = opacity;
-        if !enabled {
-            self.cursor_magnetism_entries.clear();
-        }
-    }
-
-    /// Update depth shadow config
-    pub fn set_depth_shadow(&mut self, enabled: bool, layers: u32, offset: f32, color: (f32, f32, f32), opacity: f32) {
-        self.effects.depth_shadow.enabled = enabled;
-        self.effects.depth_shadow.layers = layers;
-        self.effects.depth_shadow.offset = offset;
-        self.effects.depth_shadow.color = color;
-        self.effects.depth_shadow.opacity = opacity;
-    }
-
-    /// Update mode-line gradient config
-    pub fn set_mode_line_gradient(&mut self, enabled: bool, left_color: (f32, f32, f32), right_color: (f32, f32, f32), opacity: f32) {
-        self.effects.mode_line_gradient.enabled = enabled;
-        self.effects.mode_line_gradient.left_color = left_color;
-        self.effects.mode_line_gradient.right_color = right_color;
-        self.effects.mode_line_gradient.opacity = opacity;
-    }
-
-    /// Update corner fold config
-    pub fn set_corner_fold(&mut self, enabled: bool, size: f32, color: (f32, f32, f32), opacity: f32) {
-        self.effects.corner_fold.enabled = enabled;
-        self.effects.corner_fold.size = size;
-        self.effects.corner_fold.color = color;
-        self.effects.corner_fold.opacity = opacity;
-    }
-
-    /// Update frosted border config
-    pub fn set_frosted_border(&mut self, enabled: bool, width: f32, opacity: f32, color: (f32, f32, f32)) {
-        self.effects.frosted_border.enabled = enabled;
-        self.effects.frosted_border.width = width;
-        self.effects.frosted_border.opacity = opacity;
-        self.effects.frosted_border.color = color;
-    }
-
-    /// Update line number pulse config
-    pub fn set_line_number_pulse(&mut self, enabled: bool, color: (f32, f32, f32), intensity: f32, cycle_ms: u32) {
-        self.effects.line_number_pulse.enabled = enabled;
-        self.effects.line_number_pulse.color = color;
-        self.effects.line_number_pulse.intensity = intensity;
-        self.effects.line_number_pulse.cycle_ms = cycle_ms;
-    }
-
-    /// Update breathing border config
-    pub fn set_breathing_border(&mut self, enabled: bool, color: (f32, f32, f32), min_opacity: f32, max_opacity: f32, cycle_ms: u32) {
-        self.effects.breathing_border.enabled = enabled;
-        self.effects.breathing_border.color = color;
-        self.effects.breathing_border.min_opacity = min_opacity;
-        self.effects.breathing_border.max_opacity = max_opacity;
-        self.effects.breathing_border.cycle_ms = cycle_ms;
-    }
-
-    /// Update scanline config
-    pub fn set_scanlines(&mut self, enabled: bool, spacing: u32, opacity: f32, color: (f32, f32, f32)) {
-        self.effects.scanlines.enabled = enabled;
-        self.effects.scanlines.spacing = spacing;
-        self.effects.scanlines.opacity = opacity;
-        self.effects.scanlines.color = color;
-    }
-
-    /// Update cursor comet tail config
-    pub fn set_cursor_comet(&mut self, enabled: bool, trail_length: u32, fade_ms: u32, color: (f32, f32, f32), opacity: f32) {
-        self.effects.cursor_comet.enabled = enabled;
-        self.effects.cursor_comet.trail_length = trail_length;
-        self.effects.cursor_comet.fade_ms = fade_ms;
-        self.effects.cursor_comet.color = color;
-        self.effects.cursor_comet.opacity = opacity;
-        if !enabled {
-            self.cursor_comet_positions.clear();
-        }
-    }
-
-    /// Update cursor spotlight config
-    pub fn set_cursor_spotlight(&mut self, enabled: bool, radius: f32, intensity: f32, color: (f32, f32, f32)) {
-        self.effects.cursor_spotlight.enabled = enabled;
-        self.effects.cursor_spotlight.radius = radius;
-        self.effects.cursor_spotlight.intensity = intensity;
-        self.effects.cursor_spotlight.color = color;
-    }
-
-    /// Update cursor particle trail config
-    pub fn set_cursor_particles(&mut self, enabled: bool, color: (f32, f32, f32), count: u32, lifetime_ms: u32, gravity: f32) {
-        self.effects.cursor_particles.enabled = enabled;
-        self.effects.cursor_particles.color = color;
-        self.effects.cursor_particles.count = count;
-        self.effects.cursor_particles.lifetime_ms = lifetime_ms;
-        self.effects.cursor_particles.gravity = gravity;
-        if !enabled {
-            self.cursor_particles.clear();
-            self.cursor_particles_prev_pos = None;
-        }
-    }
-
-    /// Update per-window rounded border config
-    pub fn set_window_border_radius(&mut self, enabled: bool, radius: f32, border_width: f32, color: (f32, f32, f32), opacity: f32) {
-        self.effects.window_border_radius.enabled = enabled;
-        self.effects.window_border_radius.radius = radius;
-        self.effects.window_border_radius.width = border_width;
-        self.effects.window_border_radius.color = color;
-        self.effects.window_border_radius.opacity = opacity;
     }
 
     /// Update typing heat map config
@@ -1276,22 +977,6 @@ impl WgpuRenderer {
         }
     }
 
-    /// Update buffer modified border indicator config
-    pub fn set_modified_indicator(&mut self, enabled: bool, color: (f32, f32, f32), width: f32, opacity: f32) {
-        self.effects.modified_indicator.enabled = enabled;
-        self.effects.modified_indicator.color = color;
-        self.effects.modified_indicator.width = width;
-        self.effects.modified_indicator.opacity = opacity;
-    }
-
-    /// Update click halo config
-    pub fn set_click_halo(&mut self, enabled: bool, color: (f32, f32, f32), duration_ms: u32, max_radius: f32) {
-        self.effects.click_halo.enabled = enabled;
-        self.effects.click_halo.color = color;
-        self.effects.click_halo.duration_ms = duration_ms;
-        self.effects.click_halo.max_radius = max_radius;
-    }
-
     /// Trigger click halo at position
     pub fn trigger_click_halo(&mut self, x: f32, y: f32, now: std::time::Instant) {
         self.click_halos.push(ClickHaloEntry {
@@ -1300,13 +985,6 @@ impl WgpuRenderer {
             started: now,
             duration: std::time::Duration::from_millis(self.effects.click_halo.duration_ms as u64),
         });
-    }
-
-    /// Update scroll velocity fade config
-    pub fn set_scroll_velocity_fade(&mut self, enabled: bool, max_opacity: f32, fade_ms: u32) {
-        self.effects.scroll_velocity_fade.enabled = enabled;
-        self.effects.scroll_velocity_fade.max_opacity = max_opacity;
-        self.effects.scroll_velocity_fade.ms = fade_ms;
     }
 
     /// Trigger scroll velocity fade for a window
@@ -1320,13 +998,6 @@ impl WgpuRenderer {
             started: now,
             duration: std::time::Duration::from_millis(self.effects.scroll_velocity_fade.ms as u64),
         });
-    }
-
-    /// Update resize padding config
-    pub fn set_resize_padding(&mut self, enabled: bool, duration_ms: u32, max_padding: f32) {
-        self.effects.resize_padding.enabled = enabled;
-        self.effects.resize_padding.duration_ms = duration_ms;
-        self.effects.resize_padding.max = max_padding;
     }
 
     /// Trigger resize padding animation
@@ -1348,13 +1019,6 @@ impl WgpuRenderer {
         } else {
             0.0
         }
-    }
-
-    /// Update cursor error pulse config
-    pub fn set_cursor_error_pulse(&mut self, enabled: bool, r: f32, g: f32, b: f32, duration_ms: u32) {
-        self.effects.cursor_error_pulse.enabled = enabled;
-        self.effects.cursor_error_pulse.color = (r, g, b);
-        self.effects.cursor_error_pulse.duration_ms = duration_ms;
     }
 
     /// Trigger a cursor error pulse
@@ -1383,20 +1047,6 @@ impl WgpuRenderer {
         }
     }
 
-    /// Update wrap indicator config
-    pub fn set_wrap_indicator(&mut self, enabled: bool, r: f32, g: f32, b: f32, opacity: f32) {
-        self.effects.wrap_indicator.enabled = enabled;
-        self.effects.wrap_indicator.color = (r, g, b);
-        self.effects.wrap_indicator.opacity = opacity;
-    }
-
-    /// Update scroll momentum indicator config
-    pub fn set_scroll_momentum(&mut self, enabled: bool, fade_ms: u32, width: f32) {
-        self.effects.scroll_momentum.enabled = enabled;
-        self.effects.scroll_momentum.fade_ms = fade_ms;
-        self.effects.scroll_momentum.width = width;
-    }
-
     /// Trigger a scroll momentum indicator for a window
     pub fn trigger_scroll_momentum(&mut self, window_id: i64, bounds: Rect, direction: i32, now: std::time::Instant) {
         self.active_scroll_momentums.retain(|e| e.window_id != window_id);
@@ -1421,38 +1071,12 @@ impl WgpuRenderer {
         }
     }
 
-    /// Update cursor elastic snap config
-    pub fn set_cursor_elastic_snap(&mut self, enabled: bool, overshoot: f32, duration_ms: u32) {
-        self.effects.cursor_elastic_snap.enabled = enabled;
-        self.effects.cursor_elastic_snap.overshoot = overshoot;
-        self.effects.cursor_elastic_snap.duration_ms = duration_ms;
-    }
-
     /// Update frost border config
     pub fn set_frost_border_effect(&mut self, enabled: bool, color: (f32, f32, f32), width: f32, opacity: f32) {
         self.effects.frost_border.enabled = enabled;
         self.effects.frost_border.color = color;
         self.effects.frost_border.width = width;
         self.effects.frost_border.opacity = opacity;
-    }
-
-    /// Update cursor ghost config
-    pub fn set_cursor_ghost(&mut self, enabled: bool, color: (f32, f32, f32), count: u32, fade_ms: u32, drift: f32, opacity: f32) {
-        self.effects.cursor_ghost.enabled = enabled;
-        self.effects.cursor_ghost.color = color;
-        self.effects.cursor_ghost.count = count;
-        self.effects.cursor_ghost.fade_ms = fade_ms;
-        self.effects.cursor_ghost.drift = drift;
-        self.effects.cursor_ghost.opacity = opacity;
-    }
-
-    /// Update edge glow config
-    pub fn set_edge_glow(&mut self, enabled: bool, color: (f32, f32, f32), height: f32, opacity: f32, fade_ms: u32) {
-        self.effects.edge_glow.enabled = enabled;
-        self.effects.edge_glow.color = color;
-        self.effects.edge_glow.height = height;
-        self.effects.edge_glow.opacity = opacity;
-        self.effects.edge_glow.fade_ms = fade_ms;
     }
 
     /// Trigger edge glow for a window (at_top = beginning-of-buffer)
@@ -1467,77 +1091,6 @@ impl WgpuRenderer {
         });
     }
 
-    /// Update rain effect config
-    pub fn set_rain_effect(&mut self, enabled: bool, color: (f32, f32, f32), drop_count: u32, speed: f32, opacity: f32) {
-        self.effects.rain_effect.enabled = enabled;
-        self.effects.rain_effect.color = color;
-        self.effects.rain_effect.drop_count = drop_count;
-        self.effects.rain_effect.speed = speed;
-        self.effects.rain_effect.opacity = opacity;
-        if !enabled {
-            self.rain_drops.clear();
-        }
-    }
-
-    /// Update cursor ripple wave config
-    pub fn set_cursor_ripple_wave(&mut self, enabled: bool, color: (f32, f32, f32), ring_count: u32, max_radius: f32, duration_ms: u32, opacity: f32) {
-        self.effects.cursor_ripple_wave.enabled = enabled;
-        self.effects.cursor_ripple_wave.color = color;
-        self.effects.cursor_ripple_wave.ring_count = ring_count;
-        self.effects.cursor_ripple_wave.max_radius = max_radius;
-        self.effects.cursor_ripple_wave.duration_ms = duration_ms;
-        self.effects.cursor_ripple_wave.opacity = opacity;
-    }
-
-    /// Update aurora config
-    pub fn set_aurora(&mut self, enabled: bool, color1: (f32, f32, f32), color2: (f32, f32, f32), height: f32, speed: f32, opacity: f32) {
-        self.effects.aurora.enabled = enabled;
-        self.effects.aurora.color1 = color1;
-        self.effects.aurora.color2 = color2;
-        self.effects.aurora.height = height;
-        self.effects.aurora.speed = speed;
-        self.effects.aurora.opacity = opacity;
-    }
-
-    /// Update heat distortion config
-    pub fn set_heat_distortion(&mut self, enabled: bool, intensity: f32, speed: f32, edge_width: f32, opacity: f32) {
-        self.effects.heat_distortion.enabled = enabled;
-        self.effects.heat_distortion.intensity = intensity;
-        self.effects.heat_distortion.speed = speed;
-        self.effects.heat_distortion.edge_width = edge_width;
-        self.effects.heat_distortion.opacity = opacity;
-    }
-
-    /// Update cursor lighthouse config
-    pub fn set_cursor_lighthouse(&mut self, enabled: bool, color: (f32, f32, f32), beam_width: f32, rotation_speed: f32, beam_length: f32, opacity: f32) {
-        self.effects.cursor_lighthouse.enabled = enabled;
-        self.effects.cursor_lighthouse.color = color;
-        self.effects.cursor_lighthouse.beam_width = beam_width;
-        self.effects.cursor_lighthouse.rotation_speed = rotation_speed;
-        self.effects.cursor_lighthouse.beam_length = beam_length;
-        self.effects.cursor_lighthouse.opacity = opacity;
-    }
-
-    /// Update neon border config
-    pub fn set_neon_border(&mut self, enabled: bool, color: (f32, f32, f32), intensity: f32, flicker: f32, thickness: f32, opacity: f32) {
-        self.effects.neon_border.enabled = enabled;
-        self.effects.neon_border.color = color;
-        self.effects.neon_border.intensity = intensity;
-        self.effects.neon_border.flicker = flicker;
-        self.effects.neon_border.thickness = thickness;
-        self.effects.neon_border.opacity = opacity;
-    }
-
-    /// Update cursor sonar ping config
-    pub fn set_cursor_sonar_ping(&mut self, enabled: bool, color: (f32, f32, f32), ring_count: u32, max_radius: f32, duration_ms: u32, opacity: f32) {
-        self.effects.cursor_sonar_ping.enabled = enabled;
-        self.effects.cursor_sonar_ping.color = color;
-        self.effects.cursor_sonar_ping.ring_count = ring_count;
-        self.effects.cursor_sonar_ping.max_radius = max_radius;
-        self.effects.cursor_sonar_ping.duration_ms = duration_ms;
-        self.effects.cursor_sonar_ping.opacity = opacity;
-    }
-
     /// Trigger a sonar ping at cursor position
     pub fn trigger_sonar_ping(&mut self, cx: f32, cy: f32, now: std::time::Instant) {
         self.cursor_sonar_ping_entries.push(SonarPingEntry {
@@ -1546,638 +1099,6 @@ impl WgpuRenderer {
             started: now,
             duration: std::time::Duration::from_millis(self.effects.cursor_sonar_ping.duration_ms as u64),
         });
-    }
-
-    /// Update lightning bolt config
-    pub fn set_lightning_bolt(&mut self, enabled: bool, color: (f32, f32, f32), frequency: f32, intensity: f32, opacity: f32) {
-        self.effects.lightning_bolt.enabled = enabled;
-        self.effects.lightning_bolt.color = color;
-        self.effects.lightning_bolt.frequency = frequency;
-        self.effects.lightning_bolt.intensity = intensity;
-        self.effects.lightning_bolt.opacity = opacity;
-        if !enabled {
-            self.lightning_bolt_segments.clear();
-        }
-    }
-
-    /// Update cursor orbit particles config
-    pub fn set_cursor_orbit_particles(&mut self, enabled: bool, color: (f32, f32, f32), count: u32, radius: f32, speed: f32, opacity: f32) {
-        self.effects.cursor_orbit_particles.enabled = enabled;
-        self.effects.cursor_orbit_particles.color = color;
-        self.effects.cursor_orbit_particles.count = count;
-        self.effects.cursor_orbit_particles.radius = radius;
-        self.effects.cursor_orbit_particles.speed = speed;
-        self.effects.cursor_orbit_particles.opacity = opacity;
-    }
-
-    /// Update plasma border config
-    pub fn set_plasma_border(&mut self, enabled: bool, color1: (f32, f32, f32), color2: (f32, f32, f32), width: f32, speed: f32, opacity: f32) {
-        self.effects.plasma_border.enabled = enabled;
-        self.effects.plasma_border.color1 = color1;
-        self.effects.plasma_border.color2 = color2;
-        self.effects.plasma_border.width = width;
-        self.effects.plasma_border.speed = speed;
-        self.effects.plasma_border.opacity = opacity;
-    }
-
-    /// Update cursor heartbeat config
-    pub fn set_cursor_heartbeat(&mut self, enabled: bool, color: (f32, f32, f32), bpm: f32, max_radius: f32, opacity: f32) {
-        self.effects.cursor_heartbeat.enabled = enabled;
-        self.effects.cursor_heartbeat.color = color;
-        self.effects.cursor_heartbeat.bpm = bpm;
-        self.effects.cursor_heartbeat.max_radius = max_radius;
-        self.effects.cursor_heartbeat.opacity = opacity;
-    }
-
-    /// Update warp grid config
-    pub fn set_warp_grid(&mut self, enabled: bool, color: (f32, f32, f32), density: u32, amplitude: f32, speed: f32, opacity: f32) {
-        self.effects.warp_grid.enabled = enabled;
-        self.effects.warp_grid.color = color;
-        self.effects.warp_grid.density = density;
-        self.effects.warp_grid.amplitude = amplitude;
-        self.effects.warp_grid.speed = speed;
-        self.effects.warp_grid.opacity = opacity;
-    }
-
-    /// Update cursor DNA helix config
-    pub fn set_cursor_dna_helix(&mut self, enabled: bool, color1: (f32, f32, f32), color2: (f32, f32, f32), radius: f32, speed: f32, opacity: f32) {
-        self.effects.cursor_dna_helix.enabled = enabled;
-        self.effects.cursor_dna_helix.color1 = color1;
-        self.effects.cursor_dna_helix.color2 = color2;
-        self.effects.cursor_dna_helix.radius = radius;
-        self.effects.cursor_dna_helix.speed = speed;
-        self.effects.cursor_dna_helix.opacity = opacity;
-    }
-
-    /// Update prism edge config
-    pub fn set_prism_edge(&mut self, enabled: bool, width: f32, speed: f32, saturation: f32, opacity: f32) {
-        self.effects.prism_edge.enabled = enabled;
-        self.effects.prism_edge.width = width;
-        self.effects.prism_edge.speed = speed;
-        self.effects.prism_edge.saturation = saturation;
-        self.effects.prism_edge.opacity = opacity;
-    }
-
-    /// Update cursor pendulum config
-    pub fn set_cursor_pendulum(&mut self, enabled: bool, color: (f32, f32, f32), arc_length: f32, damping: f32, opacity: f32) {
-        self.effects.cursor_pendulum.enabled = enabled;
-        self.effects.cursor_pendulum.color = color;
-        self.effects.cursor_pendulum.arc_length = arc_length;
-        self.effects.cursor_pendulum.damping = damping;
-        self.effects.cursor_pendulum.opacity = opacity;
-    }
-
-    /// Update topo contour config
-    pub fn set_topo_contour(&mut self, enabled: bool, color: (f32, f32, f32), spacing: f32, speed: f32, opacity: f32) {
-        self.effects.topo_contour.enabled = enabled;
-        self.effects.topo_contour.color = color;
-        self.effects.topo_contour.spacing = spacing;
-        self.effects.topo_contour.speed = speed;
-        self.effects.topo_contour.opacity = opacity;
-    }
-
-    /// Update cursor metronome config
-    pub fn set_cursor_metronome(&mut self, enabled: bool, color: (f32, f32, f32), tick_height: f32, fade_ms: u32, opacity: f32) {
-        self.effects.cursor_metronome.enabled = enabled;
-        self.effects.cursor_metronome.color = color;
-        self.effects.cursor_metronome.tick_height = tick_height;
-        self.effects.cursor_metronome.fade_ms = fade_ms;
-        self.effects.cursor_metronome.opacity = opacity;
-    }
-
-    /// Update constellation config
-    pub fn set_constellation(&mut self, enabled: bool, color: (f32, f32, f32), star_count: u32, connect_dist: f32, twinkle_speed: f32, opacity: f32) {
-        self.effects.constellation.enabled = enabled;
-        self.effects.constellation.color = color;
-        self.effects.constellation.star_count = star_count;
-        self.effects.constellation.connect_dist = connect_dist;
-        self.effects.constellation.twinkle_speed = twinkle_speed;
-        self.effects.constellation.opacity = opacity;
-    }
-
-    /// Update cursor radar config
-    pub fn set_cursor_radar(&mut self, enabled: bool, color: (f32, f32, f32), radius: f32, speed: f32, opacity: f32) {
-        self.effects.cursor_radar.enabled = enabled;
-        self.effects.cursor_radar.color = color;
-        self.effects.cursor_radar.radius = radius;
-        self.effects.cursor_radar.speed = speed;
-        self.effects.cursor_radar.opacity = opacity;
-    }
-
-    /// Update kaleidoscope config
-    pub fn set_kaleidoscope(&mut self, enabled: bool, color: (f32, f32, f32), segments: u32, speed: f32, opacity: f32) {
-        self.effects.kaleidoscope.enabled = enabled;
-        self.effects.kaleidoscope.color = color;
-        self.effects.kaleidoscope.segments = segments;
-        self.effects.kaleidoscope.speed = speed;
-        self.effects.kaleidoscope.opacity = opacity;
-    }
-
-    /// Update cursor ripple ring config
-    pub fn set_cursor_ripple_ring(&mut self, enabled: bool, color: (f32, f32, f32), max_radius: f32, ring_count: u32, speed: f32, opacity: f32) {
-        self.effects.cursor_ripple_ring.enabled = enabled;
-        self.effects.cursor_ripple_ring.color = color;
-        self.effects.cursor_ripple_ring.max_radius = max_radius;
-        self.effects.cursor_ripple_ring.count = ring_count;
-        self.effects.cursor_ripple_ring.speed = speed;
-        self.effects.cursor_ripple_ring.opacity = opacity;
-    }
-
-    /// Update noise field config
-    pub fn set_noise_field(&mut self, enabled: bool, color: (f32, f32, f32), scale: f32, speed: f32, opacity: f32) {
-        self.effects.noise_field.enabled = enabled;
-        self.effects.noise_field.color = color;
-        self.effects.noise_field.scale = scale;
-        self.effects.noise_field.speed = speed;
-        self.effects.noise_field.opacity = opacity;
-    }
-
-    /// Update cursor scope config
-    pub fn set_cursor_scope(&mut self, enabled: bool, color: (f32, f32, f32), thickness: f32, gap: f32, opacity: f32) {
-        self.effects.cursor_scope.enabled = enabled;
-        self.effects.cursor_scope.color = color;
-        self.effects.cursor_scope.thickness = thickness;
-        self.effects.cursor_scope.gap = gap;
-        self.effects.cursor_scope.opacity = opacity;
-    }
-
-    /// Update spiral vortex config
-    pub fn set_spiral_vortex(&mut self, enabled: bool, color: (f32, f32, f32), arms: u32, speed: f32, opacity: f32) {
-        self.effects.spiral_vortex.enabled = enabled;
-        self.effects.spiral_vortex.color = color;
-        self.effects.spiral_vortex.arms = arms;
-        self.effects.spiral_vortex.speed = speed;
-        self.effects.spiral_vortex.opacity = opacity;
-    }
-
-    /// Update cursor shockwave config
-    pub fn set_cursor_shockwave(&mut self, enabled: bool, color: (f32, f32, f32), radius: f32, decay: f32, opacity: f32) {
-        self.effects.cursor_shockwave.enabled = enabled;
-        self.effects.cursor_shockwave.color = color;
-        self.effects.cursor_shockwave.radius = radius;
-        self.effects.cursor_shockwave.decay = decay;
-        self.effects.cursor_shockwave.opacity = opacity;
-    }
-
-    /// Update diamond lattice config
-    pub fn set_diamond_lattice(&mut self, enabled: bool, color: (f32, f32, f32), cell_size: f32, shimmer_speed: f32, opacity: f32) {
-        self.effects.diamond_lattice.enabled = enabled;
-        self.effects.diamond_lattice.color = color;
-        self.effects.diamond_lattice.cell_size = cell_size;
-        self.effects.diamond_lattice.shimmer_speed = shimmer_speed;
-        self.effects.diamond_lattice.opacity = opacity;
-    }
-
-    /// Update cursor gravity well config
-    pub fn set_cursor_gravity_well(&mut self, enabled: bool, color: (f32, f32, f32), field_radius: f32, line_count: u32, opacity: f32) {
-        self.effects.cursor_gravity_well.enabled = enabled;
-        self.effects.cursor_gravity_well.color = color;
-        self.effects.cursor_gravity_well.field_radius = field_radius;
-        self.effects.cursor_gravity_well.line_count = line_count;
-        self.effects.cursor_gravity_well.opacity = opacity;
-    }
-
-    /// Update wave interference config
-    pub fn set_wave_interference(&mut self, enabled: bool, color: (f32, f32, f32), wavelength: f32, source_count: u32, speed: f32, opacity: f32) {
-        self.effects.wave_interference.enabled = enabled;
-        self.effects.wave_interference.color = color;
-        self.effects.wave_interference.wavelength = wavelength;
-        self.effects.wave_interference.source_count = source_count;
-        self.effects.wave_interference.speed = speed;
-        self.effects.wave_interference.opacity = opacity;
-    }
-
-    /// Update cursor portal config
-    pub fn set_cursor_portal(&mut self, enabled: bool, color: (f32, f32, f32), radius: f32, speed: f32, opacity: f32) {
-        self.effects.cursor_portal.enabled = enabled;
-        self.effects.cursor_portal.color = color;
-        self.effects.cursor_portal.radius = radius;
-        self.effects.cursor_portal.speed = speed;
-        self.effects.cursor_portal.opacity = opacity;
-    }
-
-    /// Update chevron pattern config
-    pub fn set_chevron_pattern(&mut self, enabled: bool, color: (f32, f32, f32), spacing: f32, speed: f32, opacity: f32) {
-        self.effects.chevron_pattern.enabled = enabled;
-        self.effects.chevron_pattern.color = color;
-        self.effects.chevron_pattern.spacing = spacing;
-        self.effects.chevron_pattern.speed = speed;
-        self.effects.chevron_pattern.opacity = opacity;
-    }
-
-    /// Update cursor bubble config
-    pub fn set_cursor_bubble(&mut self, enabled: bool, color: (f32, f32, f32), count: u32, rise_speed: f32, opacity: f32) {
-        self.effects.cursor_bubble.enabled = enabled;
-        self.effects.cursor_bubble.color = color;
-        self.effects.cursor_bubble.count = count;
-        self.effects.cursor_bubble.rise_speed = rise_speed;
-        self.effects.cursor_bubble.opacity = opacity;
-    }
-
-    /// Update sunburst pattern config
-    pub fn set_sunburst_pattern(&mut self, enabled: bool, color: (f32, f32, f32), ray_count: u32, speed: f32, opacity: f32) {
-        self.effects.sunburst_pattern.enabled = enabled;
-        self.effects.sunburst_pattern.color = color;
-        self.effects.sunburst_pattern.ray_count = ray_count;
-        self.effects.sunburst_pattern.speed = speed;
-        self.effects.sunburst_pattern.opacity = opacity;
-    }
-
-    /// Update cursor firework config
-    pub fn set_cursor_firework(&mut self, enabled: bool, color: (f32, f32, f32), particle_count: u32, burst_radius: f32, opacity: f32) {
-        self.effects.cursor_firework.enabled = enabled;
-        self.effects.cursor_firework.color = color;
-        self.effects.cursor_firework.particle_count = particle_count;
-        self.effects.cursor_firework.burst_radius = burst_radius;
-        self.effects.cursor_firework.opacity = opacity;
-    }
-
-    /// Update honeycomb dissolve config
-    pub fn set_honeycomb_dissolve(&mut self, enabled: bool, color: (f32, f32, f32), cell_size: f32, dissolve_speed: f32, opacity: f32) {
-        self.effects.honeycomb_dissolve.enabled = enabled;
-        self.effects.honeycomb_dissolve.color = color;
-        self.effects.honeycomb_dissolve.cell_size = cell_size;
-        self.effects.honeycomb_dissolve.speed = dissolve_speed;
-        self.effects.honeycomb_dissolve.opacity = opacity;
-    }
-
-    /// Update cursor tornado config
-    pub fn set_cursor_tornado(&mut self, enabled: bool, color: (f32, f32, f32), radius: f32, particle_count: u32, opacity: f32) {
-        self.effects.cursor_tornado.enabled = enabled;
-        self.effects.cursor_tornado.color = color;
-        self.effects.cursor_tornado.radius = radius;
-        self.effects.cursor_tornado.particle_count = particle_count;
-        self.effects.cursor_tornado.opacity = opacity;
-    }
-
-    /// Update moiré pattern config
-    pub fn set_moire_pattern(&mut self, enabled: bool, color: (f32, f32, f32), line_spacing: f32, angle_offset: f32, speed: f32, opacity: f32) {
-        self.effects.moire_pattern.enabled = enabled;
-        self.effects.moire_pattern.color = color;
-        self.effects.moire_pattern.line_spacing = line_spacing;
-        self.effects.moire_pattern.angle_offset = angle_offset;
-        self.effects.moire_pattern.speed = speed;
-        self.effects.moire_pattern.opacity = opacity;
-    }
-
-    /// Update cursor lightning config
-    pub fn set_cursor_lightning(&mut self, enabled: bool, color: (f32, f32, f32), bolt_count: u32, max_length: f32, opacity: f32) {
-        self.effects.cursor_lightning.enabled = enabled;
-        self.effects.cursor_lightning.color = color;
-        self.effects.cursor_lightning.bolt_count = bolt_count;
-        self.effects.cursor_lightning.max_length = max_length;
-        self.effects.cursor_lightning.opacity = opacity;
-    }
-
-    /// Update dot matrix config
-    pub fn set_dot_matrix(&mut self, enabled: bool, color: (f32, f32, f32), dot_spacing: f32, pulse_speed: f32, opacity: f32) {
-        self.effects.dot_matrix.enabled = enabled;
-        self.effects.dot_matrix.color = color;
-        self.effects.dot_matrix.spacing = dot_spacing;
-        self.effects.dot_matrix.pulse_speed = pulse_speed;
-        self.effects.dot_matrix.opacity = opacity;
-    }
-
-    /// Update cursor snowflake config
-    pub fn set_cursor_snowflake(&mut self, enabled: bool, color: (f32, f32, f32), count: u32, fall_speed: f32, opacity: f32) {
-        self.effects.cursor_snowflake.enabled = enabled;
-        self.effects.cursor_snowflake.color = color;
-        self.effects.cursor_snowflake.count = count;
-        self.effects.cursor_snowflake.fall_speed = fall_speed;
-        self.effects.cursor_snowflake.opacity = opacity;
-    }
-
-    /// Update concentric rings config
-    pub fn set_concentric_rings(&mut self, enabled: bool, color: (f32, f32, f32), ring_spacing: f32, expansion_speed: f32, opacity: f32) {
-        self.effects.concentric_rings.enabled = enabled;
-        self.effects.concentric_rings.color = color;
-        self.effects.concentric_rings.spacing = ring_spacing;
-        self.effects.concentric_rings.expansion_speed = expansion_speed;
-        self.effects.concentric_rings.opacity = opacity;
-    }
-
-    /// Update cursor flame config
-    pub fn set_cursor_flame(&mut self, enabled: bool, color: (f32, f32, f32), particle_count: u32, height: f32, opacity: f32) {
-        self.effects.cursor_flame.enabled = enabled;
-        self.effects.cursor_flame.color = color;
-        self.effects.cursor_flame.particle_count = particle_count;
-        self.effects.cursor_flame.height = height;
-        self.effects.cursor_flame.opacity = opacity;
-    }
-
-    /// Update zigzag pattern config
-    pub fn set_zigzag_pattern(&mut self, enabled: bool, color: (f32, f32, f32), amplitude: f32, frequency: f32, speed: f32, opacity: f32) {
-        self.effects.zigzag_pattern.enabled = enabled;
-        self.effects.zigzag_pattern.color = color;
-        self.effects.zigzag_pattern.amplitude = amplitude;
-        self.effects.zigzag_pattern.frequency = frequency;
-        self.effects.zigzag_pattern.speed = speed;
-        self.effects.zigzag_pattern.opacity = opacity;
-    }
-
-    /// Update cursor crystal config
-    pub fn set_cursor_crystal(&mut self, enabled: bool, color: (f32, f32, f32), facet_count: u32, radius: f32, opacity: f32) {
-        self.effects.cursor_crystal.enabled = enabled;
-        self.effects.cursor_crystal.color = color;
-        self.effects.cursor_crystal.facet_count = facet_count;
-        self.effects.cursor_crystal.radius = radius;
-        self.effects.cursor_crystal.opacity = opacity;
-    }
-
-    /// Update tessellation config
-    pub fn set_tessellation(&mut self, enabled: bool, color: (f32, f32, f32), tile_size: f32, rotation: f32, opacity: f32) {
-        self.effects.tessellation.enabled = enabled;
-        self.effects.tessellation.color = color;
-        self.effects.tessellation.tile_size = tile_size;
-        self.effects.tessellation.rotation = rotation;
-        self.effects.tessellation.opacity = opacity;
-    }
-
-    /// Update cursor water drop config
-    pub fn set_cursor_water_drop(&mut self, enabled: bool, color: (f32, f32, f32), ripple_count: u32, expand_speed: f32, opacity: f32) {
-        self.effects.cursor_water_drop.enabled = enabled;
-        self.effects.cursor_water_drop.color = color;
-        self.effects.cursor_water_drop.ripple_count = ripple_count;
-        self.effects.cursor_water_drop.expand_speed = expand_speed;
-        self.effects.cursor_water_drop.opacity = opacity;
-    }
-
-    /// Update guilloche config
-    pub fn set_guilloche(&mut self, enabled: bool, color: (f32, f32, f32), curve_count: u32, wave_freq: f32, opacity: f32) {
-        self.effects.guilloche.enabled = enabled;
-        self.effects.guilloche.color = color;
-        self.effects.guilloche.curve_count = curve_count;
-        self.effects.guilloche.wave_freq = wave_freq;
-        self.effects.guilloche.opacity = opacity;
-    }
-
-    /// Update cursor pixel dust config
-    pub fn set_cursor_pixel_dust(&mut self, enabled: bool, color: (f32, f32, f32), dust_count: u32, scatter_speed: f32, opacity: f32) {
-        self.effects.cursor_pixel_dust.enabled = enabled;
-        self.effects.cursor_pixel_dust.color = color;
-        self.effects.cursor_pixel_dust.count = dust_count;
-        self.effects.cursor_pixel_dust.scatter_speed = scatter_speed;
-        self.effects.cursor_pixel_dust.opacity = opacity;
-    }
-
-    /// Update celtic knot config
-    pub fn set_celtic_knot(&mut self, enabled: bool, color: (f32, f32, f32), knot_scale: f32, weave_speed: f32, opacity: f32) {
-        self.effects.celtic_knot.enabled = enabled;
-        self.effects.celtic_knot.color = color;
-        self.effects.celtic_knot.scale = knot_scale;
-        self.effects.celtic_knot.weave_speed = weave_speed;
-        self.effects.celtic_knot.opacity = opacity;
-    }
-
-    /// Update cursor candle flame config
-    pub fn set_cursor_candle_flame(&mut self, enabled: bool, color: (f32, f32, f32), flame_height: u32, flicker_speed: f32, opacity: f32) {
-        self.effects.cursor_candle_flame.enabled = enabled;
-        self.effects.cursor_candle_flame.color = color;
-        self.effects.cursor_candle_flame.height = flame_height;
-        self.effects.cursor_candle_flame.flicker_speed = flicker_speed;
-        self.effects.cursor_candle_flame.opacity = opacity;
-    }
-
-    /// Update argyle pattern config
-    pub fn set_argyle_pattern(&mut self, enabled: bool, color: (f32, f32, f32), diamond_size: f32, line_width: f32, opacity: f32) {
-        self.effects.argyle_pattern.enabled = enabled;
-        self.effects.argyle_pattern.color = color;
-        self.effects.argyle_pattern.diamond_size = diamond_size;
-        self.effects.argyle_pattern.line_width = line_width;
-        self.effects.argyle_pattern.opacity = opacity;
-    }
-
-    /// Update cursor moth flame config
-    pub fn set_cursor_moth_flame(&mut self, enabled: bool, color: (f32, f32, f32), moth_count: u32, orbit_speed: f32, opacity: f32) {
-        self.effects.cursor_moth_flame.enabled = enabled;
-        self.effects.cursor_moth_flame.color = color;
-        self.effects.cursor_moth_flame.moth_count = moth_count;
-        self.effects.cursor_moth_flame.orbit_speed = orbit_speed;
-        self.effects.cursor_moth_flame.opacity = opacity;
-    }
-
-    /// Update basket weave config
-    pub fn set_basket_weave(&mut self, enabled: bool, color: (f32, f32, f32), strip_width: f32, strip_spacing: f32, opacity: f32) {
-        self.effects.basket_weave.enabled = enabled;
-        self.effects.basket_weave.color = color;
-        self.effects.basket_weave.strip_width = strip_width;
-        self.effects.basket_weave.strip_spacing = strip_spacing;
-        self.effects.basket_weave.opacity = opacity;
-    }
-
-    /// Update cursor sparkler config
-    pub fn set_cursor_sparkler(&mut self, enabled: bool, color: (f32, f32, f32), spark_count: u32, burn_speed: f32, opacity: f32) {
-        self.effects.cursor_sparkler.enabled = enabled;
-        self.effects.cursor_sparkler.color = color;
-        self.effects.cursor_sparkler.spark_count = spark_count;
-        self.effects.cursor_sparkler.burn_speed = burn_speed;
-        self.effects.cursor_sparkler.opacity = opacity;
-    }
-
-    /// Update fish scale config
-    pub fn set_fish_scale(&mut self, enabled: bool, color: (f32, f32, f32), scale_size: f32, row_offset: f32, opacity: f32) {
-        self.effects.fish_scale.enabled = enabled;
-        self.effects.fish_scale.color = color;
-        self.effects.fish_scale.size = scale_size;
-        self.effects.fish_scale.row_offset = row_offset;
-        self.effects.fish_scale.opacity = opacity;
-    }
-
-    /// Update cursor plasma ball config
-    pub fn set_cursor_plasma_ball(&mut self, enabled: bool, color: (f32, f32, f32), tendril_count: u32, arc_speed: f32, opacity: f32) {
-        self.effects.cursor_plasma_ball.enabled = enabled;
-        self.effects.cursor_plasma_ball.color = color;
-        self.effects.cursor_plasma_ball.tendril_count = tendril_count;
-        self.effects.cursor_plasma_ball.arc_speed = arc_speed;
-        self.effects.cursor_plasma_ball.opacity = opacity;
-    }
-
-    /// Update trefoil knot config
-    pub fn set_trefoil_knot(&mut self, enabled: bool, color: (f32, f32, f32), knot_size: f32, rotation_speed: f32, opacity: f32) {
-        self.effects.trefoil_knot.enabled = enabled;
-        self.effects.trefoil_knot.color = color;
-        self.effects.trefoil_knot.size = knot_size;
-        self.effects.trefoil_knot.rotation_speed = rotation_speed;
-        self.effects.trefoil_knot.opacity = opacity;
-    }
-
-    /// Update cursor quill pen config
-    pub fn set_cursor_quill_pen(&mut self, enabled: bool, color: (f32, f32, f32), trail_length: u32, ink_speed: f32, opacity: f32) {
-        self.effects.cursor_quill_pen.enabled = enabled;
-        self.effects.cursor_quill_pen.color = color;
-        self.effects.cursor_quill_pen.trail_length = trail_length;
-        self.effects.cursor_quill_pen.ink_speed = ink_speed;
-        self.effects.cursor_quill_pen.opacity = opacity;
-    }
-
-    /// Update herringbone pattern config
-    pub fn set_herringbone_pattern(&mut self, enabled: bool, color: (f32, f32, f32), tile_width: f32, tile_height: f32, opacity: f32) {
-        self.effects.herringbone_pattern.enabled = enabled;
-        self.effects.herringbone_pattern.color = color;
-        self.effects.herringbone_pattern.tile_width = tile_width;
-        self.effects.herringbone_pattern.tile_height = tile_height;
-        self.effects.herringbone_pattern.opacity = opacity;
-    }
-
-    /// Update cursor aurora borealis config
-    pub fn set_cursor_aurora_borealis(&mut self, enabled: bool, color: (f32, f32, f32), band_count: u32, shimmer_speed: f32, opacity: f32) {
-        self.effects.cursor_aurora_borealis.enabled = enabled;
-        self.effects.cursor_aurora_borealis.color = color;
-        self.effects.cursor_aurora_borealis.band_count = band_count;
-        self.effects.cursor_aurora_borealis.shimmer_speed = shimmer_speed;
-        self.effects.cursor_aurora_borealis.opacity = opacity;
-    }
-
-    /// Update target reticle config
-    pub fn set_target_reticle(&mut self, enabled: bool, color: (f32, f32, f32), ring_count: u32, pulse_speed: f32, opacity: f32) {
-        self.effects.target_reticle.enabled = enabled;
-        self.effects.target_reticle.color = color;
-        self.effects.target_reticle.ring_count = ring_count;
-        self.effects.target_reticle.pulse_speed = pulse_speed;
-        self.effects.target_reticle.opacity = opacity;
-    }
-
-    /// Update cursor feather config
-    pub fn set_cursor_feather(&mut self, enabled: bool, color: (f32, f32, f32), feather_count: u32, drift_speed: f32, opacity: f32) {
-        self.effects.cursor_feather.enabled = enabled;
-        self.effects.cursor_feather.color = color;
-        self.effects.cursor_feather.count = feather_count;
-        self.effects.cursor_feather.drift_speed = drift_speed;
-        self.effects.cursor_feather.opacity = opacity;
-    }
-
-    /// Update plaid pattern config
-    pub fn set_plaid_pattern(&mut self, enabled: bool, color: (f32, f32, f32), band_width: f32, band_spacing: f32, opacity: f32) {
-        self.effects.plaid_pattern.enabled = enabled;
-        self.effects.plaid_pattern.color = color;
-        self.effects.plaid_pattern.band_width = band_width;
-        self.effects.plaid_pattern.band_spacing = band_spacing;
-        self.effects.plaid_pattern.opacity = opacity;
-    }
-
-    /// Update cursor stardust config
-    pub fn set_cursor_stardust(&mut self, enabled: bool, color: (f32, f32, f32), particle_count: u32, fall_speed: f32, opacity: f32) {
-        self.effects.cursor_stardust.enabled = enabled;
-        self.effects.cursor_stardust.color = color;
-        self.effects.cursor_stardust.particle_count = particle_count;
-        self.effects.cursor_stardust.fall_speed = fall_speed;
-        self.effects.cursor_stardust.opacity = opacity;
-    }
-
-    /// Update brick wall config
-    pub fn set_brick_wall(&mut self, enabled: bool, color: (f32, f32, f32), brick_width: f32, brick_height: f32, opacity: f32) {
-        self.effects.brick_wall.enabled = enabled;
-        self.effects.brick_wall.color = color;
-        self.effects.brick_wall.width = brick_width;
-        self.effects.brick_wall.height = brick_height;
-        self.effects.brick_wall.opacity = opacity;
-    }
-
-    /// Update cursor compass needle config
-    pub fn set_cursor_compass_needle(&mut self, enabled: bool, color: (f32, f32, f32), needle_length: f32, spin_speed: f32, opacity: f32) {
-        self.effects.cursor_compass_needle.enabled = enabled;
-        self.effects.cursor_compass_needle.color = color;
-        self.effects.cursor_compass_needle.length = needle_length;
-        self.effects.cursor_compass_needle.spin_speed = spin_speed;
-        self.effects.cursor_compass_needle.opacity = opacity;
-    }
-
-    /// Update sine wave config
-    pub fn set_sine_wave(&mut self, enabled: bool, color: (f32, f32, f32), amplitude: f32, wavelength: f32, speed: f32, opacity: f32) {
-        self.effects.sine_wave.enabled = enabled;
-        self.effects.sine_wave.color = color;
-        self.effects.sine_wave.amplitude = amplitude;
-        self.effects.sine_wave.wavelength = wavelength;
-        self.effects.sine_wave.speed = speed;
-        self.effects.sine_wave.opacity = opacity;
-    }
-
-    /// Update cursor galaxy config
-    pub fn set_cursor_galaxy(&mut self, enabled: bool, color: (f32, f32, f32), star_count: u32, radius: f32, opacity: f32) {
-        self.effects.cursor_galaxy.enabled = enabled;
-        self.effects.cursor_galaxy.color = color;
-        self.effects.cursor_galaxy.star_count = star_count;
-        self.effects.cursor_galaxy.radius = radius;
-        self.effects.cursor_galaxy.opacity = opacity;
-    }
-
-    /// Update rotating gear config
-    pub fn set_rotating_gear(&mut self, enabled: bool, color: (f32, f32, f32), gear_size: f32, rotation_speed: f32, opacity: f32) {
-        self.effects.rotating_gear.enabled = enabled;
-        self.effects.rotating_gear.color = color;
-        self.effects.rotating_gear.size = gear_size;
-        self.effects.rotating_gear.speed = rotation_speed;
-        self.effects.rotating_gear.opacity = opacity;
-    }
-
-    /// Update cursor prism config
-    pub fn set_cursor_prism(&mut self, enabled: bool, color: (f32, f32, f32), ray_count: u32, spread: f32, opacity: f32) {
-        self.effects.cursor_prism.enabled = enabled;
-        self.effects.cursor_prism.color = color;
-        self.effects.cursor_prism.ray_count = ray_count;
-        self.effects.cursor_prism.spread = spread;
-        self.effects.cursor_prism.opacity = opacity;
-    }
-
-    /// Update crosshatch pattern config
-    pub fn set_crosshatch_pattern(&mut self, enabled: bool, color: (f32, f32, f32), line_spacing: f32, angle: f32, speed: f32, opacity: f32) {
-        self.effects.crosshatch_pattern.enabled = enabled;
-        self.effects.crosshatch_pattern.color = color;
-        self.effects.crosshatch_pattern.line_spacing = line_spacing;
-        self.effects.crosshatch_pattern.angle = angle;
-        self.effects.crosshatch_pattern.speed = speed;
-        self.effects.crosshatch_pattern.opacity = opacity;
-    }
-
-    /// Update cursor moth config
-    pub fn set_cursor_moth(&mut self, enabled: bool, color: (f32, f32, f32), moth_count: u32, wing_size: f32, opacity: f32) {
-        self.effects.cursor_moth.enabled = enabled;
-        self.effects.cursor_moth.color = color;
-        self.effects.cursor_moth.count = moth_count;
-        self.effects.cursor_moth.wing_size = wing_size;
-        self.effects.cursor_moth.opacity = opacity;
-    }
-
-    /// Update hex grid config
-    pub fn set_hex_grid(&mut self, enabled: bool, color: (f32, f32, f32), cell_size: f32, pulse_speed: f32, opacity: f32) {
-        self.effects.hex_grid.enabled = enabled;
-        self.effects.hex_grid.color = color;
-        self.effects.hex_grid.cell_size = cell_size;
-        self.effects.hex_grid.pulse_speed = pulse_speed;
-        self.effects.hex_grid.opacity = opacity;
-    }
-
-    /// Update cursor sparkle burst config
-    pub fn set_cursor_sparkle_burst(&mut self, enabled: bool, color: (f32, f32, f32), count: u32, radius: f32, opacity: f32) {
-        self.effects.cursor_sparkle_burst.enabled = enabled;
-        self.effects.cursor_sparkle_burst.color = color;
-        self.effects.cursor_sparkle_burst.count = count;
-        self.effects.cursor_sparkle_burst.radius = radius;
-        self.effects.cursor_sparkle_burst.opacity = opacity;
-    }
-
-    /// Update circuit trace config
-    pub fn set_circuit_trace(&mut self, enabled: bool, color: (f32, f32, f32), width: f32, speed: f32, opacity: f32) {
-        self.effects.circuit_trace.enabled = enabled;
-        self.effects.circuit_trace.color = color;
-        self.effects.circuit_trace.width = width;
-        self.effects.circuit_trace.speed = speed;
-        self.effects.circuit_trace.opacity = opacity;
-    }
-
-    /// Update cursor compass config
-    pub fn set_cursor_compass(&mut self, enabled: bool, color: (f32, f32, f32), size: f32, speed: f32, opacity: f32) {
-        self.effects.cursor_compass.enabled = enabled;
-        self.effects.cursor_compass.color = color;
-        self.effects.cursor_compass.size = size;
-        self.effects.cursor_compass.speed = speed;
-        self.effects.cursor_compass.opacity = opacity;
-    }
-
-    /// Update mode-line transition config
-    pub fn set_mode_line_transition(&mut self, enabled: bool, duration_ms: u32) {
-        self.effects.mode_line_transition.enabled = enabled;
-        self.effects.mode_line_transition.duration_ms = duration_ms;
     }
 
     /// Get the mode-line transition alpha for a glyph at (x, y)
@@ -2199,12 +1120,6 @@ impl WgpuRenderer {
             }
         }
         1.0
-    }
-
-    /// Update text fade-in config
-    pub fn set_text_fade_in(&mut self, enabled: bool, duration_ms: u32) {
-        self.effects.text_fade_in.enabled = enabled;
-        self.effects.text_fade_in.duration_ms = duration_ms;
     }
 
     /// Trigger a text fade-in animation for a window
@@ -2244,13 +1159,6 @@ impl WgpuRenderer {
         1.0
     }
 
-    /// Update scroll line spacing config
-    pub fn set_scroll_line_spacing(&mut self, enabled: bool, max_spacing: f32, duration_ms: u32) {
-        self.effects.scroll_line_spacing.enabled = enabled;
-        self.effects.scroll_line_spacing.max = max_spacing;
-        self.scroll_line_spacing_duration_ms = duration_ms;
-    }
-
     /// Trigger a scroll line spacing animation for a window
     pub fn trigger_scroll_line_spacing(&mut self, window_id: i64, bounds: Rect, direction: i32, now: std::time::Instant) {
         // Replace existing animation for this window
@@ -2263,41 +1171,6 @@ impl WgpuRenderer {
             duration: std::time::Duration::from_millis(self.scroll_line_spacing_duration_ms as u64),
         });
         self.needs_continuous_redraw = true;
-    }
-
-    /// Update focus ring config
-    pub fn set_focus_ring(&mut self, enabled: bool, color: (f32, f32, f32), opacity: f32, dash_length: f32, speed: f32) {
-        self.effects.focus_ring.enabled = enabled;
-        self.effects.focus_ring.color = color;
-        self.effects.focus_ring.opacity = opacity;
-        self.effects.focus_ring.dash_length = dash_length.max(2.0);
-        self.effects.focus_ring.speed = speed;
-        if enabled {
-            self.focus_ring_start = std::time::Instant::now();
-        }
-    }
-
-    /// Update window mode tint config
-    pub fn set_window_mode_tint(&mut self, enabled: bool, opacity: f32) {
-        self.effects.window_mode_tint.enabled = enabled;
-        self.effects.window_mode_tint.opacity = opacity;
-    }
-
-    /// Update window watermark config
-    pub fn set_window_watermark(&mut self, enabled: bool, opacity: f32, threshold: u32) {
-        self.effects.window_watermark.enabled = enabled;
-        self.effects.window_watermark.opacity = opacity;
-        self.effects.window_watermark.threshold = threshold;
-    }
-
-    /// Update cursor trail fade config
-    pub fn set_cursor_trail_fade(&mut self, enabled: bool, length: usize, fade_ms: u32) {
-        self.effects.cursor_trail_fade.enabled = enabled;
-        self.effects.cursor_trail_fade.length = length;
-        self.cursor_trail_fade_duration = std::time::Duration::from_millis(fade_ms as u64);
-        if !enabled {
-            self.cursor_trail_positions.clear();
-        }
     }
 
     /// Record a new cursor position for the trail
@@ -2314,48 +1187,9 @@ impl WgpuRenderer {
         }
     }
 
-    /// Update region glow config
-    pub fn set_region_glow(&mut self, enabled: bool, face_id: u32, radius: f32, opacity: f32) {
-        self.effects.region_glow.enabled = enabled;
-        self.effects.region_glow.face_id = face_id;
-        self.effects.region_glow.radius = radius;
-        self.effects.region_glow.opacity = opacity;
-    }
-
     /// Update idle dim alpha
     pub fn set_idle_dim_alpha(&mut self, alpha: f32) {
         self.idle_dim_alpha = alpha;
-    }
-
-    /// Update noise grain config
-    pub fn set_noise_grain(&mut self, enabled: bool, intensity: f32, size: f32) {
-        self.effects.noise_grain.enabled = enabled;
-        self.effects.noise_grain.intensity = intensity;
-        self.effects.noise_grain.size = size;
-    }
-
-    /// Update padding gradient config
-    pub fn set_padding_gradient(&mut self, enabled: bool, color: (f32, f32, f32), opacity: f32, width: f32) {
-        self.effects.padding_gradient.enabled = enabled;
-        self.effects.padding_gradient.color = color;
-        self.effects.padding_gradient.opacity = opacity;
-        self.effects.padding_gradient.width = width;
-    }
-
-    /// Update frosted glass config
-    pub fn set_frosted_glass(&mut self, enabled: bool, opacity: f32, blur: f32) {
-        self.effects.frosted_glass.enabled = enabled;
-        self.effects.frosted_glass.opacity = opacity;
-        self.effects.frosted_glass.blur = blur;
-    }
-
-    /// Update title fade config
-    pub fn set_title_fade(&mut self, enabled: bool, duration_ms: u32) {
-        self.effects.title_fade.enabled = enabled;
-        self.effects.title_fade.duration_ms = duration_ms;
-        if !enabled {
-            self.active_title_fades.clear();
-        }
     }
 
     /// Start a window switch fade for a specific window
@@ -2396,32 +1230,6 @@ impl WgpuRenderer {
         Color { r: r + m, g: g + m, b: b + m, a: 1.0 }
     }
 
-    /// Update header/mode-line shadow config
-    pub fn set_header_shadow(&mut self, enabled: bool, intensity: f32, size: f32) {
-        self.effects.header_shadow.enabled = enabled;
-        self.effects.header_shadow.intensity = intensity;
-        self.effects.header_shadow.size = size;
-    }
-
-    /// Update search pulse config
-    pub fn set_search_pulse(&mut self, enabled: bool, face_id: u32) {
-        self.effects.search_pulse.enabled = enabled;
-        self.effects.search_pulse.face_id = face_id;
-        if enabled {
-            self.search_pulse_start = std::time::Instant::now();
-        }
-    }
-
-    /// Update typing ripple config
-    pub fn set_typing_ripple(&mut self, enabled: bool, max_radius: f32, duration_ms: u32) {
-        self.effects.typing_ripple.enabled = enabled;
-        self.effects.typing_ripple.max_radius = max_radius;
-        self.typing_ripple_duration = duration_ms as f32 / 1000.0;
-        if !enabled {
-            self.active_ripples.clear();
-        }
-    }
-
     /// Spawn a new ripple at the given position
     pub fn spawn_ripple(&mut self, cx: f32, cy: f32) {
         if self.effects.typing_ripple.enabled {
@@ -2441,24 +1249,10 @@ impl WgpuRenderer {
         self.effects.line_highlight.color = color;
     }
 
-    /// Update indent guide config
-    pub fn set_indent_guide_config(&mut self, enabled: bool, color: (f32, f32, f32, f32)) {
-        self.effects.indent_guides.enabled = enabled;
-        self.effects.indent_guides.color = color;
-    }
-
     /// Update rainbow indent guide config
     pub fn set_indent_guide_rainbow(&mut self, enabled: bool, colors: Vec<(f32, f32, f32, f32)>) {
         self.effects.indent_guides.rainbow_enabled = enabled;
         self.effects.indent_guides.rainbow_colors = colors;
-    }
-
-    /// Update scroll bar rendering config
-    pub fn set_scroll_bar_config(&mut self, thumb_radius: f32, track_opacity: f32,
-                                  hover_brightness: f32) {
-        self.effects.scroll_bar.thumb_radius = thumb_radius;
-        self.effects.scroll_bar.track_opacity = track_opacity;
-        self.effects.scroll_bar.hover_brightness = hover_brightness;
     }
 
     async fn new_async(

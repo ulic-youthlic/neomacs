@@ -5847,13 +5847,13 @@ pub unsafe extern "C" fn neomacs_display_set_matrix_rain(
     speed: c_int,
     opacity: c_int,
 ) {
-    let cmd = RenderCommand::SetMatrixRain {
-        enabled: enabled != 0,
-        r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0,
-        column_count: column_count as u32,
-        speed: speed as f32,
-        opacity: opacity as f32 / 100.0,
-    };
+    let cmd = RenderCommand::UpdateEffect(EffectUpdater(Box::new(move |effects| {
+            effects.matrix_rain.enabled = enabled != 0;
+            effects.matrix_rain.color = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            effects.matrix_rain.column_count = column_count as u32;
+            effects.matrix_rain.speed = speed as f32;
+            effects.matrix_rain.opacity = opacity as f32 / 100.0;
+        })));
     if let Some(ref state) = THREADED_STATE {
         let _ = state.emacs_comms.cmd_tx.try_send(cmd);
     }
