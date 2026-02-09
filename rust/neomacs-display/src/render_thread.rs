@@ -1446,6 +1446,10 @@ struct RenderApp {
     inactive_tint_enabled: bool,
     inactive_tint_color: (f32, f32, f32),
     inactive_tint_opacity: f32,
+
+    /// Shared monitor info (populated in resumed(), read from FFI thread)
+    shared_monitors: Option<SharedMonitorInfo>,
+    monitors_populated: bool,
 }
 
 /// State for a tooltip displayed as GPU overlay
@@ -1496,6 +1500,7 @@ impl RenderApp {
         height: u32,
         title: String,
         image_dimensions: SharedImageDimensions,
+        shared_monitors: SharedMonitorInfo,
         #[cfg(feature = "neo-term")]
         shared_terminals: crate::terminal::SharedTerminals,
     ) -> Self {
@@ -2258,6 +2263,9 @@ impl RenderApp {
             inactive_tint_enabled: false,
             inactive_tint_color: (0.2, 0.1, 0.0),
             inactive_tint_opacity: 0.1,
+
+            shared_monitors: Some(shared_monitors),
+            monitors_populated: false,
         }
     }
 
@@ -6418,6 +6426,49 @@ impl ApplicationHandler for RenderApp {
                 }
             }
         }
+
+        // Populate monitor info on first resume (requires ActiveEventLoop)
+        if !self.monitors_populated {
+            self.monitors_populated = true;
+            if let Some(ref shared) = self.shared_monitors {
+                let mut monitors = Vec::new();
+                for monitor in event_loop.available_monitors() {
+                    let pos = monitor.position();
+                    let size = monitor.size();
+                    let scale = monitor.scale_factor();
+                    let name = monitor.name();
+                    let width_mm = if scale > 0.0 {
+                        (size.width as f64 * 25.4 / (96.0 * scale)) as i32
+                    } else {
+                        0
+                    };
+                    let height_mm = if scale > 0.0 {
+                        (size.height as f64 * 25.4 / (96.0 * scale)) as i32
+                    } else {
+                        0
+                    };
+                    log::info!(
+                        "Monitor: {:?} pos=({},{}) size={}x{} scale={} mm={}x{}",
+                        name, pos.x, pos.y, size.width, size.height, scale, width_mm, height_mm
+                    );
+                    monitors.push(MonitorInfo {
+                        x: pos.x,
+                        y: pos.y,
+                        width: size.width as i32,
+                        height: size.height as i32,
+                        scale,
+                        width_mm,
+                        height_mm,
+                        name,
+                    });
+                }
+                let (ref lock, ref cvar) = **shared;
+                if let Ok(mut shared) = lock.lock() {
+                    *shared = monitors;
+                    cvar.notify_all();
+                }
+            }
+        }
     }
 
     fn window_event(
@@ -7070,48 +7121,6 @@ fn run_render_loop(
     #[cfg(not(target_os = "linux"))]
     let event_loop = EventLoop::new().expect("Failed to create event loop");
 
-    // Enumerate monitors and store in shared state
-    {
-        let mut monitors = Vec::new();
-        for monitor in event_loop.available_monitors() {
-            let pos = monitor.position();
-            let size = monitor.size();
-            let scale = monitor.scale_factor();
-            let name = monitor.name();
-            // winit doesn't provide physical mm dimensions directly;
-            // estimate from DPI (96 DPI baseline) or use 0 as fallback
-            let width_mm = if scale > 0.0 {
-                (size.width as f64 * 25.4 / (96.0 * scale)) as i32
-            } else {
-                0
-            };
-            let height_mm = if scale > 0.0 {
-                (size.height as f64 * 25.4 / (96.0 * scale)) as i32
-            } else {
-                0
-            };
-            log::info!(
-                "Monitor: {:?} pos=({},{}) size={}x{} scale={} mm={}x{}",
-                name, pos.x, pos.y, size.width, size.height, scale, width_mm, height_mm
-            );
-            monitors.push(MonitorInfo {
-                x: pos.x,
-                y: pos.y,
-                width: size.width as i32,
-                height: size.height as i32,
-                scale,
-                width_mm,
-                height_mm,
-                name,
-            });
-        }
-        let (ref lock, ref cvar) = *shared_monitors;
-        if let Ok(mut shared) = lock.lock() {
-            *shared = monitors;
-            cvar.notify_all();
-        }
-    }
-
     // Start with WaitUntil to avoid busy-polling; about_to_wait() adjusts dynamically
     event_loop.set_control_flow(ControlFlow::WaitUntil(
         std::time::Instant::now() + std::time::Duration::from_millis(16),
@@ -7119,6 +7128,7 @@ fn run_render_loop(
 
     let mut app = RenderApp::new(
         comms, width, height, title, image_dimensions,
+        shared_monitors,
         #[cfg(feature = "neo-term")]
         shared_terminals,
     );

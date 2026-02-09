@@ -26,6 +26,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <dlfcn.h>
 #include <string.h>
 #include <stdint.h>
+#include <signal.h>
 #include <xkbcommon/xkbcommon.h>
 
 #include "lisp.h"

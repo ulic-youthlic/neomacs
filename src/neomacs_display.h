@@ -199,8 +199,6 @@ typedef struct NeomacsInputEvent {
 
 #define VA_INVALID_SURFACE 4294967295
 
-extern GMainContext *g_main_context_get_thread_default(void);
-
 /* Forward declaration of opaque display handle type */
 struct NeomacsDisplay;
 
