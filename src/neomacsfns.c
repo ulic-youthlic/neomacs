@@ -1061,18 +1061,16 @@ If the parameters specify a display, that display is used.  */)
 		       Qx_create_frame_1);
   }
 
-  /* Menu, tab, tool bar lines */
+  /* Menu, tab, tool bar lines.
+     Default to 0 (hidden) — these are not yet fully functional.  */
   gui_default_parameter (f, parms, Qmenu_bar_lines,
-			 NILP (Vmenu_bar_mode)
-			 ? make_fixnum (0) : make_fixnum (1),
+			 make_fixnum (0),
 			 NULL, NULL, RES_TYPE_NUMBER);
   gui_default_parameter (f, parms, Qtab_bar_lines,
-			 NILP (Vtab_bar_mode)
-			 ? make_fixnum (0) : make_fixnum (1),
+			 make_fixnum (0),
 			 NULL, NULL, RES_TYPE_NUMBER);
   gui_default_parameter (f, parms, Qtool_bar_lines,
-			 NILP (Vtool_bar_mode)
-			 ? make_fixnum (0) : make_fixnum (1),
+			 make_fixnum (0),
 			 NULL, NULL, RES_TYPE_NUMBER);
 
   /* Re-fit the frame within the display dimensions now that all margins
