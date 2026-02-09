@@ -10519,6 +10519,160 @@ OPACITY is 0-100 for pulse opacity (default 20). */)
   return on ? Qt : Qnil;
 }
 
+DEFUN ("neomacs-set-warp-grid",
+       Fneomacs_set_warp_grid,
+       Sneomacs_set_warp_grid, 0, 6, 0,
+       doc: /* Configure warp/distortion grid effect.
+ENABLED non-nil activates animated distortion grid overlay.
+COLOR is a hex color string like "#RRGGBB" (default "#4D80E5").
+DENSITY is grid cells across width (default 20).
+AMPLITUDE is distortion in pixels (default 5).
+SPEED is animation speed * 100 (default 100).
+OPACITY is 0-100 (default 15). */)
+  (Lisp_Object enabled, Lisp_Object color, Lisp_Object density,
+   Lisp_Object amplitude, Lisp_Object speed, Lisp_Object opacity)
+{
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+  int on = !NILP (enabled);
+  int r = 0x4D, g = 0x80, b = 0xE5, den = 20, amp = 5, spd = 100, op = 15;
+  if (STRINGP (color))
+    {
+      const char *s = SSDATA (color);
+      if (s[0] == '#' && strlen (s) == 7)
+        {
+          unsigned int hex;
+          sscanf (s + 1, "%06x", &hex);
+          r = (hex >> 16) & 0xFF;
+          g = (hex >> 8) & 0xFF;
+          b = hex & 0xFF;
+        }
+    }
+  if (FIXNUMP (density)) den = XFIXNUM (density);
+  if (FIXNUMP (amplitude)) amp = XFIXNUM (amplitude);
+  if (FIXNUMP (speed)) spd = XFIXNUM (speed);
+  if (FIXNUMP (opacity)) op = XFIXNUM (opacity);
+
+  neomacs_display_set_warp_grid (dpyinfo->display_handle, on, r, g, b, den, amp, spd, op);
+  return on ? Qt : Qnil;
+}
+
+DEFUN ("neomacs-set-cursor-dna-helix",
+       Fneomacs_set_cursor_dna_helix,
+       Sneomacs_set_cursor_dna_helix, 0, 6, 0,
+       doc: /* Configure cursor DNA helix trail effect.
+ENABLED non-nil activates double-helix spirals around cursor.
+COLOR1 is primary strand hex string (default "#4DE580").
+COLOR2 is secondary strand hex string (default "#804DE5").
+RADIUS is helix radius in pixels (default 12).
+SPEED is rotation speed * 100 (default 150).
+OPACITY is 0-100 (default 30). */)
+  (Lisp_Object enabled, Lisp_Object color1, Lisp_Object color2,
+   Lisp_Object radius, Lisp_Object speed, Lisp_Object opacity)
+{
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+  int on = !NILP (enabled);
+  int r1 = 0x4D, g1 = 0xE5, b1 = 0x80;
+  int r2 = 0x80, g2 = 0x4D, b2 = 0xE5;
+  int rad = 12, spd = 150, op = 30;
+  if (STRINGP (color1))
+    {
+      const char *s = SSDATA (color1);
+      if (s[0] == '#' && strlen (s) == 7)
+        {
+          unsigned int hex;
+          sscanf (s + 1, "%06x", &hex);
+          r1 = (hex >> 16) & 0xFF;
+          g1 = (hex >> 8) & 0xFF;
+          b1 = hex & 0xFF;
+        }
+    }
+  if (STRINGP (color2))
+    {
+      const char *s = SSDATA (color2);
+      if (s[0] == '#' && strlen (s) == 7)
+        {
+          unsigned int hex;
+          sscanf (s + 1, "%06x", &hex);
+          r2 = (hex >> 16) & 0xFF;
+          g2 = (hex >> 8) & 0xFF;
+          b2 = hex & 0xFF;
+        }
+    }
+  if (FIXNUMP (radius)) rad = XFIXNUM (radius);
+  if (FIXNUMP (speed)) spd = XFIXNUM (speed);
+  if (FIXNUMP (opacity)) op = XFIXNUM (opacity);
+
+  neomacs_display_set_cursor_dna_helix (dpyinfo->display_handle, on, r1, g1, b1, r2, g2, b2, rad, spd, op);
+  return on ? Qt : Qnil;
+}
+
+DEFUN ("neomacs-set-prism-edge",
+       Fneomacs_set_prism_edge,
+       Sneomacs_set_prism_edge, 0, 5, 0,
+       doc: /* Configure prism/rainbow edge effect.
+ENABLED non-nil activates animated rainbow spectrum at frame edges.
+WIDTH is spectrum band width in pixels (default 6).
+SPEED is animation speed * 100 (default 100).
+SATURATION is color saturation 0-100 (default 80).
+OPACITY is 0-100 (default 25). */)
+  (Lisp_Object enabled, Lisp_Object width, Lisp_Object speed,
+   Lisp_Object saturation, Lisp_Object opacity)
+{
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+  int on = !NILP (enabled);
+  int w = 6, spd = 100, sat = 80, op = 25;
+  if (FIXNUMP (width)) w = XFIXNUM (width);
+  if (FIXNUMP (speed)) spd = XFIXNUM (speed);
+  if (FIXNUMP (saturation)) sat = XFIXNUM (saturation);
+  if (FIXNUMP (opacity)) op = XFIXNUM (opacity);
+
+  neomacs_display_set_prism_edge (dpyinfo->display_handle, on, w, spd, sat, op);
+  return on ? Qt : Qnil;
+}
+
+DEFUN ("neomacs-set-cursor-pendulum",
+       Fneomacs_set_cursor_pendulum,
+       Sneomacs_set_cursor_pendulum, 0, 5, 0,
+       doc: /* Configure cursor pendulum swing effect.
+ENABLED non-nil activates pendulum arc on cursor movement.
+COLOR is a hex color string like "#RRGGBB" (default "#E5B34D").
+ARC-LENGTH is arc length in pixels (default 40).
+DAMPING is damping factor 0-100 (default 50).
+OPACITY is 0-100 (default 30). */)
+  (Lisp_Object enabled, Lisp_Object color, Lisp_Object arc_length,
+   Lisp_Object damping, Lisp_Object opacity)
+{
+  struct neomacs_display_info *dpyinfo = neomacs_display_list;
+  if (!dpyinfo || !dpyinfo->display_handle)
+    return Qnil;
+  int on = !NILP (enabled);
+  int r = 0xE5, g = 0xB3, b = 0x4D, arc = 40, damp = 50, op = 30;
+  if (STRINGP (color))
+    {
+      const char *s = SSDATA (color);
+      if (s[0] == '#' && strlen (s) == 7)
+        {
+          unsigned int hex;
+          sscanf (s + 1, "%06x", &hex);
+          r = (hex >> 16) & 0xFF;
+          g = (hex >> 8) & 0xFF;
+          b = hex & 0xFF;
+        }
+    }
+  if (FIXNUMP (arc_length)) arc = XFIXNUM (arc_length);
+  if (FIXNUMP (damping)) damp = XFIXNUM (damping);
+  if (FIXNUMP (opacity)) op = XFIXNUM (opacity);
+
+  neomacs_display_set_cursor_pendulum (dpyinfo->display_handle, on, r, g, b, arc, damp, op);
+  return on ? Qt : Qnil;
+}
+
 DEFUN ("neomacs-set-padding-gradient",
        Fneomacs_set_padding_gradient,
        Sneomacs_set_padding_gradient, 0, 6, 0,
@@ -12038,6 +12192,10 @@ syms_of_neomacsterm (void)
   defsubr (&Sneomacs_set_cursor_orbit_particles);
   defsubr (&Sneomacs_set_plasma_border);
   defsubr (&Sneomacs_set_cursor_heartbeat);
+  defsubr (&Sneomacs_set_warp_grid);
+  defsubr (&Sneomacs_set_cursor_dna_helix);
+  defsubr (&Sneomacs_set_prism_edge);
+  defsubr (&Sneomacs_set_cursor_pendulum);
   defsubr (&Sneomacs_set_mode_line_gradient);
   defsubr (&Sneomacs_set_region_glow);
   defsubr (&Sneomacs_set_window_glow);

@@ -5090,6 +5090,330 @@ Non-nil renders animated flowing color bands at the top of the frame."
                 neomacs-cursor-heartbeat-max-radius nil)
             val))))
 
+;; Warp/distortion grid effect
+(declare-function neomacs-set-warp-grid "neomacsterm.c")
+
+(defcustom neomacs-warp-grid nil
+  "Enable warp/distortion grid effect."
+  :type 'boolean
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (fboundp 'neomacs-set-warp-grid)
+           (neomacs-set-warp-grid val))))
+
+(defcustom neomacs-warp-grid-color "#4D80E5"
+  "Color of the warp grid lines."
+  :type 'color
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-warp-grid)
+                    (boundp 'neomacs-warp-grid)
+                    neomacs-warp-grid)
+           (neomacs-set-warp-grid t val))))
+
+(defcustom neomacs-warp-grid-density 20
+  "Grid cell density (cells across width)."
+  :type '(integer :tag "Density")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-warp-grid)
+                    (boundp 'neomacs-warp-grid)
+                    neomacs-warp-grid)
+           (neomacs-set-warp-grid t
+            (if (boundp 'neomacs-warp-grid-color)
+                neomacs-warp-grid-color nil)
+            val))))
+
+(defcustom neomacs-warp-grid-amplitude 5
+  "Distortion amplitude in pixels."
+  :type '(integer :tag "Amplitude (pixels)")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-warp-grid)
+                    (boundp 'neomacs-warp-grid)
+                    neomacs-warp-grid)
+           (neomacs-set-warp-grid t
+            (if (boundp 'neomacs-warp-grid-color)
+                neomacs-warp-grid-color nil)
+            (if (boundp 'neomacs-warp-grid-density)
+                neomacs-warp-grid-density nil)
+            val))))
+
+(defcustom neomacs-warp-grid-speed 100
+  "Animation speed * 100."
+  :type '(integer :tag "Speed")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-warp-grid)
+                    (boundp 'neomacs-warp-grid)
+                    neomacs-warp-grid)
+           (neomacs-set-warp-grid t
+            (if (boundp 'neomacs-warp-grid-color)
+                neomacs-warp-grid-color nil)
+            (if (boundp 'neomacs-warp-grid-density)
+                neomacs-warp-grid-density nil)
+            (if (boundp 'neomacs-warp-grid-amplitude)
+                neomacs-warp-grid-amplitude nil)
+            val))))
+
+(defcustom neomacs-warp-grid-opacity 15
+  "Warp grid opacity (0-100)."
+  :type '(integer :tag "Opacity (0-100)")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-warp-grid)
+                    (boundp 'neomacs-warp-grid)
+                    neomacs-warp-grid)
+           (neomacs-set-warp-grid t
+            (if (boundp 'neomacs-warp-grid-color)
+                neomacs-warp-grid-color nil)
+            (if (boundp 'neomacs-warp-grid-density)
+                neomacs-warp-grid-density nil)
+            (if (boundp 'neomacs-warp-grid-amplitude)
+                neomacs-warp-grid-amplitude nil)
+            (if (boundp 'neomacs-warp-grid-speed)
+                neomacs-warp-grid-speed nil)
+            val))))
+
+;; Cursor DNA helix trail effect
+(declare-function neomacs-set-cursor-dna-helix "neomacsterm.c")
+
+(defcustom neomacs-cursor-dna-helix nil
+  "Enable cursor DNA helix trail effect."
+  :type 'boolean
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (fboundp 'neomacs-set-cursor-dna-helix)
+           (neomacs-set-cursor-dna-helix val))))
+
+(defcustom neomacs-cursor-dna-helix-color1 "#4DE580"
+  "Primary DNA strand color."
+  :type 'color
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-dna-helix)
+                    (boundp 'neomacs-cursor-dna-helix)
+                    neomacs-cursor-dna-helix)
+           (neomacs-set-cursor-dna-helix t val))))
+
+(defcustom neomacs-cursor-dna-helix-color2 "#804DE5"
+  "Secondary DNA strand color."
+  :type 'color
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-dna-helix)
+                    (boundp 'neomacs-cursor-dna-helix)
+                    neomacs-cursor-dna-helix)
+           (neomacs-set-cursor-dna-helix t
+            (if (boundp 'neomacs-cursor-dna-helix-color1)
+                neomacs-cursor-dna-helix-color1 nil)
+            val))))
+
+(defcustom neomacs-cursor-dna-helix-radius 12
+  "Helix radius in pixels."
+  :type '(integer :tag "Radius (pixels)")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-dna-helix)
+                    (boundp 'neomacs-cursor-dna-helix)
+                    neomacs-cursor-dna-helix)
+           (neomacs-set-cursor-dna-helix t
+            (if (boundp 'neomacs-cursor-dna-helix-color1)
+                neomacs-cursor-dna-helix-color1 nil)
+            (if (boundp 'neomacs-cursor-dna-helix-color2)
+                neomacs-cursor-dna-helix-color2 nil)
+            val))))
+
+(defcustom neomacs-cursor-dna-helix-speed 150
+  "Helix rotation speed * 100."
+  :type '(integer :tag "Speed")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-dna-helix)
+                    (boundp 'neomacs-cursor-dna-helix)
+                    neomacs-cursor-dna-helix)
+           (neomacs-set-cursor-dna-helix t
+            (if (boundp 'neomacs-cursor-dna-helix-color1)
+                neomacs-cursor-dna-helix-color1 nil)
+            (if (boundp 'neomacs-cursor-dna-helix-color2)
+                neomacs-cursor-dna-helix-color2 nil)
+            (if (boundp 'neomacs-cursor-dna-helix-radius)
+                neomacs-cursor-dna-helix-radius nil)
+            val))))
+
+(defcustom neomacs-cursor-dna-helix-opacity 30
+  "DNA helix opacity (0-100)."
+  :type '(integer :tag "Opacity (0-100)")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-dna-helix)
+                    (boundp 'neomacs-cursor-dna-helix)
+                    neomacs-cursor-dna-helix)
+           (neomacs-set-cursor-dna-helix t
+            (if (boundp 'neomacs-cursor-dna-helix-color1)
+                neomacs-cursor-dna-helix-color1 nil)
+            (if (boundp 'neomacs-cursor-dna-helix-color2)
+                neomacs-cursor-dna-helix-color2 nil)
+            (if (boundp 'neomacs-cursor-dna-helix-radius)
+                neomacs-cursor-dna-helix-radius nil)
+            (if (boundp 'neomacs-cursor-dna-helix-speed)
+                neomacs-cursor-dna-helix-speed nil)
+            val))))
+
+;; Prism/rainbow edge effect
+(declare-function neomacs-set-prism-edge "neomacsterm.c")
+
+(defcustom neomacs-prism-edge nil
+  "Enable prism/rainbow edge effect."
+  :type 'boolean
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (fboundp 'neomacs-set-prism-edge)
+           (neomacs-set-prism-edge val))))
+
+(defcustom neomacs-prism-edge-width 6
+  "Spectrum band width in pixels."
+  :type '(integer :tag "Width (pixels)")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-prism-edge)
+                    (boundp 'neomacs-prism-edge)
+                    neomacs-prism-edge)
+           (neomacs-set-prism-edge t val))))
+
+(defcustom neomacs-prism-edge-speed 100
+  "Prism animation speed * 100."
+  :type '(integer :tag "Speed")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-prism-edge)
+                    (boundp 'neomacs-prism-edge)
+                    neomacs-prism-edge)
+           (neomacs-set-prism-edge t
+            (if (boundp 'neomacs-prism-edge-width)
+                neomacs-prism-edge-width nil)
+            val))))
+
+(defcustom neomacs-prism-edge-saturation 80
+  "Color saturation (0-100)."
+  :type '(integer :tag "Saturation (0-100)")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-prism-edge)
+                    (boundp 'neomacs-prism-edge)
+                    neomacs-prism-edge)
+           (neomacs-set-prism-edge t
+            (if (boundp 'neomacs-prism-edge-width)
+                neomacs-prism-edge-width nil)
+            (if (boundp 'neomacs-prism-edge-speed)
+                neomacs-prism-edge-speed nil)
+            val))))
+
+(defcustom neomacs-prism-edge-opacity 25
+  "Prism edge opacity (0-100)."
+  :type '(integer :tag "Opacity (0-100)")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-prism-edge)
+                    (boundp 'neomacs-prism-edge)
+                    neomacs-prism-edge)
+           (neomacs-set-prism-edge t
+            (if (boundp 'neomacs-prism-edge-width)
+                neomacs-prism-edge-width nil)
+            (if (boundp 'neomacs-prism-edge-speed)
+                neomacs-prism-edge-speed nil)
+            (if (boundp 'neomacs-prism-edge-saturation)
+                neomacs-prism-edge-saturation nil)
+            val))))
+
+;; Cursor pendulum swing effect
+(declare-function neomacs-set-cursor-pendulum "neomacsterm.c")
+
+(defcustom neomacs-cursor-pendulum nil
+  "Enable cursor pendulum swing effect."
+  :type 'boolean
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (fboundp 'neomacs-set-cursor-pendulum)
+           (neomacs-set-cursor-pendulum val))))
+
+(defcustom neomacs-cursor-pendulum-color "#E5B34D"
+  "Color of pendulum swing arc."
+  :type 'color
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-pendulum)
+                    (boundp 'neomacs-cursor-pendulum)
+                    neomacs-cursor-pendulum)
+           (neomacs-set-cursor-pendulum t val))))
+
+(defcustom neomacs-cursor-pendulum-arc-length 40
+  "Arc length in pixels."
+  :type '(integer :tag "Arc length (pixels)")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-pendulum)
+                    (boundp 'neomacs-cursor-pendulum)
+                    neomacs-cursor-pendulum)
+           (neomacs-set-cursor-pendulum t
+            (if (boundp 'neomacs-cursor-pendulum-color)
+                neomacs-cursor-pendulum-color nil)
+            val))))
+
+(defcustom neomacs-cursor-pendulum-damping 50
+  "Swing damping factor (0-100, higher = faster decay)."
+  :type '(integer :tag "Damping (0-100)")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-pendulum)
+                    (boundp 'neomacs-cursor-pendulum)
+                    neomacs-cursor-pendulum)
+           (neomacs-set-cursor-pendulum t
+            (if (boundp 'neomacs-cursor-pendulum-color)
+                neomacs-cursor-pendulum-color nil)
+            (if (boundp 'neomacs-cursor-pendulum-arc-length)
+                neomacs-cursor-pendulum-arc-length nil)
+            val))))
+
+(defcustom neomacs-cursor-pendulum-opacity 30
+  "Pendulum swing opacity (0-100)."
+  :type '(integer :tag "Opacity (0-100)")
+  :group 'neomacs
+  :set (lambda (sym val)
+         (set-default sym val)
+         (when (and (fboundp 'neomacs-set-cursor-pendulum)
+                    (boundp 'neomacs-cursor-pendulum)
+                    neomacs-cursor-pendulum)
+           (neomacs-set-cursor-pendulum t
+            (if (boundp 'neomacs-cursor-pendulum-color)
+                neomacs-cursor-pendulum-color nil)
+            (if (boundp 'neomacs-cursor-pendulum-arc-length)
+                neomacs-cursor-pendulum-arc-length nil)
+            (if (boundp 'neomacs-cursor-pendulum-damping)
+                neomacs-cursor-pendulum-damping nil)
+            val))))
+
 ;; Provide the feature
 (provide 'neomacs-win)
 (provide 'term/neomacs-win)

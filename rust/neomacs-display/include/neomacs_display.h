@@ -2531,6 +2531,56 @@ void neomacs_display_set_cursor_heartbeat(struct NeomacsDisplay *handle,
                                           int opacity);
 
 /**
+ * Configure warp/distortion grid effect
+ */
+void neomacs_display_set_warp_grid(struct NeomacsDisplay *handle,
+                                   int enabled,
+                                   int r,
+                                   int g,
+                                   int b,
+                                   int density,
+                                   int amplitude,
+                                   int speed,
+                                   int opacity);
+
+/**
+ * Configure cursor DNA helix trail effect
+ */
+void neomacs_display_set_cursor_dna_helix(struct NeomacsDisplay *handle,
+                                          int enabled,
+                                          int r1,
+                                          int g1,
+                                          int b1,
+                                          int r2,
+                                          int g2,
+                                          int b2,
+                                          int radius,
+                                          int speed,
+                                          int opacity);
+
+/**
+ * Configure prism/rainbow edge effect
+ */
+void neomacs_display_set_prism_edge(struct NeomacsDisplay *handle,
+                                    int enabled,
+                                    int width,
+                                    int speed,
+                                    int saturation,
+                                    int opacity);
+
+/**
+ * Configure cursor pendulum swing effect
+ */
+void neomacs_display_set_cursor_pendulum(struct NeomacsDisplay *handle,
+                                         int enabled,
+                                         int r,
+                                         int g,
+                                         int b,
+                                         int arcLength,
+                                         int damping,
+                                         int opacity);
+
+/**
  * Shutdown threaded display
  */
 void neomacs_display_shutdown_threaded(void);

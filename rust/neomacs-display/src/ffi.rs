@@ -6140,6 +6140,110 @@ pub unsafe extern "C" fn neomacs_display_set_cursor_heartbeat(
     }
 }
 
+/// Configure warp/distortion grid effect
+#[cfg(feature = "winit-backend")]
+#[no_mangle]
+pub unsafe extern "C" fn neomacs_display_set_warp_grid(
+    _handle: *mut NeomacsDisplay,
+    enabled: c_int,
+    r: c_int, g: c_int, b: c_int,
+    density: c_int,
+    amplitude: c_int,
+    speed: c_int,
+    opacity: c_int,
+) {
+    let cmd = RenderCommand::SetWarpGrid {
+        enabled: enabled != 0,
+        r: r as f32 / 255.0,
+        g: g as f32 / 255.0,
+        b: b as f32 / 255.0,
+        density: density as u32,
+        amplitude: amplitude as f32,
+        speed: speed as f32 / 100.0,
+        opacity: opacity as f32 / 100.0,
+    };
+    if let Some(ref state) = THREADED_STATE {
+        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+    }
+}
+
+/// Configure cursor DNA helix trail effect
+#[cfg(feature = "winit-backend")]
+#[no_mangle]
+pub unsafe extern "C" fn neomacs_display_set_cursor_dna_helix(
+    _handle: *mut NeomacsDisplay,
+    enabled: c_int,
+    r1: c_int, g1: c_int, b1: c_int,
+    r2: c_int, g2: c_int, b2: c_int,
+    radius: c_int,
+    speed: c_int,
+    opacity: c_int,
+) {
+    let cmd = RenderCommand::SetCursorDnaHelix {
+        enabled: enabled != 0,
+        r1: r1 as f32 / 255.0,
+        g1: g1 as f32 / 255.0,
+        b1: b1 as f32 / 255.0,
+        r2: r2 as f32 / 255.0,
+        g2: g2 as f32 / 255.0,
+        b2: b2 as f32 / 255.0,
+        radius: radius as f32,
+        speed: speed as f32 / 100.0,
+        opacity: opacity as f32 / 100.0,
+    };
+    if let Some(ref state) = THREADED_STATE {
+        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+    }
+}
+
+/// Configure prism/rainbow edge effect
+#[cfg(feature = "winit-backend")]
+#[no_mangle]
+pub unsafe extern "C" fn neomacs_display_set_prism_edge(
+    _handle: *mut NeomacsDisplay,
+    enabled: c_int,
+    width: c_int,
+    speed: c_int,
+    saturation: c_int,
+    opacity: c_int,
+) {
+    let cmd = RenderCommand::SetPrismEdge {
+        enabled: enabled != 0,
+        width: width as f32,
+        speed: speed as f32 / 100.0,
+        saturation: saturation as f32 / 100.0,
+        opacity: opacity as f32 / 100.0,
+    };
+    if let Some(ref state) = THREADED_STATE {
+        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+    }
+}
+
+/// Configure cursor pendulum swing effect
+#[cfg(feature = "winit-backend")]
+#[no_mangle]
+pub unsafe extern "C" fn neomacs_display_set_cursor_pendulum(
+    _handle: *mut NeomacsDisplay,
+    enabled: c_int,
+    r: c_int, g: c_int, b: c_int,
+    arc_length: c_int,
+    damping: c_int,
+    opacity: c_int,
+) {
+    let cmd = RenderCommand::SetCursorPendulum {
+        enabled: enabled != 0,
+        r: r as f32 / 255.0,
+        g: g as f32 / 255.0,
+        b: b as f32 / 255.0,
+        arc_length: arc_length as f32,
+        damping: damping as f32 / 100.0,
+        opacity: opacity as f32 / 100.0,
+    };
+    if let Some(ref state) = THREADED_STATE {
+        let _ = state.emacs_comms.cmd_tx.try_send(cmd);
+    }
+}
+
 /// Shutdown threaded display
 #[cfg(feature = "winit-backend")]
 #[no_mangle]

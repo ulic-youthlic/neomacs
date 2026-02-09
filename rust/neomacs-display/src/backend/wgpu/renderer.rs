@@ -481,6 +481,35 @@ pub struct WgpuRenderer {
     cursor_heartbeat_bpm: f32,
     cursor_heartbeat_max_radius: f32,
     cursor_heartbeat_opacity: f32,
+    /// Warp/distortion grid effect
+    warp_grid_enabled: bool,
+    warp_grid_color: (f32, f32, f32),
+    warp_grid_density: u32,
+    warp_grid_amplitude: f32,
+    warp_grid_speed: f32,
+    warp_grid_opacity: f32,
+    /// Cursor DNA helix trail
+    cursor_dna_helix_enabled: bool,
+    cursor_dna_helix_color1: (f32, f32, f32),
+    cursor_dna_helix_color2: (f32, f32, f32),
+    cursor_dna_helix_radius: f32,
+    cursor_dna_helix_speed: f32,
+    cursor_dna_helix_opacity: f32,
+    /// Prism/rainbow edge effect
+    prism_edge_enabled: bool,
+    prism_edge_width: f32,
+    prism_edge_speed: f32,
+    prism_edge_saturation: f32,
+    prism_edge_opacity: f32,
+    /// Cursor pendulum swing
+    cursor_pendulum_enabled: bool,
+    cursor_pendulum_color: (f32, f32, f32),
+    cursor_pendulum_arc_length: f32,
+    cursor_pendulum_damping: f32,
+    cursor_pendulum_opacity: f32,
+    cursor_pendulum_last_x: f32,
+    cursor_pendulum_last_y: f32,
+    cursor_pendulum_swing_start: Option<std::time::Instant>,
     /// Window edge glow on scroll boundaries
     edge_glow_enabled: bool,
     edge_glow_color: (f32, f32, f32),
@@ -1467,6 +1496,31 @@ impl WgpuRenderer {
             cursor_heartbeat_bpm: 72.0,
             cursor_heartbeat_max_radius: 50.0,
             cursor_heartbeat_opacity: 0.2,
+            warp_grid_enabled: false,
+            warp_grid_color: (0.3, 0.5, 0.9),
+            warp_grid_density: 20,
+            warp_grid_amplitude: 5.0,
+            warp_grid_speed: 1.0,
+            warp_grid_opacity: 0.15,
+            cursor_dna_helix_enabled: false,
+            cursor_dna_helix_color1: (0.3, 0.9, 0.5),
+            cursor_dna_helix_color2: (0.5, 0.3, 0.9),
+            cursor_dna_helix_radius: 12.0,
+            cursor_dna_helix_speed: 1.5,
+            cursor_dna_helix_opacity: 0.3,
+            prism_edge_enabled: false,
+            prism_edge_width: 6.0,
+            prism_edge_speed: 1.0,
+            prism_edge_saturation: 0.8,
+            prism_edge_opacity: 0.25,
+            cursor_pendulum_enabled: false,
+            cursor_pendulum_color: (0.9, 0.7, 0.3),
+            cursor_pendulum_arc_length: 40.0,
+            cursor_pendulum_damping: 0.5,
+            cursor_pendulum_opacity: 0.3,
+            cursor_pendulum_last_x: 0.0,
+            cursor_pendulum_last_y: 0.0,
+            cursor_pendulum_swing_start: None,
             edge_glow_enabled: false,
             edge_glow_color: (0.4, 0.6, 1.0),
             edge_glow_height: 40.0,
@@ -2222,6 +2276,44 @@ impl WgpuRenderer {
         self.cursor_heartbeat_bpm = bpm;
         self.cursor_heartbeat_max_radius = max_radius;
         self.cursor_heartbeat_opacity = opacity;
+    }
+
+    /// Update warp grid config
+    pub fn set_warp_grid(&mut self, enabled: bool, color: (f32, f32, f32), density: u32, amplitude: f32, speed: f32, opacity: f32) {
+        self.warp_grid_enabled = enabled;
+        self.warp_grid_color = color;
+        self.warp_grid_density = density;
+        self.warp_grid_amplitude = amplitude;
+        self.warp_grid_speed = speed;
+        self.warp_grid_opacity = opacity;
+    }
+
+    /// Update cursor DNA helix config
+    pub fn set_cursor_dna_helix(&mut self, enabled: bool, color1: (f32, f32, f32), color2: (f32, f32, f32), radius: f32, speed: f32, opacity: f32) {
+        self.cursor_dna_helix_enabled = enabled;
+        self.cursor_dna_helix_color1 = color1;
+        self.cursor_dna_helix_color2 = color2;
+        self.cursor_dna_helix_radius = radius;
+        self.cursor_dna_helix_speed = speed;
+        self.cursor_dna_helix_opacity = opacity;
+    }
+
+    /// Update prism edge config
+    pub fn set_prism_edge(&mut self, enabled: bool, width: f32, speed: f32, saturation: f32, opacity: f32) {
+        self.prism_edge_enabled = enabled;
+        self.prism_edge_width = width;
+        self.prism_edge_speed = speed;
+        self.prism_edge_saturation = saturation;
+        self.prism_edge_opacity = opacity;
+    }
+
+    /// Update cursor pendulum config
+    pub fn set_cursor_pendulum(&mut self, enabled: bool, color: (f32, f32, f32), arc_length: f32, damping: f32, opacity: f32) {
+        self.cursor_pendulum_enabled = enabled;
+        self.cursor_pendulum_color = color;
+        self.cursor_pendulum_arc_length = arc_length;
+        self.cursor_pendulum_damping = damping;
+        self.cursor_pendulum_opacity = opacity;
     }
 
     /// Update mode-line transition config
@@ -5779,6 +5871,259 @@ impl WgpuRenderer {
                         render_pass.draw(0..heartbeat_verts.len() as u32, 0..1);
                     }
                     self.needs_continuous_redraw = true;
+                }
+            }
+
+            // === Warp/distortion grid effect ===
+            if self.warp_grid_enabled {
+                let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
+                let (wr, wg, wb) = self.warp_grid_color;
+                let wop = self.warp_grid_opacity;
+                let density = self.warp_grid_density.max(2) as f32;
+                let amp = self.warp_grid_amplitude;
+                let spd = self.warp_grid_speed;
+                let fw = self.width() as f32;
+                let fh = self.height() as f32;
+                let cell_w = fw / density;
+                let cell_h = fh / density;
+                let mut warp_verts: Vec<RectVertex> = Vec::new();
+                let line_thick = 1.0;
+                // Vertical lines
+                for i in 0..=(density as u32) {
+                    let base_x = i as f32 * cell_w;
+                    for seg in 0..20 {
+                        let sy = seg as f32 / 20.0 * fh;
+                        let dy = amp * (sy * 0.02 + now * spd * 2.0).sin();
+                        let dx = amp * (sy * 0.015 + now * spd * 1.5 + base_x * 0.01).cos();
+                        let c = Color::new(wr, wg, wb, wop * (0.5 + 0.5 * (sy * 0.03 + now).sin()));
+                        self.add_rect(&mut warp_verts, base_x + dx, sy + dy, line_thick, fh / 20.0, &c);
+                    }
+                }
+                // Horizontal lines
+                for j in 0..=(density as u32) {
+                    let base_y = j as f32 * cell_h;
+                    for seg in 0..20 {
+                        let sx = seg as f32 / 20.0 * fw;
+                        let dx = amp * (sx * 0.02 + now * spd * 1.8).sin();
+                        let dy = amp * (sx * 0.015 + now * spd * 1.3 + base_y * 0.01).cos();
+                        let c = Color::new(wr, wg, wb, wop * (0.5 + 0.5 * (sx * 0.03 + now * 0.7).cos()));
+                        self.add_rect(&mut warp_verts, sx + dx, base_y + dy, fw / 20.0, line_thick, &c);
+                    }
+                }
+                if !warp_verts.is_empty() {
+                    let wg_buf = self.device.create_buffer_init(
+                        &wgpu::util::BufferInitDescriptor {
+                            label: Some("Warp Grid Buffer"),
+                            contents: bytemuck::cast_slice(&warp_verts),
+                            usage: wgpu::BufferUsages::VERTEX,
+                        },
+                    );
+                    render_pass.set_pipeline(&self.rect_pipeline);
+                    render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                    render_pass.set_vertex_buffer(0, wg_buf.slice(..));
+                    render_pass.draw(0..warp_verts.len() as u32, 0..1);
+                }
+                self.needs_continuous_redraw = true;
+            }
+
+            // === Cursor DNA helix trail effect ===
+            if self.cursor_dna_helix_enabled && cursor_visible {
+                if let Some(ref anim) = animated_cursor {
+                    let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
+                    let cx = anim.x + anim.width / 2.0;
+                    let cy = anim.y + anim.height / 2.0;
+                    let (c1r, c1g, c1b) = self.cursor_dna_helix_color1;
+                    let (c2r, c2g, c2b) = self.cursor_dna_helix_color2;
+                    let dop = self.cursor_dna_helix_opacity;
+                    let radius = self.cursor_dna_helix_radius;
+                    let spd = self.cursor_dna_helix_speed;
+                    let mut dna_verts: Vec<RectVertex> = Vec::new();
+                    let num_nodes = 16;
+                    let dot_size = 3.0;
+                    for i in 0..num_nodes {
+                        let t = i as f32 / num_nodes as f32;
+                        let angle = now * spd * 3.0 + t * std::f32::consts::PI * 4.0;
+                        let vert_offset = (t - 0.5) * anim.height * 2.0;
+                        let fade = 1.0 - t;
+                        // Strand 1
+                        let x1 = cx + angle.cos() * radius;
+                        let y1 = cy + vert_offset;
+                        let c1 = Color::new(c1r, c1g, c1b, dop * fade);
+                        self.add_rect(&mut dna_verts, x1 - dot_size / 2.0, y1 - dot_size / 2.0, dot_size, dot_size, &c1);
+                        // Strand 2 (opposite phase)
+                        let x2 = cx - angle.cos() * radius;
+                        let y2 = cy + vert_offset;
+                        let c2 = Color::new(c2r, c2g, c2b, dop * fade);
+                        self.add_rect(&mut dna_verts, x2 - dot_size / 2.0, y2 - dot_size / 2.0, dot_size, dot_size, &c2);
+                        // Cross-link every 4th node
+                        if i % 4 == 0 {
+                            let link_c = Color::new((c1r + c2r) * 0.5, (c1g + c2g) * 0.5, (c1b + c2b) * 0.5, dop * fade * 0.5);
+                            let lx = x1.min(x2);
+                            let lw = (x2 - x1).abs().max(1.0);
+                            self.add_rect(&mut dna_verts, lx, y1 - 0.5, lw, 1.0, &link_c);
+                        }
+                    }
+                    if !dna_verts.is_empty() {
+                        let dna_buf = self.device.create_buffer_init(
+                            &wgpu::util::BufferInitDescriptor {
+                                label: Some("DNA Helix Buffer"),
+                                contents: bytemuck::cast_slice(&dna_verts),
+                                usage: wgpu::BufferUsages::VERTEX,
+                            },
+                        );
+                        render_pass.set_pipeline(&self.rect_pipeline);
+                        render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                        render_pass.set_vertex_buffer(0, dna_buf.slice(..));
+                        render_pass.draw(0..dna_verts.len() as u32, 0..1);
+                    }
+                    self.needs_continuous_redraw = true;
+                }
+            }
+
+            // === Prism/rainbow edge effect ===
+            if self.prism_edge_enabled {
+                let now = std::time::Instant::now().duration_since(self.aurora_start).as_secs_f32();
+                let pw = self.prism_edge_width;
+                let pop = self.prism_edge_opacity;
+                let sat = self.prism_edge_saturation;
+                let spd = self.prism_edge_speed;
+                let fw = self.width() as f32;
+                let fh = self.height() as f32;
+                let mut prism_verts: Vec<RectVertex> = Vec::new();
+                let num_bands = 30;
+                // Helper: HSV to RGB (simplified)
+                let hsv_to_rgb = |h: f32, s: f32, v: f32| -> (f32, f32, f32) {
+                    let h = h % 1.0;
+                    let i = (h * 6.0).floor() as i32;
+                    let f = h * 6.0 - i as f32;
+                    let p = v * (1.0 - s);
+                    let q = v * (1.0 - s * f);
+                    let t = v * (1.0 - s * (1.0 - f));
+                    match i % 6 {
+                        0 => (v, t, p),
+                        1 => (q, v, p),
+                        2 => (p, v, t),
+                        3 => (p, q, v),
+                        4 => (t, p, v),
+                        _ => (v, p, q),
+                    }
+                };
+                // Top edge
+                for i in 0..num_bands {
+                    let t = i as f32 / num_bands as f32;
+                    let hue = (t + now * spd * 0.2) % 1.0;
+                    let (pr, pg, pb) = hsv_to_rgb(hue, sat, 1.0);
+                    let x = t * fw;
+                    let band_w = fw / num_bands as f32 + 1.0;
+                    let c = Color::new(pr, pg, pb, pop);
+                    self.add_rect(&mut prism_verts, x, 0.0, band_w, pw, &c);
+                }
+                // Bottom edge
+                for i in 0..num_bands {
+                    let t = i as f32 / num_bands as f32;
+                    let hue = (t + now * spd * 0.2 + 0.5) % 1.0;
+                    let (pr, pg, pb) = hsv_to_rgb(hue, sat, 1.0);
+                    let x = t * fw;
+                    let band_w = fw / num_bands as f32 + 1.0;
+                    let c = Color::new(pr, pg, pb, pop);
+                    self.add_rect(&mut prism_verts, x, fh - pw, band_w, pw, &c);
+                }
+                // Left edge
+                for i in 0..num_bands {
+                    let t = i as f32 / num_bands as f32;
+                    let hue = (t + now * spd * 0.15 + 0.25) % 1.0;
+                    let (pr, pg, pb) = hsv_to_rgb(hue, sat, 1.0);
+                    let y = t * fh;
+                    let band_h = fh / num_bands as f32 + 1.0;
+                    let c = Color::new(pr, pg, pb, pop);
+                    self.add_rect(&mut prism_verts, 0.0, y, pw, band_h, &c);
+                }
+                // Right edge
+                for i in 0..num_bands {
+                    let t = i as f32 / num_bands as f32;
+                    let hue = (t + now * spd * 0.15 + 0.75) % 1.0;
+                    let (pr, pg, pb) = hsv_to_rgb(hue, sat, 1.0);
+                    let y = t * fh;
+                    let band_h = fh / num_bands as f32 + 1.0;
+                    let c = Color::new(pr, pg, pb, pop);
+                    self.add_rect(&mut prism_verts, fw - pw, y, pw, band_h, &c);
+                }
+                if !prism_verts.is_empty() {
+                    let prism_buf = self.device.create_buffer_init(
+                        &wgpu::util::BufferInitDescriptor {
+                            label: Some("Prism Edge Buffer"),
+                            contents: bytemuck::cast_slice(&prism_verts),
+                            usage: wgpu::BufferUsages::VERTEX,
+                        },
+                    );
+                    render_pass.set_pipeline(&self.rect_pipeline);
+                    render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                    render_pass.set_vertex_buffer(0, prism_buf.slice(..));
+                    render_pass.draw(0..prism_verts.len() as u32, 0..1);
+                }
+                self.needs_continuous_redraw = true;
+            }
+
+            // === Cursor pendulum swing effect ===
+            if self.cursor_pendulum_enabled && cursor_visible {
+                if let Some(ref anim) = animated_cursor {
+                    let cx = anim.x + anim.width / 2.0;
+                    let cy = anim.y + anim.height / 2.0;
+                    // Detect cursor move
+                    if (cx - self.cursor_pendulum_last_x).abs() > 1.0 || (cy - self.cursor_pendulum_last_y).abs() > 1.0 {
+                        self.cursor_pendulum_swing_start = Some(std::time::Instant::now());
+                        self.cursor_pendulum_last_x = cx;
+                        self.cursor_pendulum_last_y = cy;
+                    }
+                    if let Some(start) = self.cursor_pendulum_swing_start {
+                        let elapsed = start.elapsed().as_secs_f32();
+                        let (pr, pg, pb) = self.cursor_pendulum_color;
+                        let pop = self.cursor_pendulum_opacity;
+                        let arc_len = self.cursor_pendulum_arc_length;
+                        let damping = self.cursor_pendulum_damping;
+                        let decay = (-elapsed * damping * 5.0).exp();
+                        if decay > 0.01 {
+                            let swing_angle = (elapsed * 8.0).sin() * decay * std::f32::consts::PI * 0.4;
+                            let mut pend_verts: Vec<RectVertex> = Vec::new();
+                            let num_seg = 12;
+                            for seg in 0..num_seg {
+                                let t = seg as f32 / num_seg as f32;
+                                let r = t * arc_len;
+                                let angle = swing_angle + std::f32::consts::PI * 0.5;
+                                let px = cx + angle.cos() * r;
+                                let py = cy + angle.sin() * r;
+                                let fade = (1.0 - t) * decay;
+                                let dot = 2.0 + t * 2.0;
+                                let c = Color::new(pr, pg, pb, pop * fade);
+                                self.add_rect(&mut pend_verts, px - dot / 2.0, py - dot / 2.0, dot, dot, &c);
+                            }
+                            // Bob at end
+                            let bob_r = arc_len;
+                            let bob_angle = swing_angle + std::f32::consts::PI * 0.5;
+                            let bx = cx + bob_angle.cos() * bob_r;
+                            let by = cy + bob_angle.sin() * bob_r;
+                            let bob_size = 6.0;
+                            let bc = Color::new(pr, pg, pb, pop * decay);
+                            self.add_rect(&mut pend_verts, bx - bob_size / 2.0, by - bob_size / 2.0, bob_size, bob_size, &bc);
+
+                            if !pend_verts.is_empty() {
+                                let pend_buf = self.device.create_buffer_init(
+                                    &wgpu::util::BufferInitDescriptor {
+                                        label: Some("Pendulum Buffer"),
+                                        contents: bytemuck::cast_slice(&pend_verts),
+                                        usage: wgpu::BufferUsages::VERTEX,
+                                    },
+                                );
+                                render_pass.set_pipeline(&self.rect_pipeline);
+                                render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                                render_pass.set_vertex_buffer(0, pend_buf.slice(..));
+                                render_pass.draw(0..pend_verts.len() as u32, 0..1);
+                            }
+                            self.needs_continuous_redraw = true;
+                        } else {
+                            self.cursor_pendulum_swing_start = None;
+                        }
+                    }
                 }
             }
 

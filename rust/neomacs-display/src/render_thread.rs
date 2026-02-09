@@ -648,6 +648,33 @@ struct RenderApp {
     cursor_heartbeat_max_radius: f32,
     cursor_heartbeat_opacity: f32,
 
+    // Warp grid effect
+    warp_grid_enabled: bool,
+    warp_grid_color: (f32, f32, f32),
+    warp_grid_density: u32,
+    warp_grid_amplitude: f32,
+    warp_grid_speed: f32,
+    warp_grid_opacity: f32,
+    // Cursor DNA helix trail
+    cursor_dna_helix_enabled: bool,
+    cursor_dna_helix_color1: (f32, f32, f32),
+    cursor_dna_helix_color2: (f32, f32, f32),
+    cursor_dna_helix_radius: f32,
+    cursor_dna_helix_speed: f32,
+    cursor_dna_helix_opacity: f32,
+    // Prism/rainbow edge effect
+    prism_edge_enabled: bool,
+    prism_edge_width: f32,
+    prism_edge_speed: f32,
+    prism_edge_saturation: f32,
+    prism_edge_opacity: f32,
+    // Cursor pendulum swing
+    cursor_pendulum_enabled: bool,
+    cursor_pendulum_color: (f32, f32, f32),
+    cursor_pendulum_arc_length: f32,
+    cursor_pendulum_damping: f32,
+    cursor_pendulum_opacity: f32,
+
     // Per-window metadata from previous frame (for transition detection)
     prev_window_infos: HashMap<i64, crate::core::frame_glyphs::WindowInfo>,
 
@@ -1250,6 +1277,28 @@ impl RenderApp {
             cursor_heartbeat_bpm: 72.0,
             cursor_heartbeat_max_radius: 50.0,
             cursor_heartbeat_opacity: 0.2,
+            warp_grid_enabled: false,
+            warp_grid_color: (0.3, 0.5, 0.9),
+            warp_grid_density: 20,
+            warp_grid_amplitude: 5.0,
+            warp_grid_speed: 1.0,
+            warp_grid_opacity: 0.15,
+            cursor_dna_helix_enabled: false,
+            cursor_dna_helix_color1: (0.3, 0.9, 0.5),
+            cursor_dna_helix_color2: (0.5, 0.3, 0.9),
+            cursor_dna_helix_radius: 12.0,
+            cursor_dna_helix_speed: 1.5,
+            cursor_dna_helix_opacity: 0.3,
+            prism_edge_enabled: false,
+            prism_edge_width: 6.0,
+            prism_edge_speed: 1.0,
+            prism_edge_saturation: 0.8,
+            prism_edge_opacity: 0.25,
+            cursor_pendulum_enabled: false,
+            cursor_pendulum_color: (0.9, 0.7, 0.3),
+            cursor_pendulum_arc_length: 40.0,
+            cursor_pendulum_damping: 0.5,
+            cursor_pendulum_opacity: 0.3,
             prev_window_infos: HashMap::new(),
             crossfade_enabled: true,
             crossfade_duration: std::time::Duration::from_millis(200),
@@ -3080,6 +3129,52 @@ impl RenderApp {
                     self.cursor_heartbeat_opacity = opacity;
                     if let Some(renderer) = self.renderer.as_mut() {
                         renderer.set_cursor_heartbeat(enabled, (r, g, b), bpm, max_radius, opacity);
+                    }
+                    self.frame_dirty = true;
+                }
+                RenderCommand::SetWarpGrid { enabled, r, g, b, density, amplitude, speed, opacity } => {
+                    self.warp_grid_enabled = enabled;
+                    self.warp_grid_color = (r, g, b);
+                    self.warp_grid_density = density;
+                    self.warp_grid_amplitude = amplitude;
+                    self.warp_grid_speed = speed;
+                    self.warp_grid_opacity = opacity;
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_warp_grid(enabled, (r, g, b), density, amplitude, speed, opacity);
+                    }
+                    self.frame_dirty = true;
+                }
+                RenderCommand::SetCursorDnaHelix { enabled, r1, g1, b1, r2, g2, b2, radius, speed, opacity } => {
+                    self.cursor_dna_helix_enabled = enabled;
+                    self.cursor_dna_helix_color1 = (r1, g1, b1);
+                    self.cursor_dna_helix_color2 = (r2, g2, b2);
+                    self.cursor_dna_helix_radius = radius;
+                    self.cursor_dna_helix_speed = speed;
+                    self.cursor_dna_helix_opacity = opacity;
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_cursor_dna_helix(enabled, (r1, g1, b1), (r2, g2, b2), radius, speed, opacity);
+                    }
+                    self.frame_dirty = true;
+                }
+                RenderCommand::SetPrismEdge { enabled, width, speed, saturation, opacity } => {
+                    self.prism_edge_enabled = enabled;
+                    self.prism_edge_width = width;
+                    self.prism_edge_speed = speed;
+                    self.prism_edge_saturation = saturation;
+                    self.prism_edge_opacity = opacity;
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_prism_edge(enabled, width, speed, saturation, opacity);
+                    }
+                    self.frame_dirty = true;
+                }
+                RenderCommand::SetCursorPendulum { enabled, r, g, b, arc_length, damping, opacity } => {
+                    self.cursor_pendulum_enabled = enabled;
+                    self.cursor_pendulum_color = (r, g, b);
+                    self.cursor_pendulum_arc_length = arc_length;
+                    self.cursor_pendulum_damping = damping;
+                    self.cursor_pendulum_opacity = opacity;
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        renderer.set_cursor_pendulum(enabled, (r, g, b), arc_length, damping, opacity);
                     }
                     self.frame_dirty = true;
                 }

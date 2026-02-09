@@ -1088,6 +1088,58 @@ pub enum RenderCommand {
         /// Opacity (0.0-1.0)
         opacity: f32,
     },
+    /// Configure warp/distortion grid effect
+    SetWarpGrid {
+        enabled: bool,
+        /// Grid color (sRGB floats)
+        r: f32, g: f32, b: f32,
+        /// Grid cell density (cells across width)
+        density: u32,
+        /// Distortion amplitude in pixels
+        amplitude: f32,
+        /// Animation speed multiplier
+        speed: f32,
+        /// Opacity (0.0-1.0)
+        opacity: f32,
+    },
+    /// Configure cursor DNA helix trail effect
+    SetCursorDnaHelix {
+        enabled: bool,
+        /// Strand 1 color (sRGB floats)
+        r1: f32, g1: f32, b1: f32,
+        /// Strand 2 color (sRGB floats)
+        r2: f32, g2: f32, b2: f32,
+        /// Helix radius in pixels
+        radius: f32,
+        /// Rotation speed multiplier
+        speed: f32,
+        /// Opacity (0.0-1.0)
+        opacity: f32,
+    },
+    /// Configure prism/rainbow edge effect
+    SetPrismEdge {
+        enabled: bool,
+        /// Spectrum band width in pixels
+        width: f32,
+        /// Animation speed multiplier
+        speed: f32,
+        /// Saturation (0.0-1.0)
+        saturation: f32,
+        /// Opacity (0.0-1.0)
+        opacity: f32,
+    },
+    /// Configure cursor pendulum swing effect
+    SetCursorPendulum {
+        enabled: bool,
+        /// Swing arc color (sRGB floats)
+        r: f32, g: f32, b: f32,
+        /// Arc length in pixels
+        arc_length: f32,
+        /// Damping factor (0.0-1.0, higher = faster decay)
+        damping: f32,
+        /// Opacity (0.0-1.0)
+        opacity: f32,
+    },
     /// Configure background pattern
     SetBackgroundPattern {
         /// 0=none, 1=dots, 2=grid, 3=crosshatch
