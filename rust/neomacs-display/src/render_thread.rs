@@ -481,6 +481,282 @@ impl PopupMenuState {
 }
 
 /// Application state for winit event loop
+/// Cursor animation, blinking, and size transition state.
+///
+/// Extracted from RenderApp to group all cursor-related fields together.
+struct CursorState {
+    // Blink state (managed by render thread)
+    blink_on: bool,
+    blink_enabled: bool,
+    last_blink_toggle: std::time::Instant,
+    blink_interval: std::time::Duration,
+
+    // Animation (smooth motion)
+    anim_enabled: bool,
+    anim_speed: f32,
+    anim_style: CursorAnimStyle,
+    anim_duration: f32, // seconds, for non-Exponential styles
+    target: Option<CursorTarget>,
+    current_x: f32,
+    current_y: f32,
+    current_w: f32,
+    current_h: f32,
+    animating: bool,
+    last_anim_time: std::time::Instant,
+    // For easing/linear styles: capture start position when animation begins
+    start_x: f32,
+    start_y: f32,
+    start_w: f32,
+    start_h: f32,
+    anim_start_time: std::time::Instant,
+    // For critically-damped spring: velocity per axis
+    velocity_x: f32,
+    velocity_y: f32,
+    velocity_w: f32,
+    velocity_h: f32,
+    // 4-corner spring trail state (TL, TR, BR, BL)
+    corner_springs: [CornerSpring; 4],
+    trail_size: f32,
+    // Previous target center for computing travel direction
+    prev_target_cx: f32,
+    prev_target_cy: f32,
+
+    // Size transition (independent of position animation)
+    size_transition_enabled: bool,
+    size_transition_duration: f32, // seconds
+    size_animating: bool,
+    size_start_w: f32,
+    size_start_h: f32,
+    size_target_w: f32,
+    size_target_h: f32,
+    size_anim_start: std::time::Instant,
+}
+
+impl Default for CursorState {
+    fn default() -> Self {
+        Self {
+            blink_on: true,
+            blink_enabled: true,
+            last_blink_toggle: std::time::Instant::now(),
+            blink_interval: std::time::Duration::from_millis(500),
+            anim_enabled: true,
+            anim_speed: 15.0,
+            anim_style: CursorAnimStyle::CriticallyDampedSpring,
+            anim_duration: 0.15,
+            target: None,
+            current_x: 0.0,
+            current_y: 0.0,
+            current_w: 0.0,
+            current_h: 0.0,
+            animating: false,
+            last_anim_time: std::time::Instant::now(),
+            start_x: 0.0,
+            start_y: 0.0,
+            start_w: 0.0,
+            start_h: 0.0,
+            anim_start_time: std::time::Instant::now(),
+            velocity_x: 0.0,
+            velocity_y: 0.0,
+            velocity_w: 0.0,
+            velocity_h: 0.0,
+            corner_springs: [CornerSpring {
+                x: 0.0, y: 0.0, vx: 0.0, vy: 0.0,
+                target_x: 0.0, target_y: 0.0, omega: 26.7,
+            }; 4],
+            trail_size: 0.7,
+            prev_target_cx: 0.0,
+            prev_target_cy: 0.0,
+            size_transition_enabled: false,
+            size_transition_duration: 0.15,
+            size_animating: false,
+            size_start_w: 0.0,
+            size_start_h: 0.0,
+            size_target_w: 0.0,
+            size_target_h: 0.0,
+            size_anim_start: std::time::Instant::now(),
+        }
+    }
+}
+
+impl CursorState {
+    /// Compute the 4 target corners for a cursor based on its style.
+    /// Returns [TL, TR, BR, BL] as (x, y) tuples.
+    fn target_corners(target: &CursorTarget) -> [(f32, f32); 4] {
+        match target.style {
+            0 => {
+                // Filled box: full rectangle
+                let x0 = target.x;
+                let y0 = target.y;
+                let x1 = target.x + target.width;
+                let y1 = target.y + target.height;
+                [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
+            }
+            1 => {
+                // Bar: thin vertical line (2px wide)
+                let x0 = target.x;
+                let y0 = target.y;
+                let x1 = target.x + 2.0;
+                let y1 = target.y + target.height;
+                [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
+            }
+            2 => {
+                // Underline: thin horizontal line at bottom (2px tall)
+                let x0 = target.x;
+                let y0 = target.y + target.height - 2.0;
+                let x1 = target.x + target.width;
+                let y1 = target.y + target.height;
+                [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
+            }
+            _ => {
+                // Default: full rectangle
+                let x0 = target.x;
+                let y0 = target.y;
+                let x1 = target.x + target.width;
+                let y1 = target.y + target.height;
+                [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
+            }
+        }
+    }
+
+    /// Tick cursor animation, returns true if position changed (needs redraw)
+    fn tick_animation(&mut self) -> bool {
+        if !self.anim_enabled || !self.animating {
+            return false;
+        }
+        let target = match self.target.as_ref() {
+            Some(t) => t.clone(),
+            None => return false,
+        };
+
+        let now = std::time::Instant::now();
+        let dt = now.duration_since(self.last_anim_time).as_secs_f32();
+        self.last_anim_time = now;
+
+        match self.anim_style {
+            CursorAnimStyle::Exponential => {
+                let factor = 1.0 - (-self.anim_speed * dt).exp();
+                let dx = target.x - self.current_x;
+                let dy = target.y - self.current_y;
+                let dw = target.width - self.current_w;
+                let dh = target.height - self.current_h;
+                self.current_x += dx * factor;
+                self.current_y += dy * factor;
+                self.current_w += dw * factor;
+                self.current_h += dh * factor;
+                if dx.abs() < 0.5 && dy.abs() < 0.5 && dw.abs() < 0.5 && dh.abs() < 0.5 {
+                    self.snap(&target);
+                }
+            }
+            CursorAnimStyle::CriticallyDampedSpring => {
+                let mut all_settled = true;
+                for i in 0..4 {
+                    let spring = &mut self.corner_springs[i];
+                    let omega = spring.omega;
+                    let exp_term = (-omega * dt).exp();
+
+                    let x0 = spring.x - spring.target_x;
+                    let vx0 = spring.vx;
+                    let new_x = (x0 + (vx0 + omega * x0) * dt) * exp_term;
+                    spring.vx = ((vx0 + omega * x0) * exp_term)
+                        - omega * (x0 + (vx0 + omega * x0) * dt) * exp_term;
+                    spring.x = spring.target_x + new_x;
+
+                    let y0 = spring.y - spring.target_y;
+                    let vy0 = spring.vy;
+                    let new_y = (y0 + (vy0 + omega * y0) * dt) * exp_term;
+                    spring.vy = ((vy0 + omega * y0) * exp_term)
+                        - omega * (y0 + (vy0 + omega * y0) * dt) * exp_term;
+                    spring.y = spring.target_y + new_y;
+
+                    let dist = (spring.x - spring.target_x).abs()
+                        + (spring.y - spring.target_y).abs();
+                    let vel = spring.vx.abs() + spring.vy.abs();
+                    if dist > 0.5 || vel > 1.0 {
+                        all_settled = false;
+                    }
+                }
+
+                let min_x = self.corner_springs.iter().map(|s| s.x).fold(f32::INFINITY, f32::min);
+                let min_y = self.corner_springs.iter().map(|s| s.y).fold(f32::INFINITY, f32::min);
+                let max_x = self.corner_springs.iter().map(|s| s.x).fold(f32::NEG_INFINITY, f32::max);
+                let max_y = self.corner_springs.iter().map(|s| s.y).fold(f32::NEG_INFINITY, f32::max);
+                self.current_x = min_x;
+                self.current_y = min_y;
+                self.current_w = max_x - min_x;
+                self.current_h = max_y - min_y;
+
+                if all_settled {
+                    let target_corners = Self::target_corners(&target);
+                    for i in 0..4 {
+                        self.corner_springs[i].x = target_corners[i].0;
+                        self.corner_springs[i].y = target_corners[i].1;
+                        self.corner_springs[i].vx = 0.0;
+                        self.corner_springs[i].vy = 0.0;
+                    }
+                    self.snap(&target);
+                }
+            }
+            style => {
+                let elapsed = now.duration_since(self.anim_start_time).as_secs_f32();
+                let raw_t = (elapsed / self.anim_duration).min(1.0);
+                let t = match style {
+                    CursorAnimStyle::EaseOutQuad => ease_out_quad(raw_t),
+                    CursorAnimStyle::EaseOutCubic => ease_out_cubic(raw_t),
+                    CursorAnimStyle::EaseOutExpo => ease_out_expo(raw_t),
+                    CursorAnimStyle::EaseInOutCubic => ease_in_out_cubic(raw_t),
+                    CursorAnimStyle::Linear => ease_linear(raw_t),
+                    _ => raw_t,
+                };
+                self.current_x = self.start_x + (target.x - self.start_x) * t;
+                self.current_y = self.start_y + (target.y - self.start_y) * t;
+                self.current_w = self.start_w + (target.width - self.start_w) * t;
+                self.current_h = self.start_h + (target.height - self.start_h) * t;
+                if raw_t >= 1.0 {
+                    self.snap(&target);
+                }
+            }
+        }
+
+        true
+    }
+
+    /// Snap cursor to target and stop animating
+    fn snap(&mut self, target: &CursorTarget) {
+        self.current_x = target.x;
+        self.current_y = target.y;
+        self.current_w = target.width;
+        self.current_h = target.height;
+        self.animating = false;
+    }
+
+    /// Tick cursor size transition, returns true if size changed (needs redraw).
+    fn tick_size_animation(&mut self) -> bool {
+        if !self.size_transition_enabled || !self.size_animating {
+            return false;
+        }
+        let elapsed = self.size_anim_start.elapsed().as_secs_f32();
+        let raw_t = (elapsed / self.size_transition_duration).min(1.0);
+        let t = raw_t * (2.0 - raw_t); // ease-out-quad
+        self.current_w = self.size_start_w
+            + (self.size_target_w - self.size_start_w) * t;
+        self.current_h = self.size_start_h
+            + (self.size_target_h - self.size_start_h) * t;
+        if raw_t >= 1.0 {
+            self.current_w = self.size_target_w;
+            self.current_h = self.size_target_h;
+            self.size_animating = false;
+        }
+        true
+    }
+
+    /// Reset blink to visible (e.g. when new frame arrives)
+    fn reset_blink(&mut self) {
+        self.blink_on = true;
+        self.last_blink_toggle = std::time::Instant::now();
+    }
+}
+
+
 struct RenderApp {
     comms: RenderComms,
     window: Option<Arc<Window>>,
@@ -517,51 +793,8 @@ struct RenderApp {
     // Frame dirty flag: set when new frame data arrives, cleared after render
     frame_dirty: bool,
 
-    // Cursor blink state (managed by render thread)
-    cursor_blink_on: bool,
-    cursor_blink_enabled: bool,
-    last_cursor_toggle: std::time::Instant,
-    cursor_blink_interval: std::time::Duration,
-
-    // Cursor animation (smooth motion)
-    cursor_anim_enabled: bool,
-    cursor_anim_speed: f32,
-    cursor_anim_style: CursorAnimStyle,
-    cursor_anim_duration: f32, // seconds, for non-Exponential styles
-    cursor_target: Option<CursorTarget>,
-    cursor_current_x: f32,
-    cursor_current_y: f32,
-    cursor_current_w: f32,
-    cursor_current_h: f32,
-    cursor_animating: bool,
-    last_anim_time: std::time::Instant,
-    // For easing/linear styles: capture start position when animation begins
-    cursor_start_x: f32,
-    cursor_start_y: f32,
-    cursor_start_w: f32,
-    cursor_start_h: f32,
-    cursor_anim_start_time: std::time::Instant,
-    // For critically-damped spring: velocity per axis (rect-level, non-trail)
-    cursor_velocity_x: f32,
-    cursor_velocity_y: f32,
-    cursor_velocity_w: f32,
-    cursor_velocity_h: f32,
-    // 4-corner spring trail state (TL, TR, BR, BL)
-    cursor_corner_springs: [CornerSpring; 4],
-    cursor_trail_size: f32,
-    // Previous target center for computing travel direction
-    cursor_prev_target_cx: f32,
-    cursor_prev_target_cy: f32,
-
-    // Cursor size transition (independent of position animation)
-    cursor_size_transition_enabled: bool,
-    cursor_size_transition_duration: f32, // seconds
-    cursor_size_animating: bool,
-    cursor_size_start_w: f32,
-    cursor_size_start_h: f32,
-    cursor_size_target_w: f32,
-    cursor_size_target_h: f32,
-    cursor_size_anim_start: std::time::Instant,
+    // Cursor state (blink, animation, size transition)
+    cursor: CursorState,
 
     // All visual effect configurations
     effects: crate::effect_config::EffectsConfig,
@@ -745,45 +978,7 @@ impl RenderApp {
             mouse_hidden_for_typing: false,
             image_dimensions,
             frame_dirty: false,
-            cursor_blink_on: true,
-            cursor_blink_enabled: true,
-            last_cursor_toggle: std::time::Instant::now(),
-            cursor_blink_interval: std::time::Duration::from_millis(500),
-            cursor_anim_enabled: true,
-            cursor_anim_speed: 15.0,
-            cursor_anim_style: CursorAnimStyle::CriticallyDampedSpring,
-            cursor_anim_duration: 0.15,
-            cursor_target: None,
-            cursor_current_x: 0.0,
-            cursor_current_y: 0.0,
-            cursor_current_w: 0.0,
-            cursor_current_h: 0.0,
-            cursor_animating: false,
-            last_anim_time: std::time::Instant::now(),
-            cursor_start_x: 0.0,
-            cursor_start_y: 0.0,
-            cursor_start_w: 0.0,
-            cursor_start_h: 0.0,
-            cursor_anim_start_time: std::time::Instant::now(),
-            cursor_velocity_x: 0.0,
-            cursor_velocity_y: 0.0,
-            cursor_velocity_w: 0.0,
-            cursor_velocity_h: 0.0,
-            cursor_corner_springs: [CornerSpring {
-                x: 0.0, y: 0.0, vx: 0.0, vy: 0.0,
-                target_x: 0.0, target_y: 0.0, omega: 26.7,
-            }; 4],
-            cursor_trail_size: 0.7,
-            cursor_prev_target_cx: 0.0,
-            cursor_prev_target_cy: 0.0,
-            cursor_size_transition_enabled: false,
-            cursor_size_transition_duration: 0.15,
-            cursor_size_animating: false,
-            cursor_size_start_w: 0.0,
-            cursor_size_start_h: 0.0,
-            cursor_size_target_w: 0.0,
-            cursor_size_target_h: 0.0,
-            cursor_size_anim_start: std::time::Instant::now(),
+            cursor: CursorState::default(),
             effects: crate::effect_config::EffectsConfig::default(),
             prev_window_infos: HashMap::new(),
             crossfade_enabled: true,
@@ -1319,19 +1514,19 @@ impl RenderApp {
                 }
                 RenderCommand::SetCursorBlink { enabled, interval_ms } => {
                     log::debug!("Cursor blink: enabled={}, interval={}ms", enabled, interval_ms);
-                    self.cursor_blink_enabled = enabled;
-                    self.cursor_blink_interval = std::time::Duration::from_millis(interval_ms as u64);
+                    self.cursor.blink_enabled = enabled;
+                    self.cursor.blink_interval = std::time::Duration::from_millis(interval_ms as u64);
                     if !enabled {
-                        self.cursor_blink_on = true;
+                        self.cursor.blink_on = true;
                         self.frame_dirty = true;
                     }
                 }
                 RenderCommand::SetCursorAnimation { enabled, speed } => {
                     log::debug!("Cursor animation: enabled={}, speed={}", enabled, speed);
-                    self.cursor_anim_enabled = enabled;
-                    self.cursor_anim_speed = speed;
+                    self.cursor.anim_enabled = enabled;
+                    self.cursor.anim_speed = speed;
                     if !enabled {
-                        self.cursor_animating = false;
+                        self.cursor.animating = false;
                     }
                 }
                 RenderCommand::SetAnimationConfig {
@@ -1368,11 +1563,11 @@ impl RenderApp {
                         cursor_enabled, cursor_speed, cursor_style, cursor_duration_ms, trail_size,
                         crossfade_enabled, crossfade_duration_ms, cf_effect, cf_easing,
                         scroll_enabled, scroll_duration_ms, effect, easing);
-                    self.cursor_anim_enabled = cursor_enabled;
-                    self.cursor_anim_speed = cursor_speed;
-                    self.cursor_anim_style = cursor_style;
-                    self.cursor_anim_duration = cursor_duration_ms as f32 / 1000.0;
-                    self.cursor_trail_size = trail_size.clamp(0.0, 1.0);
+                    self.cursor.anim_enabled = cursor_enabled;
+                    self.cursor.anim_speed = cursor_speed;
+                    self.cursor.anim_style = cursor_style;
+                    self.cursor.anim_duration = cursor_duration_ms as f32 / 1000.0;
+                    self.cursor.trail_size = trail_size.clamp(0.0, 1.0);
                     self.crossfade_enabled = crossfade_enabled;
                     self.crossfade_duration = std::time::Duration::from_millis(crossfade_duration_ms as u64);
                     self.crossfade_effect = cf_effect;
@@ -1382,7 +1577,7 @@ impl RenderApp {
                     self.scroll_effect = effect;
                     self.scroll_easing = easing;
                     if !cursor_enabled {
-                        self.cursor_animating = false;
+                        self.cursor.animating = false;
                     }
                     if !crossfade_enabled {
                         self.crossfades.clear();
@@ -1568,10 +1763,10 @@ impl RenderApp {
                     self.frame_dirty = true;
                 }
                 RenderCommand::SetCursorSizeTransition { enabled, duration_ms } => {
-                    self.cursor_size_transition_enabled = enabled;
-                    self.cursor_size_transition_duration = duration_ms as f32 / 1000.0;
+                    self.cursor.size_transition_enabled = enabled;
+                    self.cursor.size_transition_duration = duration_ms as f32 / 1000.0;
                     if !enabled {
-                        self.cursor_size_animating = false;
+                        self.cursor.size_animating = false;
                     }
                     self.frame_dirty = true;
                 }
@@ -1588,8 +1783,7 @@ impl RenderApp {
             self.current_frame = Some(frame);
             self.frame_dirty = true;
             // Reset blink to visible when new frame arrives (cursor just moved/redrawn)
-            self.cursor_blink_on = true;
-            self.last_cursor_toggle = std::time::Instant::now();
+            self.cursor.reset_blink();
         }
 
         // Extract active cursor target for animation
@@ -1607,56 +1801,56 @@ impl RenderApp {
             });
 
             if let Some(new_target) = active_cursor {
-                let had_target = self.cursor_target.is_some();
-                let target_moved = self.cursor_target.as_ref().map_or(true, |old| {
+                let had_target = self.cursor.target.is_some();
+                let target_moved = self.cursor.target.as_ref().map_or(true, |old| {
                     (old.x - new_target.x).abs() > 0.5
                     || (old.y - new_target.y).abs() > 0.5
                     || (old.width - new_target.width).abs() > 0.5
                     || (old.height - new_target.height).abs() > 0.5
                 });
 
-                if !had_target || !self.cursor_anim_enabled {
+                if !had_target || !self.cursor.anim_enabled {
                     // First appearance or animation disabled: snap
-                    self.cursor_current_x = new_target.x;
-                    self.cursor_current_y = new_target.y;
-                    self.cursor_current_w = new_target.width;
-                    self.cursor_current_h = new_target.height;
-                    self.cursor_animating = false;
+                    self.cursor.current_x = new_target.x;
+                    self.cursor.current_y = new_target.y;
+                    self.cursor.current_w = new_target.width;
+                    self.cursor.current_h = new_target.height;
+                    self.cursor.animating = false;
                     // Snap corner springs to target corners
-                    let corners = Self::cursor_target_corners(&new_target);
+                    let corners = CursorState::target_corners(&new_target);
                     for i in 0..4 {
-                        self.cursor_corner_springs[i].x = corners[i].0;
-                        self.cursor_corner_springs[i].y = corners[i].1;
-                        self.cursor_corner_springs[i].vx = 0.0;
-                        self.cursor_corner_springs[i].vy = 0.0;
-                        self.cursor_corner_springs[i].target_x = corners[i].0;
-                        self.cursor_corner_springs[i].target_y = corners[i].1;
+                        self.cursor.corner_springs[i].x = corners[i].0;
+                        self.cursor.corner_springs[i].y = corners[i].1;
+                        self.cursor.corner_springs[i].vx = 0.0;
+                        self.cursor.corner_springs[i].vy = 0.0;
+                        self.cursor.corner_springs[i].target_x = corners[i].0;
+                        self.cursor.corner_springs[i].target_y = corners[i].1;
                     }
-                    self.cursor_prev_target_cx = new_target.x + new_target.width / 2.0;
-                    self.cursor_prev_target_cy = new_target.y + new_target.height / 2.0;
+                    self.cursor.prev_target_cx = new_target.x + new_target.width / 2.0;
+                    self.cursor.prev_target_cy = new_target.y + new_target.height / 2.0;
                 } else if target_moved {
                     let now = std::time::Instant::now();
-                    self.cursor_animating = true;
-                    self.last_anim_time = now;
+                    self.cursor.animating = true;
+                    self.cursor.last_anim_time = now;
                     // Capture start position for easing/linear/spring styles
-                    self.cursor_start_x = self.cursor_current_x;
-                    self.cursor_start_y = self.cursor_current_y;
-                    self.cursor_start_w = self.cursor_current_w;
-                    self.cursor_start_h = self.cursor_current_h;
-                    self.cursor_anim_start_time = now;
+                    self.cursor.start_x = self.cursor.current_x;
+                    self.cursor.start_y = self.cursor.current_y;
+                    self.cursor.start_w = self.cursor.current_w;
+                    self.cursor.start_h = self.cursor.current_h;
+                    self.cursor.anim_start_time = now;
                     // For spring: reset velocities
-                    self.cursor_velocity_x = 0.0;
-                    self.cursor_velocity_y = 0.0;
-                    self.cursor_velocity_w = 0.0;
-                    self.cursor_velocity_h = 0.0;
+                    self.cursor.velocity_x = 0.0;
+                    self.cursor.velocity_y = 0.0;
+                    self.cursor.velocity_w = 0.0;
+                    self.cursor.velocity_h = 0.0;
 
                     // Set up 4-corner springs for trail effect (spring style only)
-                    if self.cursor_anim_style == CursorAnimStyle::CriticallyDampedSpring {
-                        let new_corners = Self::cursor_target_corners(&new_target);
+                    if self.cursor.anim_style == CursorAnimStyle::CriticallyDampedSpring {
+                        let new_corners = CursorState::target_corners(&new_target);
                         let new_cx = new_target.x + new_target.width / 2.0;
                         let new_cy = new_target.y + new_target.height / 2.0;
-                        let old_cx = self.cursor_prev_target_cx;
-                        let old_cy = self.cursor_prev_target_cy;
+                        let old_cx = self.cursor.prev_target_cx;
+                        let old_cy = self.cursor.prev_target_cy;
 
                         // Travel direction (normalized)
                         let dx = new_cx - old_cx;
@@ -1680,20 +1874,20 @@ impl RenderApp {
                         dots.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
                         // dots[0] = most trailing (lowest dot), dots[3] = most leading (highest dot)
 
-                        let base_dur = self.cursor_anim_duration; // seconds
+                        let base_dur = self.cursor.anim_duration; // seconds
                         for (rank, &(_dot, corner_idx)) in dots.iter().enumerate() {
-                            let factor = 1.0 - self.cursor_trail_size * (rank as f32 / 3.0);
+                            let factor = 1.0 - self.cursor.trail_size * (rank as f32 / 3.0);
                             let duration_i = (base_dur * factor).max(0.01);
                             let omega_i = 4.0 / duration_i;
 
-                            self.cursor_corner_springs[corner_idx].target_x = new_corners[corner_idx].0;
-                            self.cursor_corner_springs[corner_idx].target_y = new_corners[corner_idx].1;
-                            self.cursor_corner_springs[corner_idx].omega = omega_i;
+                            self.cursor.corner_springs[corner_idx].target_x = new_corners[corner_idx].0;
+                            self.cursor.corner_springs[corner_idx].target_y = new_corners[corner_idx].1;
+                            self.cursor.corner_springs[corner_idx].omega = omega_i;
                             // Don't reset velocity — preserve momentum from in-flight animation
                         }
 
-                        self.cursor_prev_target_cx = new_cx;
-                        self.cursor_prev_target_cy = new_cy;
+                        self.cursor.prev_target_cx = new_cx;
+                        self.cursor.prev_target_cy = new_cy;
                     }
                 }
 
@@ -1710,10 +1904,10 @@ impl RenderApp {
                 if target_moved && had_target && self.effects.cursor_trail_fade.enabled {
                     if let Some(renderer) = self.renderer.as_mut() {
                         renderer.record_cursor_trail(
-                            self.cursor_current_x,
-                            self.cursor_current_y,
-                            self.cursor_current_w,
-                            self.cursor_current_h,
+                            self.cursor.current_x,
+                            self.cursor.current_y,
+                            self.cursor.current_w,
+                            self.cursor.current_h,
                         );
                     }
                 }
@@ -1731,202 +1925,27 @@ impl RenderApp {
                 }
 
                 // Detect cursor size change for smooth size transition
-                if self.cursor_size_transition_enabled {
-                    let dw = (new_target.width - self.cursor_size_target_w).abs();
-                    let dh = (new_target.height - self.cursor_size_target_h).abs();
+                if self.cursor.size_transition_enabled {
+                    let dw = (new_target.width - self.cursor.size_target_w).abs();
+                    let dh = (new_target.height - self.cursor.size_target_h).abs();
                     if dw > 2.0 || dh > 2.0 {
-                        self.cursor_size_animating = true;
-                        self.cursor_size_start_w = self.cursor_current_w;
-                        self.cursor_size_start_h = self.cursor_current_h;
-                        self.cursor_size_anim_start = std::time::Instant::now();
+                        self.cursor.size_animating = true;
+                        self.cursor.size_start_w = self.cursor.current_w;
+                        self.cursor.size_start_h = self.cursor.current_h;
+                        self.cursor.size_anim_start = std::time::Instant::now();
                     }
-                    self.cursor_size_target_w = new_target.width;
-                    self.cursor_size_target_h = new_target.height;
+                    self.cursor.size_target_w = new_target.width;
+                    self.cursor.size_target_h = new_target.height;
                 }
 
-                self.cursor_target = Some(new_target);
+                self.cursor.target = Some(new_target);
             }
         }
     }
 
-    /// Compute the 4 target corners for a cursor based on its style.
-    /// Returns [TL, TR, BR, BL] as (x, y) tuples.
-    fn cursor_target_corners(target: &CursorTarget) -> [(f32, f32); 4] {
-        match target.style {
-            0 => {
-                // Filled box: full rectangle
-                let x0 = target.x;
-                let y0 = target.y;
-                let x1 = target.x + target.width;
-                let y1 = target.y + target.height;
-                [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
-            }
-            1 => {
-                // Bar: thin vertical line (2px wide)
-                let x0 = target.x;
-                let y0 = target.y;
-                let x1 = target.x + 2.0;
-                let y1 = target.y + target.height;
-                [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
-            }
-            2 => {
-                // Underline: thin horizontal line at bottom (2px tall)
-                let x0 = target.x;
-                let y0 = target.y + target.height - 2.0;
-                let x1 = target.x + target.width;
-                let y1 = target.y + target.height;
-                [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
-            }
-            _ => {
-                // Default: full rectangle
-                let x0 = target.x;
-                let y0 = target.y;
-                let x1 = target.x + target.width;
-                let y1 = target.y + target.height;
-                [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
-            }
-        }
-    }
 
-    /// Tick cursor animation, returns true if position changed (needs redraw)
-    fn tick_cursor_animation(&mut self) -> bool {
-        if !self.cursor_anim_enabled || !self.cursor_animating {
-            return false;
-        }
-        let target = match self.cursor_target.as_ref() {
-            Some(t) => t.clone(),
-            None => return false,
-        };
 
-        let now = std::time::Instant::now();
-        let dt = now.duration_since(self.last_anim_time).as_secs_f32();
-        self.last_anim_time = now;
 
-        match self.cursor_anim_style {
-            CursorAnimStyle::Exponential => {
-                let factor = 1.0 - (-self.cursor_anim_speed * dt).exp();
-                let dx = target.x - self.cursor_current_x;
-                let dy = target.y - self.cursor_current_y;
-                let dw = target.width - self.cursor_current_w;
-                let dh = target.height - self.cursor_current_h;
-                self.cursor_current_x += dx * factor;
-                self.cursor_current_y += dy * factor;
-                self.cursor_current_w += dw * factor;
-                self.cursor_current_h += dh * factor;
-                if dx.abs() < 0.5 && dy.abs() < 0.5 && dw.abs() < 0.5 && dh.abs() < 0.5 {
-                    self.snap_cursor(&target);
-                }
-            }
-            CursorAnimStyle::CriticallyDampedSpring => {
-                // 4-corner spring trail: each corner has its own omega (speed).
-                // Leading corners (aligned with travel direction) have higher omega (faster).
-                // Trailing corners have lower omega (slower), creating a stretching trail.
-                let mut all_settled = true;
-                for i in 0..4 {
-                    let spring = &mut self.cursor_corner_springs[i];
-                    let omega = spring.omega;
-                    let exp_term = (-omega * dt).exp();
-
-                    // Critically-damped spring per axis
-                    // x(t) = (x0 + (v0 + omega*x0)*t) * exp(-omega*t)
-                    let x0 = spring.x - spring.target_x;
-                    let vx0 = spring.vx;
-                    let new_x = (x0 + (vx0 + omega * x0) * dt) * exp_term;
-                    spring.vx = ((vx0 + omega * x0) * exp_term)
-                        - omega * (x0 + (vx0 + omega * x0) * dt) * exp_term;
-                    spring.x = spring.target_x + new_x;
-
-                    let y0 = spring.y - spring.target_y;
-                    let vy0 = spring.vy;
-                    let new_y = (y0 + (vy0 + omega * y0) * dt) * exp_term;
-                    spring.vy = ((vy0 + omega * y0) * exp_term)
-                        - omega * (y0 + (vy0 + omega * y0) * dt) * exp_term;
-                    spring.y = spring.target_y + new_y;
-
-                    let dist = (spring.x - spring.target_x).abs()
-                        + (spring.y - spring.target_y).abs();
-                    let vel = spring.vx.abs() + spring.vy.abs();
-                    if dist > 0.5 || vel > 1.0 {
-                        all_settled = false;
-                    }
-                }
-
-                // Also update the rect-level position (bounding box of corners)
-                let min_x = self.cursor_corner_springs.iter().map(|s| s.x).fold(f32::INFINITY, f32::min);
-                let min_y = self.cursor_corner_springs.iter().map(|s| s.y).fold(f32::INFINITY, f32::min);
-                let max_x = self.cursor_corner_springs.iter().map(|s| s.x).fold(f32::NEG_INFINITY, f32::max);
-                let max_y = self.cursor_corner_springs.iter().map(|s| s.y).fold(f32::NEG_INFINITY, f32::max);
-                self.cursor_current_x = min_x;
-                self.cursor_current_y = min_y;
-                self.cursor_current_w = max_x - min_x;
-                self.cursor_current_h = max_y - min_y;
-
-                if all_settled {
-                    // Snap all corners to targets
-                    let target_corners = Self::cursor_target_corners(&target);
-                    for i in 0..4 {
-                        self.cursor_corner_springs[i].x = target_corners[i].0;
-                        self.cursor_corner_springs[i].y = target_corners[i].1;
-                        self.cursor_corner_springs[i].vx = 0.0;
-                        self.cursor_corner_springs[i].vy = 0.0;
-                    }
-                    self.snap_cursor(&target);
-                }
-            }
-            style => {
-                // Duration-based easing styles
-                let elapsed = now.duration_since(self.cursor_anim_start_time).as_secs_f32();
-                let raw_t = (elapsed / self.cursor_anim_duration).min(1.0);
-                let t = match style {
-                    CursorAnimStyle::EaseOutQuad => ease_out_quad(raw_t),
-                    CursorAnimStyle::EaseOutCubic => ease_out_cubic(raw_t),
-                    CursorAnimStyle::EaseOutExpo => ease_out_expo(raw_t),
-                    CursorAnimStyle::EaseInOutCubic => ease_in_out_cubic(raw_t),
-                    CursorAnimStyle::Linear => ease_linear(raw_t),
-                    _ => raw_t, // unreachable
-                };
-                self.cursor_current_x = self.cursor_start_x + (target.x - self.cursor_start_x) * t;
-                self.cursor_current_y = self.cursor_start_y + (target.y - self.cursor_start_y) * t;
-                self.cursor_current_w = self.cursor_start_w + (target.width - self.cursor_start_w) * t;
-                self.cursor_current_h = self.cursor_start_h + (target.height - self.cursor_start_h) * t;
-                if raw_t >= 1.0 {
-                    self.snap_cursor(&target);
-                }
-            }
-        }
-
-        true
-    }
-
-    /// Snap cursor to target and stop animating
-    fn snap_cursor(&mut self, target: &CursorTarget) {
-        self.cursor_current_x = target.x;
-        self.cursor_current_y = target.y;
-        self.cursor_current_w = target.width;
-        self.cursor_current_h = target.height;
-        self.cursor_animating = false;
-    }
-
-    /// Tick cursor size transition, returns true if size changed (needs redraw).
-    /// Runs AFTER tick_cursor_animation() to override w/h with smooth size interpolation.
-    fn tick_cursor_size_animation(&mut self) -> bool {
-        if !self.cursor_size_transition_enabled || !self.cursor_size_animating {
-            return false;
-        }
-        let elapsed = self.cursor_size_anim_start.elapsed().as_secs_f32();
-        let raw_t = (elapsed / self.cursor_size_transition_duration).min(1.0);
-        let t = raw_t * (2.0 - raw_t); // ease-out-quad
-        self.cursor_current_w = self.cursor_size_start_w
-            + (self.cursor_size_target_w - self.cursor_size_start_w) * t;
-        self.cursor_current_h = self.cursor_size_start_h
-            + (self.cursor_size_target_h - self.cursor_size_start_h) * t;
-        if raw_t >= 1.0 {
-            self.cursor_current_w = self.cursor_size_target_w;
-            self.cursor_current_h = self.cursor_size_target_h;
-            self.cursor_size_animating = false;
-        }
-        true
-    }
 
     /// Check if any transitions are currently active
     fn has_active_transitions(&self) -> bool {
@@ -1935,7 +1954,7 @@ impl RenderApp {
 
     /// Update cursor blink state, returns true if blink toggled
     fn tick_cursor_blink(&mut self) -> bool {
-        if !self.cursor_blink_enabled || self.current_frame.is_none() {
+        if !self.cursor.blink_enabled || self.current_frame.is_none() {
             return false;
         }
         // Check if any cursor exists in the current frame
@@ -1946,12 +1965,12 @@ impl RenderApp {
             return false;
         }
         let now = std::time::Instant::now();
-        if now.duration_since(self.last_cursor_toggle) >= self.cursor_blink_interval {
-            let was_off = !self.cursor_blink_on;
-            self.cursor_blink_on = !self.cursor_blink_on;
-            self.last_cursor_toggle = now;
+        if now.duration_since(self.cursor.last_blink_toggle) >= self.cursor.blink_interval {
+            let was_off = !self.cursor.blink_on;
+            self.cursor.blink_on = !self.cursor.blink_on;
+            self.cursor.last_blink_toggle = now;
             // Trigger wake animation when cursor becomes visible after blink-off
-            if was_off && self.cursor_blink_on && self.effects.cursor_wake.enabled {
+            if was_off && self.cursor.blink_on && self.effects.cursor_wake.enabled {
                 if let Some(renderer) = self.renderer.as_mut() {
                     renderer.trigger_cursor_wake(now);
                 }
@@ -2997,26 +3016,26 @@ impl RenderApp {
 
         // Build animated cursor override if applicable
         let animated_cursor = if let (true, Some(target)) =
-            (self.cursor_anim_enabled, self.cursor_target.as_ref())
+            (self.cursor.anim_enabled, self.cursor.target.as_ref())
         {
-            let corners = if self.cursor_anim_style == CursorAnimStyle::CriticallyDampedSpring
-                && self.cursor_animating
+            let corners = if self.cursor.anim_style == CursorAnimStyle::CriticallyDampedSpring
+                && self.cursor.animating
             {
                 Some([
-                    (self.cursor_corner_springs[0].x, self.cursor_corner_springs[0].y),
-                    (self.cursor_corner_springs[1].x, self.cursor_corner_springs[1].y),
-                    (self.cursor_corner_springs[2].x, self.cursor_corner_springs[2].y),
-                    (self.cursor_corner_springs[3].x, self.cursor_corner_springs[3].y),
+                    (self.cursor.corner_springs[0].x, self.cursor.corner_springs[0].y),
+                    (self.cursor.corner_springs[1].x, self.cursor.corner_springs[1].y),
+                    (self.cursor.corner_springs[2].x, self.cursor.corner_springs[2].y),
+                    (self.cursor.corner_springs[3].x, self.cursor.corner_springs[3].y),
                 ])
             } else {
                 None
             };
             Some(AnimatedCursor {
                 window_id: target.window_id,
-                x: self.cursor_current_x,
-                y: self.cursor_current_y,
-                width: self.cursor_current_w,
-                height: self.cursor_current_h,
+                x: self.cursor.current_x,
+                y: self.cursor.current_y,
+                width: self.cursor.current_w,
+                height: self.cursor.current_h,
                 corners,
             })
         } else {
@@ -3057,7 +3076,7 @@ impl RenderApp {
                     &self.faces,
                     self.width,
                     self.height,
-                    self.cursor_blink_on,
+                    self.cursor.blink_on,
                     animated_cursor,
                     self.mouse_pos,
                     bg_gradient,
@@ -3096,7 +3115,7 @@ impl RenderApp {
                 &self.faces,
                 self.width,
                 self.height,
-                self.cursor_blink_on,
+                self.cursor.blink_on,
                 animated_cursor,
                 self.mouse_pos,
                 bg_gradient,
@@ -3182,7 +3201,7 @@ impl RenderApp {
         // Render IME preedit text overlay at cursor position
         if self.ime_preedit_active && !self.ime_preedit_text.is_empty() {
             if let (Some(ref renderer), Some(ref mut glyph_atlas), Some(ref target)) =
-                (&self.renderer, &mut self.glyph_atlas, &self.cursor_target)
+                (&self.renderer, &mut self.glyph_atlas, &self.cursor.target)
             {
                 renderer.render_ime_preedit(
                     &surface_view,
@@ -3952,7 +3971,7 @@ impl ApplicationHandler for RenderApp {
                         // Update IME cursor area so the OS positions the
                         // candidate window near the text cursor
                         if let Some(ref window) = self.window {
-                            if let Some(ref target) = self.cursor_target {
+                            if let Some(ref target) = self.cursor.target {
                                 let x = (target.x as f64) * self.scale_factor;
                                 let y = (target.y as f64 + target.height as f64) * self.scale_factor;
                                 let w = target.width as f64 * self.scale_factor;
@@ -4020,12 +4039,12 @@ impl ApplicationHandler for RenderApp {
         }
 
         // Tick cursor animation
-        if self.tick_cursor_animation() {
+        if self.cursor.tick_animation() {
             self.frame_dirty = true;
         }
 
         // Tick cursor size transition (runs after position animation, overrides w/h)
-        if self.tick_cursor_size_animation() {
+        if self.cursor.tick_size_animation() {
             self.frame_dirty = true;
         }
 
@@ -4096,14 +4115,14 @@ impl ApplicationHandler for RenderApp {
         // Window events (key, mouse, resize) still wake immediately.
         let now = std::time::Instant::now();
         let next_wake = if self.frame_dirty || has_active_content
-            || self.cursor_animating || self.cursor_size_animating
+            || self.cursor.animating || self.cursor.size_animating
             || self.idle_dim_active || self.has_active_transitions()
         {
             // Active rendering: cap at ~240fps to avoid spinning
             now + std::time::Duration::from_millis(4)
-        } else if self.cursor_blink_enabled {
+        } else if self.cursor.blink_enabled {
             // Idle with cursor blink: wake at next toggle time
-            self.last_cursor_toggle + self.cursor_blink_interval
+            self.cursor.last_blink_toggle + self.cursor.blink_interval
         } else {
             // Fully idle: poll for new Emacs frames at 60fps
             now + std::time::Duration::from_millis(16)
